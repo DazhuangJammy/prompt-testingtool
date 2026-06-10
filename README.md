@@ -24,7 +24,7 @@ Windows PowerShell：
 iwr https://raw.githubusercontent.com/DazhuangJammy/prompt-testingtool/main/scripts/install.ps1 -UseB | iex
 ```
 
-默认端口是 `8787`。服务器模式会监听 `0.0.0.0:8787`，需要在云服务器安全组/防火墙放行该端口。
+正式模式默认端口是 `8787`。服务器模式会监听 `0.0.0.0:8787`，需要在云服务器安全组/防火墙放行该端口。
 
 可选环境变量：
 
@@ -34,15 +34,25 @@ PROMPT_TOOL_PORT=8787
 PROMPT_TOOL_BRANCH=main
 ```
 
-## 启动管理
+## 本地开发启动
 
 在项目目录内：
 
 ```bash
-./start.sh start
-./start.sh status
-./start.sh stop
-./start.sh restart
+./start.sh
+```
+
+这个入口会启动开发模式：API 使用 `8787`，前端使用 Vite 的 `5173`，代码修改后页面会自动刷新。
+
+## 正式模式启动管理
+
+在项目目录内：
+
+```bash
+./start-prod.sh start
+./start-prod.sh status
+./start-prod.sh stop
+./start-prod.sh restart
 ```
 
 或：

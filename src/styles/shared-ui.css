@@ -24,6 +24,12 @@
   white-space: nowrap;
 }
 
+.app-mark {
+  font-size: 17px;
+  font-weight: 760;
+  line-height: 1.1;
+}
+
 .icon-button,
 .file-button {
   align-items: center;

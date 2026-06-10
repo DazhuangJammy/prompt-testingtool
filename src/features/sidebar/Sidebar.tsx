@@ -56,8 +56,13 @@ export function Sidebar({
       <div className="sidebar-head">
         {!collapsed && (
           <div className="app-brand">
-            <span className="app-mark">Prompt</span>
-            <AppVersionBadge />
+            <div className="app-logo-wrap" aria-hidden="true">
+              <img src="/favicon.svg" alt="" className="app-logo" />
+            </div>
+            <div className="app-brand-copy">
+              <span className="app-mark">Prompt Canvas</span>
+              <AppVersionBadge />
+            </div>
           </div>
         )}
         <IconButton

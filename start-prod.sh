@@ -3,4 +3,4 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-node scripts/dev-tool.mjs "$@"
+node scripts/prompt-tool.mjs "${@:-start}"

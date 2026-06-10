@@ -1,8 +1,36 @@
 .app-brand {
-  display: grid;
-  gap: 4px;
+  align-items: center;
+  display: flex;
+  gap: 12px;
   min-width: 0;
   position: relative;
+}
+
+.app-logo-wrap {
+  align-items: center;
+  background:
+    radial-gradient(circle at 30% 18%, rgba(255, 255, 255, 0.28), transparent 34%),
+    color-mix(in srgb, var(--surface) 78%, var(--panel-2));
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(134, 59, 255, 0.22);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.app-logo {
+  display: block;
+  height: 30px;
+  width: 31px;
+}
+
+.app-brand-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
 }
 
 .version-shell {
