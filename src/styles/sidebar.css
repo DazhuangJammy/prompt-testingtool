@@ -1,3 +1,126 @@
+.app-brand {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  position: relative;
+}
+
+.version-shell {
+  position: relative;
+  width: fit-content;
+}
+
+.version-badge {
+  background: color-mix(in srgb, var(--line-strong) 50%, transparent);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+  height: 24px;
+  padding: 0 10px;
+}
+
+.version-badge:hover,
+.version-badge.has-update {
+  background: color-mix(in srgb, var(--ok) 18%, var(--surface));
+  border-color: color-mix(in srgb, var(--ok) 34%, transparent);
+  color: var(--text);
+}
+
+.version-popover {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  left: 0;
+  overflow: hidden;
+  position: absolute;
+  top: 30px;
+  width: min(320px, calc(100vw - 28px));
+  z-index: 60;
+}
+
+.version-popover-head {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  min-height: 52px;
+  padding: 10px 12px;
+}
+
+.version-popover-head strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.version-popover-body {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  padding: 18px 14px 16px;
+  text-align: center;
+}
+
+.version-number {
+  align-items: center;
+  color: var(--text);
+  display: flex;
+  font-size: 28px;
+  font-weight: 760;
+  gap: 8px;
+}
+
+.version-ok {
+  align-items: center;
+  background: color-mix(in srgb, var(--ok) 20%, transparent);
+  border-radius: 999px;
+  color: var(--ok);
+  display: inline-flex;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.version-popover-body p,
+.version-popover-body small {
+  color: var(--muted);
+  margin: 0;
+}
+
+.version-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.version-actions a,
+.version-actions button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 10px;
+  text-decoration: none;
+}
+
+.version-actions :is(a, button):hover:not(:disabled) {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.version-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .sidebar-actions {
   border-bottom: 1px solid var(--line);
   display: flex;

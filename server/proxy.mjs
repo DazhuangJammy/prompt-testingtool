@@ -7,6 +7,7 @@ import { apiRoutes } from './routes/apiRoutes.mjs'
 
 const app = express()
 const port = Number(process.env.PORT ?? 8787)
+const host = process.env.HOST ?? '127.0.0.1'
 const root = join(fileURLToPath(new URL('..', import.meta.url)))
 const dist = join(root, 'dist')
 
@@ -25,6 +26,6 @@ if (existsSync(dist)) {
   })
 }
 
-app.listen(port, () => {
-  console.log(`Prompt proxy listening on http://localhost:${port}`)
+app.listen(port, host, () => {
+  console.log(`Prompt proxy listening on http://${host}:${port}`)
 })

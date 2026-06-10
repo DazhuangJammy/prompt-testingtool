@@ -11,6 +11,7 @@ import type { ChangeEvent, CSSProperties, PointerEvent } from 'react'
 import { IconButton } from '@/shared/ui/IconButton'
 import { hideTooltip, showTooltip } from '@/shared/ui/tooltip'
 import type { Canvas } from '@/shared/types'
+import { AppVersionBadge } from './components/AppVersionBadge'
 
 interface SidebarProps {
   canvases: Canvas[]
@@ -53,7 +54,12 @@ export function Sidebar({
       style={{ '--panel-width': `${width}px` } as CSSProperties}
     >
       <div className="sidebar-head">
-        {!collapsed && <span className="app-mark">Prompt</span>}
+        {!collapsed && (
+          <div className="app-brand">
+            <span className="app-mark">Prompt</span>
+            <AppVersionBadge />
+          </div>
+        )}
         <IconButton
           icon={collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
           label={collapsed ? '展开' : '收起'}

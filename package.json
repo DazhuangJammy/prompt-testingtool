@@ -12,7 +12,10 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "preview": "vite preview",
-    "serve": "node server/proxy.mjs"
+    "serve": "node server/proxy.mjs",
+    "start:tool": "node scripts/prompt-tool.mjs start --install --build --open",
+    "stop:tool": "node scripts/prompt-tool.mjs stop",
+    "status:tool": "node scripts/prompt-tool.mjs status"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
