@@ -1,0 +1,94 @@
+.markdown-preview,
+.message,
+.compare-result article {
+  font-size: 13px;
+  line-height: 1.68;
+}
+
+.markdown-preview h1,
+.message h1,
+.compare-result h1 {
+  font-size: 16px;
+  line-height: 1.28;
+}
+
+.markdown-preview h2,
+.message h2,
+.compare-result h2 {
+  font-size: 14px;
+  line-height: 1.32;
+}
+
+.markdown-preview h1,
+.message h1,
+.compare-result h1 {
+  margin: 22px 0 10px;
+}
+
+.markdown-preview h2,
+.markdown-preview h3,
+.message h2,
+.message h3,
+.compare-result h2,
+.compare-result h3 {
+  margin: 18px 0 9px;
+}
+
+.markdown-preview h1:first-child,
+.markdown-preview h2:first-child,
+.markdown-preview h3:first-child,
+.message h1:first-child,
+.message h2:first-child,
+.message h3:first-child,
+.compare-result h1:first-child,
+.compare-result h2:first-child,
+.compare-result h3:first-child {
+  margin-top: 0;
+}
+
+.markdown-preview p,
+.markdown-preview ul,
+.markdown-preview ol,
+.message p,
+.message ul,
+.message ol,
+.compare-result p,
+.compare-result ul,
+.compare-result ol {
+  margin: 0 0 10px;
+}
+
+.markdown-preview li + li,
+.message li + li,
+.compare-result li + li {
+  margin-top: 5px;
+}
+
+.markdown-preview :is(p, ul, ol, pre, blockquote) + :is(h1, h2, h3),
+.message :is(p, ul, ol, pre, blockquote) + :is(h1, h2, h3),
+.compare-result :is(p, ul, ol, pre, blockquote) + :is(h1, h2, h3) {
+  margin-top: 20px;
+}
+
+.markdown-preview code,
+.message code,
+.compare-result code {
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.markdown-preview pre,
+.message pre,
+.compare-result pre {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: auto;
+  padding: 8px;
+}
+
+.message > :last-child,
+.compare-result article > :last-child,
+.markdown-preview > :last-child {
+  margin-bottom: 0;
+}

@@ -1,0 +1,353 @@
+import { requestCompletion, requestCompletionStream } from '@/shared/api/ai'
+import { compilePrompt } from '@/features/prompt-card/model/prompt'
+import type {
+  ChatAttachment,
+  ChatMessage,
+  PromptInjectionMode,
+  PromptCard,
+  ProviderConfig,
+  ThinkingMode,
+} from '@/shared/types'
+import { createId } from '@/shared/utils/identity'
+import { nowIso } from '@/shared/utils/time'
+import {
+  buildChatMessages,
+  createCompareRun,
+  createPromptVersion,
+} from '@/features/chat/model/chatCompletion'
+import { splitThinkingBlock } from '@/features/chat/model/thinking'
+import { createChatSession } from '@/features/chat/model/chatSession'
+import { chatRepository } from '@/features/chat/infrastructure/chatRepository'
+
+export async function ensureChatSession(
+  promptCardId: string,
+  effectiveSessionId?: string,
+) {
+  if (effectiveSessionId) return effectiveSessionId
+  const session = createChatSession(promptCardId)
+  await chatRepository.createSession(session)
+  return session.id
+}
+
+export async function clearChatSession(sessionId?: string) {
+  if (!sessionId) return
+  await chatRepository.clearMessages(sessionId)
+}
+
+export async function editChatMessage(id: string, content: string) {
+  await chatRepository.updateMessageContent(id, content)
+}
+
+export async function sendChatMessage({
+  card,
+  history,
+  onAssistantMessage,
+  provider,
+  promptInjectionMode,
+  sessionId,
+  signal,
+  attachments = [],
+  text,
+  thinkingMode,
+}: {
+  attachments?: ChatAttachment[]
+  card: PromptCard
+  history: ChatMessage[]
+  onAssistantMessage?: (message: ChatMessage) => void
+  provider: ProviderConfig
+  promptInjectionMode: PromptInjectionMode
+  sessionId: string
+  signal?: AbortSignal
+  text: string
+  thinkingMode: ThinkingMode
+}) {
+  const version = createPromptVersion(card, 'chat-send')
+  await chatRepository.savePromptVersion(version)
+
+  const userMessage: ChatMessage = {
+    id: createId(),
+    sessionId,
+    role: 'user',
+    content: text,
+    attachments,
+    promptVersionId: version.id,
+    createdAt: nowIso(),
+  }
+  await chatRepository.addMessage(userMessage)
+
+  const assistantMessage: ChatMessage = {
+    id: createId(),
+    sessionId,
+    role: 'assistant',
+    content: '',
+    promptVersionId: version.id,
+    thinkingMode,
+    status: 'streaming',
+    createdAt: nowIso(),
+  }
+  await chatRepository.addMessage(assistantMessage)
+  onAssistantMessage?.(assistantMessage)
+
+  const startedAt = performance.now()
+  let assistantText = ''
+  let thinkingText = ''
+  const aborted = await streamAssistantReply({
+    assistantMessageId: assistantMessage.id,
+    getAssistantText: () => assistantText,
+    getThinkingText: () => thinkingText,
+    messages: buildChatMessages(
+      version.compiledMarkdown,
+      history,
+      userMessage.content,
+      promptInjectionMode,
+      userMessage.attachments,
+    ),
+    provider,
+    setAssistantText: (value) => {
+      assistantText = value
+    },
+    setThinkingText: (value) => {
+      thinkingText = value
+    },
+    signal,
+    startedAt,
+    thinkingMode,
+  })
+  if (!aborted && !assistantText.trim() && !thinkingText.trim()) {
+    throw new Error('上游返回为空')
+  }
+  await chatRepository.updateAssistantMessage(assistantMessage.id, {
+    content: mergeThinkingContent(thinkingText, assistantText, thinkingMode),
+    thinkingDurationMs: thinkingText && thinkingMode !== 'off'
+      ? Math.round(performance.now() - startedAt)
+      : undefined,
+    status: 'complete',
+  })
+  await chatRepository.updateSessionAfterReply(sessionId, userMessage.content)
+}
+
+async function requestAssistantReply({
+  attachments = [],
+  card,
+  history,
+  provider,
+  promptInjectionMode,
+  sessionId,
+  signal,
+  text,
+  thinkingMode,
+}: {
+  attachments?: ChatAttachment[]
+  card: PromptCard
+  history: ChatMessage[]
+  provider: ProviderConfig
+  promptInjectionMode: PromptInjectionMode
+  sessionId: string
+  signal?: AbortSignal
+  text: string
+  thinkingMode: ThinkingMode
+}) {
+  const version = createPromptVersion(card, 'chat-send')
+  await chatRepository.savePromptVersion(version)
+
+  const assistantMessage: ChatMessage = {
+    id: createId(),
+    sessionId,
+    role: 'assistant',
+    content: '',
+    promptVersionId: version.id,
+    thinkingMode,
+    status: 'streaming',
+    createdAt: nowIso(),
+  }
+  await chatRepository.addMessage(assistantMessage)
+
+  const startedAt = performance.now()
+  let assistantText = ''
+  let thinkingText = ''
+  const aborted = await streamAssistantReply({
+    assistantMessageId: assistantMessage.id,
+    getAssistantText: () => assistantText,
+    getThinkingText: () => thinkingText,
+    messages: buildChatMessages(
+      version.compiledMarkdown,
+      history,
+      text,
+      promptInjectionMode,
+      attachments,
+    ),
+    provider,
+    setAssistantText: (value) => {
+      assistantText = value
+    },
+    setThinkingText: (value) => {
+      thinkingText = value
+    },
+    signal,
+    startedAt,
+    thinkingMode,
+  })
+  if (!aborted && !assistantText.trim() && !thinkingText.trim()) {
+    throw new Error('上游返回为空')
+  }
+  await chatRepository.updateAssistantMessage(assistantMessage.id, {
+    content: mergeThinkingContent(thinkingText, assistantText, thinkingMode),
+    thinkingDurationMs: thinkingText && thinkingMode !== 'off'
+      ? Math.round(performance.now() - startedAt)
+      : undefined,
+    status: 'complete',
+  })
+  await chatRepository.updateSessionAfterReply(sessionId, text)
+}
+
+function mergeThinkingContent(
+  thinking: string,
+  text: string,
+  thinkingMode: ThinkingMode,
+) {
+  if (thinkingMode === 'off') return splitThinkingBlock(text).answer || text
+  return thinking ? `<think>${thinking}</think>${text}` : text
+}
+
+async function streamAssistantReply({
+  assistantMessageId,
+  getAssistantText,
+  getThinkingText,
+  messages,
+  provider,
+  setAssistantText,
+  setThinkingText,
+  signal,
+  startedAt,
+  thinkingMode,
+}: {
+  assistantMessageId: string
+  getAssistantText: () => string
+  getThinkingText: () => string
+  messages: ReturnType<typeof buildChatMessages>
+  provider: ProviderConfig
+  setAssistantText: (value: string) => void
+  setThinkingText: (value: string) => void
+  signal?: AbortSignal
+  startedAt: number
+  thinkingMode: ThinkingMode
+}) {
+  try {
+    await requestCompletionStream(
+      provider,
+      messages,
+      {
+        onText: async (chunk) => {
+          setAssistantText(getAssistantText() + chunk)
+          await chatRepository.updateAssistantMessage(assistantMessageId, {
+            content: mergeThinkingContent(
+              getThinkingText(),
+              getAssistantText(),
+              thinkingMode,
+            ),
+          })
+        },
+        onThinking: async (chunk) => {
+          setThinkingText(getThinkingText() + chunk)
+          await chatRepository.updateAssistantMessage(assistantMessageId, {
+            content: mergeThinkingContent(
+              getThinkingText(),
+              getAssistantText(),
+              thinkingMode,
+            ),
+            thinkingDurationMs: Math.round(performance.now() - startedAt),
+          })
+        },
+      },
+      thinkingMode,
+      signal,
+    )
+    return false
+  } catch (error) {
+    if (!isAbortError(error)) throw error
+    return true
+  }
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === 'AbortError'
+}
+
+export async function resendChatMessage({
+  card,
+  history,
+  message,
+  provider,
+  promptInjectionMode,
+  sessionId,
+  signal,
+  text,
+  thinkingMode,
+}: {
+  card: PromptCard
+  history: ChatMessage[]
+  message: ChatMessage
+  provider: ProviderConfig
+  promptInjectionMode: PromptInjectionMode
+  sessionId: string
+  signal?: AbortSignal
+  text: string
+  thinkingMode: ThinkingMode
+}) {
+  await editChatMessage(message.id, text)
+  await chatRepository.deleteMessagesAfter(sessionId, message.createdAt)
+  await requestAssistantReply({
+    attachments: message.attachments,
+    card,
+    history: history.filter((item) => item.createdAt < message.createdAt),
+    provider,
+    promptInjectionMode,
+    sessionId,
+    signal,
+    text,
+    thinkingMode,
+  })
+}
+
+export async function runPromptCompare({
+  leftCard,
+  rightCard,
+  input,
+  ownerPromptCardId,
+  provider,
+  promptInjectionMode,
+}: {
+  leftCard: PromptCard
+  rightCard: PromptCard
+  input: string
+  ownerPromptCardId: string
+  provider: ProviderConfig
+  promptInjectionMode: PromptInjectionMode
+}) {
+  const leftVersion = createPromptVersion(leftCard, 'compare')
+  const rightVersion = createPromptVersion(rightCard, 'compare')
+  await Promise.all([
+    chatRepository.savePromptVersion(leftVersion),
+    chatRepository.savePromptVersion(rightVersion),
+  ])
+  const baseMessages = (prompt: string) => [
+    {
+      role: promptInjectionMode === 'system' ? ('system' as const) : ('user' as const),
+      content: prompt,
+    },
+    { role: 'user' as const, content: input },
+  ]
+  const [oldOutput, newOutput] = await Promise.all([
+    requestCompletion(provider, baseMessages(compilePrompt(leftCard))),
+    requestCompletion(provider, baseMessages(compilePrompt(rightCard))),
+  ])
+  const run = createCompareRun(
+    ownerPromptCardId,
+    leftVersion,
+    rightVersion,
+    input,
+    oldOutput,
+    newOutput,
+  )
+  await chatRepository.saveCompareRun(run)
+}

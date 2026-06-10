@@ -1,0 +1,374 @@
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Download,
+  FileText,
+  Pencil,
+  RotateCcw,
+  X,
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
+import ReactMarkdown from 'react-markdown'
+import {
+  formatGenerationDuration,
+  formatMessageTime,
+  formatThinkingSeconds,
+  splitThinkingBlock,
+} from '@/features/chat/model/thinking'
+import { formatAttachmentSize } from '@/features/chat/model/attachments'
+import {
+  splitSvgPreviewBlocks,
+  type SvgPreviewBlock,
+} from '@/features/chat/model/svgPreview'
+import type { ChatAttachment, ChatMessage } from '@/shared/types'
+import { IconButton } from '@/shared/ui/IconButton'
+
+interface MessageListProps {
+  messages: ChatMessage[]
+  onEdit: (message: ChatMessage, content: string) => void
+  onResend: (message: ChatMessage, content: string) => void
+}
+
+interface ImagePreviewItem {
+  name: string
+  src: string
+}
+
+export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
+  const [editingId, setEditingId] = useState<string>()
+  const [previewItem, setPreviewItem] = useState<ImagePreviewItem>()
+  const [collapsedThinkingIds, setCollapsedThinkingIds] = useState<Set<string>>(
+    () => new Set(),
+  )
+  const [autoCollapsedThinkingIds, setAutoCollapsedThinkingIds] = useState<Set<string>>(
+    () => new Set(),
+  )
+  const [draft, setDraft] = useState('')
+
+  useEffect(() => {
+    const ids = messages
+      .filter((message) => {
+        const parsed = splitThinkingBlock(message.content)
+        return (
+          message.role === 'assistant' &&
+          message.thinkingMode !== 'off' &&
+          message.status === 'complete' &&
+          parsed.thinking &&
+          !autoCollapsedThinkingIds.has(message.id)
+        )
+      })
+      .map((message) => message.id)
+
+    if (!ids.length) return
+
+    const timer = window.setTimeout(() => {
+      setCollapsedThinkingIds((current) => {
+        const next = new Set(current)
+        ids.forEach((id) => next.add(id))
+        return next
+      })
+      setAutoCollapsedThinkingIds((current) => {
+        const next = new Set(current)
+        ids.forEach((id) => next.add(id))
+        return next
+      })
+    }, 0)
+
+    return () => window.clearTimeout(timer)
+  }, [autoCollapsedThinkingIds, messages])
+
+  useEffect(() => {
+    if (!previewItem) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPreviewItem(undefined)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [previewItem])
+
+  return (
+    <>
+      <div className="message-list">
+        {messages.map((message) => {
+          const isEditing = editingId === message.id
+          const attachments = message.attachments ?? []
+          const parsed = splitThinkingBlock(message.content)
+          const showThinking =
+            message.role === 'assistant' &&
+            message.thinkingMode !== 'off' &&
+            Boolean(parsed.thinking)
+          const answerText =
+            parsed.answer ||
+            (message.role === 'assistant' && message.status === 'complete'
+              ? '空回复'
+              : '')
+          const showBubble = isEditing || Boolean(answerText) || attachments.length > 0
+          const thinkingCollapsed = collapsedThinkingIds.has(message.id)
+
+          return (
+            <article className={`message is-${message.role}`} key={message.id}>
+              {!isEditing && showThinking && (
+                <div className="thinking-box">
+                  <button
+                    type="button"
+                    className="thinking-head"
+                    onClick={() =>
+                      setCollapsedThinkingIds((current) => {
+                        const next = new Set(current)
+                        if (next.has(message.id)) next.delete(message.id)
+                        else next.add(message.id)
+                        return next
+                      })
+                    }
+                  >
+                    {thinkingCollapsed ? <ChevronRight /> : <ChevronDown />}
+                    <span>Thinking</span>
+                    {message.thinkingDurationMs && (
+                      <span>{formatThinkingSeconds(message.thinkingDurationMs)}</span>
+                    )}
+                  </button>
+                  {!thinkingCollapsed && (
+                    <ReactMarkdown>{parsed.thinking}</ReactMarkdown>
+                  )}
+                </div>
+              )}
+              {showBubble && (
+                <div
+                  className={`message-bubble ${
+                    answerText === '空回复' && !attachments.length ? 'is-empty' : ''
+                  }`}
+                >
+                  {isEditing ? (
+                    <textarea
+                      value={draft}
+                      onChange={(event) => setDraft(event.target.value)}
+                    />
+                  ) : (
+                    <>
+                      {answerText && (
+                        <MessageContent
+                          content={answerText}
+                          onPreview={setPreviewItem}
+                        />
+                      )}
+                      <MessageAttachments
+                        attachments={attachments}
+                        onPreview={setPreviewItem}
+                      />
+                    </>
+                  )}
+                </div>
+              )}
+              <div className="message-actions">
+                <div className="message-action-buttons">
+                  <IconButton
+                    icon={<Copy />}
+                    label="复制"
+                    onClick={() => void navigator.clipboard.writeText(message.content)}
+                  />
+                  {message.role === 'user' &&
+                    (isEditing ? (
+                      <>
+                        <IconButton
+                          icon={<Check />}
+                          label="保存"
+                          onClick={() => {
+                            onEdit(message, draft)
+                            setEditingId(undefined)
+                          }}
+                        />
+                        <IconButton
+                          icon={<RotateCcw />}
+                          label="重发"
+                          onClick={() => {
+                            onResend(message, draft)
+                            setEditingId(undefined)
+                          }}
+                        />
+                        <IconButton
+                          icon={<X />}
+                          label="取消"
+                          onClick={() => setEditingId(undefined)}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <IconButton
+                          icon={<Pencil />}
+                          label="编辑"
+                          onClick={() => {
+                            setDraft(message.content)
+                            setEditingId(message.id)
+                          }}
+                        />
+                        <IconButton
+                          icon={<RotateCcw />}
+                          label="重发"
+                          onClick={() => onResend(message, message.content)}
+                        />
+                      </>
+                    ))}
+                </div>
+                <span className="message-time">
+                  {formatMessageTime(message.createdAt)}
+                  {message.role === 'assistant' &&
+                    message.thinkingMode !== 'off' &&
+                    formatGenerationDuration(message.thinkingDurationMs)}
+                </span>
+              </div>
+            </article>
+          )
+        })}
+      </div>
+      {previewItem && (
+        <ImagePreviewDialog
+          item={previewItem}
+          onClose={() => setPreviewItem(undefined)}
+        />
+      )}
+    </>
+  )
+}
+
+interface MessageContentProps {
+  content: string
+  onPreview: (item: ImagePreviewItem) => void
+}
+
+function MessageContent({ content, onPreview }: MessageContentProps) {
+  const blocks = splitSvgPreviewBlocks(content)
+  if (!blocks.length) return null
+
+  return (
+    <>
+      {blocks.map((block) =>
+        block.kind === 'svg' ? (
+          <SvgPreviewCard block={block} key={block.id} onPreview={onPreview} />
+        ) : (
+          <ReactMarkdown key={block.id}>{block.markdown}</ReactMarkdown>
+        ),
+      )}
+    </>
+  )
+}
+
+interface SvgPreviewCardProps {
+  block: SvgPreviewBlock
+  onPreview: (item: ImagePreviewItem) => void
+}
+
+function SvgPreviewCard({ block, onPreview }: SvgPreviewCardProps) {
+  return (
+    <div className="message-svg-card">
+      <button
+        type="button"
+        className="message-image-thumb message-svg-thumb"
+        aria-label={`查看 ${block.filename}`}
+        onClick={() => onPreview({ name: block.filename, src: block.dataUrl })}
+      >
+        <img src={block.dataUrl} alt={block.filename} />
+      </button>
+      <IconButton
+        icon={<Download />}
+        label="下载 SVG"
+        disabled={block.status !== 'complete'}
+        onClick={() => downloadSvg(block)}
+      />
+      {block.status === 'streaming' && (
+        <span className="message-svg-status">生成中</span>
+      )}
+    </div>
+  )
+}
+
+interface MessageAttachmentsProps {
+  attachments: ChatAttachment[]
+  onPreview: (item: ImagePreviewItem) => void
+}
+
+function MessageAttachments({ attachments, onPreview }: MessageAttachmentsProps) {
+  if (!attachments.length) return null
+
+  const imageAttachments = attachments.filter(
+    (attachment) => attachment.kind === 'image' && attachment.dataUrl,
+  )
+  const fileAttachments = attachments.filter(
+    (attachment) => attachment.kind !== 'image' || !attachment.dataUrl,
+  )
+
+  return (
+    <div className="message-attachments">
+      {imageAttachments.length > 0 && (
+        <div className="message-image-grid">
+          {imageAttachments.map((attachment) => (
+            <button
+              type="button"
+              className="message-image-thumb"
+              key={attachment.id}
+              aria-label={`查看 ${attachment.name}`}
+              onClick={() =>
+                onPreview({
+                  name: attachment.name,
+                  src: attachment.dataUrl as string,
+                })
+              }
+            >
+              <img src={attachment.dataUrl} alt={attachment.name} />
+            </button>
+          ))}
+        </div>
+      )}
+      {fileAttachments.length > 0 && (
+        <div className="message-file-list">
+          {fileAttachments.map((attachment) => (
+            <span className="attachment-pill" key={attachment.id}>
+              <FileText />
+              <span>{attachment.name}</span>
+              <small>{formatAttachmentSize(attachment.size)}</small>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface ImagePreviewDialogProps {
+  item: ImagePreviewItem
+  onClose: () => void
+}
+
+function ImagePreviewDialog({ item, onClose }: ImagePreviewDialogProps) {
+  return createPortal(
+    <div className="image-preview-backdrop" onMouseDown={onClose}>
+      <div
+        className="image-preview-dialog"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="image-preview-head">
+          <span>{item.name}</span>
+          <IconButton icon={<X />} label="关闭" onClick={onClose} />
+        </div>
+        <img src={item.src} alt={item.name} />
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
+function downloadSvg(block: SvgPreviewBlock) {
+  const blob = new Blob([block.svg], { type: 'image/svg+xml;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = block.filename
+  document.body.append(anchor)
+  anchor.click()
+  anchor.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 0)
+}

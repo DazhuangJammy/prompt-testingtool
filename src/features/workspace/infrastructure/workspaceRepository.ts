@@ -1,0 +1,191 @@
+import { createPromptCard } from '@/features/prompt-card/model/prompt'
+import { db } from '@/shared/storage/db'
+import type { Canvas, ExportPayload, PromptCard } from '@/shared/types'
+import { nowIso } from '@/shared/utils/time'
+
+export const workspaceRepository = {
+  async createCanvas(title?: string) {
+    const at = nowIso()
+    const canvas: Canvas = {
+      id: crypto.randomUUID(),
+      title: title?.trim() || '未命名',
+      createdAt: at,
+      updatedAt: at,
+    }
+    await db.canvases.add(canvas)
+    return canvas
+  },
+
+  async updateCanvas(id: string, updates: Partial<Canvas>) {
+    await db.canvases.update(id, { ...updates, updatedAt: nowIso() })
+  },
+
+  async touchCanvas(canvasId: string) {
+    await db.canvases.update(canvasId, { updatedAt: nowIso() })
+  },
+
+  async createPromptCard(
+    canvasId: string,
+    index: number,
+    position?: PromptCard['position'],
+  ) {
+    const card = createPromptCard(canvasId, index, position)
+    await db.promptCards.add(card)
+    await this.touchCanvas(canvasId)
+    return card
+  },
+
+  async savePromptCardCopy(card: PromptCard) {
+    await db.promptCards.add(card)
+    await this.touchCanvas(card.canvasId)
+    return card
+  },
+
+  async deletePromptCardCascade(id: string) {
+    const sessions = await db.chatSessions.where('promptCardId').equals(id).toArray()
+    await Promise.all([
+      db.promptCards.delete(id),
+      db.canvasEdges.where('sourceId').equals(id).delete(),
+      db.canvasEdges.where('targetId').equals(id).delete(),
+      db.promptVersions.where('promptCardId').equals(id).delete(),
+      db.chatSessions.where('promptCardId').equals(id).delete(),
+      db.compareRuns.where('promptCardId').equals(id).delete(),
+      sessions.length
+        ? db.chatMessages
+            .where('sessionId')
+            .anyOf(sessions.map((session) => session.id))
+            .delete()
+        : Promise.resolve(),
+    ])
+  },
+
+  async deleteCanvasCascade(id: string) {
+    await db.transaction(
+      'rw',
+      [
+        db.canvases,
+        db.promptCards,
+      db.canvasShapeNodes,
+      db.canvasEdges,
+      db.canvasStrokes,
+      db.canvasTextNodes,
+      db.promptVersions,
+        db.chatSessions,
+        db.chatMessages,
+        db.compareRuns,
+      ],
+      async () => {
+        const cards = await db.promptCards.where('canvasId').equals(id).toArray()
+        const cardIds = cards.map((card) => card.id)
+        const sessions = await db.chatSessions
+          .where('promptCardId')
+          .anyOf(cardIds.length ? cardIds : [''])
+          .toArray()
+        await Promise.all([
+          db.canvases.delete(id),
+          db.promptCards.where('canvasId').equals(id).delete(),
+          db.canvasShapeNodes.where('canvasId').equals(id).delete(),
+          db.canvasEdges.where('canvasId').equals(id).delete(),
+          db.canvasStrokes.where('canvasId').equals(id).delete(),
+          db.canvasTextNodes.where('canvasId').equals(id).delete(),
+          cardIds.length
+            ? db.promptVersions.where('promptCardId').anyOf(cardIds).delete()
+            : Promise.resolve(),
+          cardIds.length
+            ? db.chatSessions.where('promptCardId').anyOf(cardIds).delete()
+            : Promise.resolve(),
+          sessions.length
+            ? db.chatMessages
+                .where('sessionId')
+                .anyOf(sessions.map((session) => session.id))
+                .delete()
+            : Promise.resolve(),
+          cardIds.length
+            ? db.compareRuns.where('promptCardId').anyOf(cardIds).delete()
+            : Promise.resolve(),
+        ])
+      },
+    )
+  },
+
+  async exportWorkspace(): Promise<ExportPayload> {
+    return {
+      version: 3,
+      exportedAt: nowIso(),
+      canvases: await db.canvases.toArray(),
+      promptCards: await db.promptCards.toArray(),
+      canvasShapeNodes: await db.canvasShapeNodes.toArray(),
+      canvasEdges: await db.canvasEdges.toArray(),
+      canvasStrokes: await db.canvasStrokes.toArray(),
+      canvasTextNodes: await db.canvasTextNodes.toArray(),
+      promptVersions: await db.promptVersions.toArray(),
+      providerConfigs: await db.providerConfigs.toArray(),
+      chatSessions: await db.chatSessions.toArray(),
+      chatMessages: await db.chatMessages.toArray(),
+      compareRuns: await db.compareRuns.toArray(),
+    }
+  },
+
+  async importWorkspace(payload: ExportPayload) {
+    if (payload.version !== 1 && payload.version !== 2 && payload.version !== 3) {
+      throw new Error('Unsupported file')
+    }
+    await db.transaction(
+      'rw',
+      [
+        db.canvases,
+        db.promptCards,
+        db.canvasShapeNodes,
+        db.canvasEdges,
+        db.canvasStrokes,
+        db.canvasTextNodes,
+        db.promptVersions,
+        db.providerConfigs,
+        db.chatSessions,
+        db.chatMessages,
+        db.compareRuns,
+      ],
+      async () => {
+        await Promise.all([
+          db.canvases.clear(),
+          db.promptCards.clear(),
+          db.canvasShapeNodes.clear(),
+          db.canvasEdges.clear(),
+          db.canvasStrokes.clear(),
+          db.canvasTextNodes.clear(),
+          db.promptVersions.clear(),
+          db.providerConfigs.clear(),
+          db.chatSessions.clear(),
+          db.chatMessages.clear(),
+          db.compareRuns.clear(),
+        ])
+
+        await Promise.all([
+          db.canvases.bulkPut(payload.canvases ?? []),
+          db.promptCards.bulkPut(payload.promptCards ?? []),
+          db.canvasShapeNodes.bulkPut(payload.canvasShapeNodes ?? []),
+          db.canvasEdges.bulkPut(payload.canvasEdges ?? []),
+          db.canvasStrokes.bulkPut(payload.canvasStrokes ?? []),
+          db.canvasTextNodes.bulkPut(payload.canvasTextNodes ?? []),
+          db.promptVersions.bulkPut(payload.promptVersions ?? []),
+          db.providerConfigs.bulkPut(payload.providerConfigs ?? []),
+          db.chatSessions.bulkPut(payload.chatSessions ?? []),
+          db.chatMessages.bulkPut(payload.chatMessages ?? []),
+          db.compareRuns.bulkPut(payload.compareRuns ?? []),
+        ])
+      },
+    )
+  },
+
+  async listCanvasesByUpdatedAt() {
+    return db.canvases.reverse().sortBy('updatedAt')
+  },
+
+  async listPromptCardsByCanvas(canvasId: string) {
+    return db.promptCards.where('canvasId').equals(canvasId).sortBy('updatedAt')
+  },
+
+  async listProvidersByUpdatedAt() {
+    return db.providerConfigs.reverse().sortBy('updatedAt')
+  },
+}

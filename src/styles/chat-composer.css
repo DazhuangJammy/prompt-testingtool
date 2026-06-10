@@ -1,0 +1,215 @@
+.composer {
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  position: relative;
+}
+
+.composer-input-surface {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 116px;
+  padding: 14px 14px 52px;
+  width: 100%;
+}
+
+.composer-input-surface:focus-within {
+  border-color: var(--line-strong);
+  outline: 1px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.composer textarea {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  flex: 1;
+  min-height: 42px;
+  min-width: 0;
+  outline: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.composer-toolbar {
+  align-items: center;
+  bottom: 18px;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  left: 18px;
+  pointer-events: none;
+  position: absolute;
+  right: 18px;
+}
+
+.composer-tool-group,
+.composer-status {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  pointer-events: auto;
+}
+
+.composer-tool-group input[type='file'] {
+  display: none;
+}
+
+.composer-status {
+  color: var(--muted);
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.composer-status span {
+  white-space: nowrap;
+}
+
+.send-button {
+  background: var(--text);
+  border-color: var(--text);
+  border-radius: 999px;
+  color: var(--bg);
+}
+
+.send-button:hover {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.composer-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.composer-attachments {
+  margin: -4px 0 2px;
+}
+
+.attachment-pill {
+  align-items: center;
+  background: color-mix(in srgb, var(--ok) 14%, var(--surface));
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ok);
+  display: inline-flex;
+  font-size: 12px;
+  gap: 6px;
+  min-height: 28px;
+  max-width: 100%;
+  padding: 0 8px;
+}
+
+.attachment-pill svg {
+  flex: 0 0 auto;
+  height: 14px;
+  width: 14px;
+}
+
+.attachment-pill span {
+  color: inherit;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-pill small {
+  color: var(--muted);
+  flex: 0 0 auto;
+  font-size: 11px;
+}
+
+.attachment-pill button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  height: 20px;
+  justify-content: center;
+  padding: 0;
+  width: 20px;
+}
+
+.attachment-pill button:hover {
+  color: var(--text);
+}
+
+.composer-error {
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.composer-menu-shell {
+  position: relative;
+}
+
+.composer-menu {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  bottom: 38px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 2px;
+  left: 0;
+  min-width: min(300px, calc(100vw - 36px));
+  padding: 6px;
+  position: absolute;
+  z-index: 25;
+}
+
+.composer-menu button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  gap: 2px;
+  grid-template-columns: minmax(52px, auto) 1fr;
+  min-height: 38px;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.composer-menu button:hover,
+.composer-menu button.is-active {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.composer-menu span {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.composer-menu small {
+  color: var(--muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prompt-mode-menu {
+  min-width: 160px;
+}
+
+.prompt-mode-menu button {
+  grid-template-columns: 1fr auto;
+}

@@ -1,0 +1,131 @@
+.app-shell {
+  background: var(--bg);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  height: 100vh;
+  overflow: hidden;
+  width: 100vw;
+}
+
+.sidebar,
+.chat-panel {
+  background: var(--panel);
+  border-color: var(--line);
+  border-style: solid;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-width: 0;
+  position: relative;
+  transition: width 0.16s;
+  width: var(--panel-width, 248px);
+  z-index: 5;
+}
+
+.sidebar {
+  border-width: 0 1px 0 0;
+}
+
+.chat-panel {
+  border-width: 0 0 0 1px;
+  width: var(--panel-width, 360px);
+}
+
+.sidebar.is-collapsed,
+.chat-panel.is-collapsed {
+  width: 48px;
+}
+
+.sidebar-head,
+.panel-head {
+  border-bottom: 1px solid var(--line);
+  height: 48px;
+  padding: 0 10px;
+}
+
+.panel-resizer {
+  background: transparent;
+  border: 0;
+  bottom: 0;
+  cursor: col-resize;
+  padding: 0;
+  position: absolute;
+  top: 0;
+  width: 7px;
+  z-index: 10;
+}
+
+.panel-resizer:hover {
+  background: color-mix(in srgb, var(--line-strong) 38%, transparent);
+}
+
+.panel-resizer.is-right {
+  right: -4px;
+}
+
+.panel-resizer.is-left {
+  left: -4px;
+}
+
+.is-resizing-panel {
+  cursor: col-resize;
+  user-select: none;
+}
+
+.workspace {
+  background: var(--canvas);
+  display: grid;
+  grid-template-rows: 48px 1fr;
+  height: 100vh;
+  min-width: 0;
+}
+
+.topbar {
+  backdrop-filter: blur(16px);
+  background: color-mix(in srgb, var(--panel) 86%, transparent);
+  border-bottom: 1px solid var(--line);
+  height: 48px;
+  padding: 0 10px;
+  z-index: 4;
+}
+
+.topbar-left,
+.topbar-actions {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+
+.flow-wrap {
+  min-height: 0;
+}
+
+.react-flow {
+  background: var(--canvas);
+}
+
+.react-flow__controls {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.react-flow__controls-button {
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+}
+
+.react-flow__controls-button:hover {
+  background: var(--panel-2);
+}
+
+.react-flow__minimap {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  overflow: hidden;
+}

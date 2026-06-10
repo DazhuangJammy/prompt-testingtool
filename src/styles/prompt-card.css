@@ -1,0 +1,377 @@
+.prompt-node {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  color: var(--text);
+  overflow: hidden;
+  width: 420px;
+}
+
+.prompt-node.is-selected {
+  border-color: var(--line-strong);
+}
+
+.prompt-node-head {
+  border-bottom: 1px solid var(--line);
+  height: 44px;
+  padding: 0 8px 0 10px;
+  position: relative;
+}
+
+.prompt-drag-handle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--faint);
+  cursor: grab;
+  display: flex;
+  height: 30px;
+  justify-content: center;
+  padding: 0;
+  width: 20px;
+}
+
+.prompt-drag-handle:hover {
+  color: var(--text);
+}
+
+.prompt-drag-handle:active {
+  cursor: grabbing;
+}
+
+.prompt-title {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text);
+  flex: 1 1 auto;
+  font-weight: 520;
+  height: 30px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 8px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.prompt-title-button {
+  border: 1px solid transparent;
+  cursor: grab;
+}
+
+.prompt-title-button:hover {
+  background: var(--panel-2);
+}
+
+.prompt-title-button:active {
+  cursor: grabbing;
+}
+
+.prompt-title:focus {
+  background: var(--panel-2);
+}
+
+.prompt-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.prompt-actions .icon-button {
+  height: 28px;
+  min-width: 28px;
+  width: 28px;
+}
+
+.copy-toast {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1;
+  padding: 5px 8px;
+  position: absolute;
+  right: 42px;
+  top: 38px;
+  white-space: nowrap;
+  z-index: 3;
+}
+
+.prompt-import-panel {
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+}
+
+.prompt-import-head,
+.prompt-import-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.prompt-import-head span {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 520;
+}
+
+.prompt-import-panel textarea {
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: 12px;
+  height: 160px;
+  line-height: 1.55;
+  padding: 10px;
+  width: 100%;
+}
+
+.prompt-import-actions {
+  justify-content: flex-end;
+}
+
+.prompt-import-actions button {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  height: 28px;
+  padding: 0 10px;
+}
+
+.prompt-import-actions button:hover:not(:disabled) {
+  border-color: var(--line-strong);
+}
+
+.prompt-import-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.prompt-preview-backdrop {
+  align-items: center;
+  background: color-mix(in srgb, var(--bg) 74%, transparent);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 32px;
+  position: fixed;
+  z-index: 80;
+}
+
+.prompt-preview-dialog {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--panel) 98%, var(--surface)),
+      var(--panel)
+    );
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.45);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  max-height: min(760px, calc(100vh - 64px));
+  max-width: min(860px, calc(100vw - 64px));
+  overflow: hidden;
+  width: 760px;
+}
+
+.prompt-preview-head {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 14px 16px;
+}
+
+.prompt-preview-head > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.prompt-preview-head span {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.prompt-preview-head strong {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 560;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prompt-preview-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.prompt-preview-body.markdown-preview {
+  background: color-mix(in srgb, var(--surface) 78%, var(--panel));
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.78;
+  max-height: none;
+  min-height: 360px;
+  overflow: auto;
+  padding: 26px 34px 34px;
+}
+
+.prompt-preview-body.markdown-preview h1 {
+  border-bottom: 1px solid var(--line);
+  font-size: 20px;
+  margin: 30px 0 14px;
+  padding-bottom: 9px;
+}
+
+.prompt-preview-body.markdown-preview h2 {
+  color: var(--text);
+  font-size: 16px;
+  margin: 24px 0 10px;
+}
+
+.prompt-preview-body.markdown-preview p,
+.prompt-preview-body.markdown-preview ul,
+.prompt-preview-body.markdown-preview ol {
+  margin-bottom: 14px;
+}
+
+.section-stack {
+  max-height: 640px;
+  overflow: auto;
+}
+
+.section-accordion {
+  border-bottom: 1px solid var(--line);
+}
+
+.section-accordion:last-child {
+  border-bottom: 0;
+}
+
+.section-accordion-head {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  font-size: 12px;
+  gap: 7px;
+  height: 36px;
+  padding: 0 10px;
+  text-align: left;
+  width: 100%;
+}
+
+.section-accordion-head:hover,
+.section-accordion:not(.is-collapsed) .section-accordion-head {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.section-accordion-head svg {
+  flex-shrink: 0;
+  height: 14px;
+  width: 14px;
+}
+
+.section-accordion-head span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.section-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+}
+
+.section-editor > textarea {
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: 12px;
+  height: 132px;
+  line-height: 1.55;
+  padding: 10px;
+  width: 100%;
+}
+
+.workflow-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.workflow-head {
+  color: var(--muted);
+  font-size: 12px;
+  height: 30px;
+}
+
+.workflow-step {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: auto 1fr auto;
+  padding: 8px;
+}
+
+.workflow-step .drag-handle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--faint);
+  cursor: grab;
+  display: flex;
+  height: 28px;
+  justify-content: center;
+  width: 24px;
+}
+
+.workflow-step input {
+  border-color: transparent;
+  height: 28px;
+  padding: 0 7px;
+}
+
+.workflow-step textarea {
+  background: var(--panel);
+  font-family: var(--mono);
+  font-size: 12px;
+  grid-column: 1 / -1;
+  height: 92px;
+  line-height: 1.5;
+  padding: 8px;
+}
+
+.markdown-preview {
+  background: var(--surface);
+  max-height: 260px;
+  min-height: 96px;
+  overflow: auto;
+  padding: 12px;
+}
