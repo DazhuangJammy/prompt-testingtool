@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { hideTooltip, showTooltip } from '@/shared/ui/tooltip'
 
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -7,21 +7,26 @@ interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   active?: boolean
 }
 
-export function IconButton({
-  icon,
-  label,
-  active,
-  className = '',
-  onBlur,
-  onClick,
-  onFocus,
-  onMouseEnter,
-  onMouseLeave,
-  onPointerDown,
-  ...props
-}: IconButtonProps) {
+export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
+function IconButton(
+  {
+    icon,
+    label,
+    active,
+    className = '',
+    onBlur,
+    onClick,
+    onFocus,
+    onMouseEnter,
+    onMouseLeave,
+    onPointerDown,
+    ...props
+  },
+  ref,
+) {
   return (
     <button
+      ref={ref}
       type="button"
       className={`icon-button ${active ? 'is-active' : ''} ${className}`}
       aria-label={label}
@@ -55,4 +60,4 @@ export function IconButton({
       {icon}
     </button>
   )
-}
+})

@@ -78,6 +78,23 @@
   z-index: 9999;
 }
 
+.action-toast {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 9px;
+  left: 50%;
+  position: fixed;
+  top: 14px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  z-index: 10000;
+}
+
 .file-button input {
   display: none;
 }

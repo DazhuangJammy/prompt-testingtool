@@ -334,7 +334,7 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
           />
         </div>
         {toastState !== 'idle' && (
-          <div className="copy-toast">
+          <div className="action-toast">
             {toastState === 'copied' ? '复制成功' : '导入成功'}
           </div>
         )}

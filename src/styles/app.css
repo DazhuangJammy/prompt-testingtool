@@ -1,6 +1,8 @@
 @import './shared-ui.css';
 @import './layout.css';
 @import './sidebar.css';
+@import './sidebar-version.css';
+@import './sidebar-topic-menu.css';
 @import './canvas-elements.css';
 @import './prompt-card.css';
 @import './prompt-markdown-card.css';

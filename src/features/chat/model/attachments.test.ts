@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import type { ProviderConfig } from '@/shared/types'
 import {
   buildAttachmentContentParts,
-  estimateChatTokenCount,
   fallbackMimeType,
   getAttachmentCapability,
   getFileAttachmentError,
@@ -146,20 +145,5 @@ describe('chat attachments model', () => {
     expect(fallbackMimeType('note.md')).toBe('text/markdown')
     expect(fallbackMimeType('note.txt')).toBe('text/plain')
     expect(fallbackMimeType('archive.bin')).toBe('application/octet-stream')
-  })
-
-  it('estimates text and image token usage', () => {
-    expect(
-      estimateChatTokenCount('hello', [
-        {
-          id: 'image',
-          kind: 'image',
-          name: 'shot.png',
-          mimeType: 'image/png',
-          size: 1,
-          dataUrl: 'data:image/png;base64,a',
-        },
-      ]),
-    ).toBeGreaterThan(250)
   })
 })

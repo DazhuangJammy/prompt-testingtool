@@ -160,17 +160,6 @@ export function formatAttachmentSize(size: number) {
   return `${Math.round(size / 1024 / 102.4) / 10} MB`
 }
 
-export function estimateChatTokenCount(
-  text: string,
-  attachments: ChatAttachment[] = [],
-) {
-  const textSize = `${text}${attachments.map((item) => item.text ?? '').join('')}`
-  const cjkCount = [...textSize].filter((char) => /[\u4e00-\u9fff]/.test(char)).length
-  const nonCjkCount = Math.max(0, textSize.length - cjkCount)
-  const imageEstimate = attachments.filter((item) => item.kind === 'image').length * 256
-  return Math.max(0, Math.ceil(cjkCount * 1.3 + nonCjkCount / 4 + imageEstimate))
-}
-
 function providerSignature(provider?: ProviderConfig) {
   return `${provider?.name ?? ''} ${provider?.baseUrl ?? ''} ${
     provider?.model ?? ''

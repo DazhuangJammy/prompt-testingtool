@@ -109,6 +109,60 @@
   width: 24px;
 }
 
+.message-export-menu {
+  position: relative;
+}
+
+.message-export-popover {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 2px;
+  min-width: 220px;
+  padding: 6px;
+  position: fixed;
+  width: 244px;
+  z-index: 1000;
+}
+
+.message-export-popover button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  height: 34px;
+  justify-content: flex-start;
+  min-width: 0;
+  padding: 0 8px;
+  text-align: left;
+}
+
+.message-export-popover button:hover {
+  background: var(--panel-2);
+}
+
+.message-export-popover span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-export-error {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
+  border-radius: 7px;
+  color: var(--danger);
+  font-size: 12px;
+  padding: 8px 10px;
+}
+
 .message.is-user {
   align-self: flex-end;
 }

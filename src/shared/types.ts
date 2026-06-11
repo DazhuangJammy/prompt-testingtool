@@ -106,11 +106,14 @@ export interface ProviderConfig {
 
 export interface ChatSession {
   id: string
-  promptCardId: string
+  canvasId?: string
+  promptCardId?: string
   title: string
   createdAt: string
   updatedAt: string
 }
+
+export type ChatTopic = ChatSession
 
 export interface ChatMessage {
   id: string
@@ -162,7 +165,7 @@ export interface CompareRun {
 }
 
 export interface ExportPayload {
-  version: 1 | 2 | 3
+  version: 1 | 2 | 3 | 4
   exportedAt: string
   canvases: Canvas[]
   promptCards: PromptCard[]

@@ -1,51 +1,156 @@
 import {
+  Bot,
+  ChevronDown,
+  ChevronRight,
   Download,
+  Folder,
+  FolderOpen,
+  Moon,
+  PanelsTopLeft,
+  MoreHorizontal,
   Pencil,
   FileInput,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
+  Settings,
+  Sun,
   Trash2,
 } from 'lucide-react'
-import type { ChangeEvent, CSSProperties, PointerEvent } from 'react'
+import type {
+  ChangeEvent,
+  CSSProperties,
+  PointerEvent as ReactPointerEvent,
+} from 'react'
+import { useEffect, useState } from 'react'
 import { IconButton } from '@/shared/ui/IconButton'
 import { hideTooltip, showTooltip } from '@/shared/ui/tooltip'
-import type { Canvas } from '@/shared/types'
+import type { Canvas, ChatSession, ThemeMode } from '@/shared/types'
 import { AppVersionBadge } from './components/AppVersionBadge'
+import { TopicActionsMenu } from './components/TopicActionsMenu'
+import type { ChatSessionExportAction } from './sidebar.types'
 
 interface SidebarProps {
   canvases: Canvas[]
   activeCanvasId?: string
+  activeSessionId?: string
   collapsed: boolean
+  theme: ThemeMode
   onToggle: () => void
+  onToggleTheme: () => void
   onSelect: (id: string) => void
+  onSelectSession: (id?: string) => void
+  sessions: ChatSession[]
   onCreate: () => void
+  onCreateSession: (canvasId?: string) => void
   onRename: (id: string, title: string) => void
+  onRenameSession: (session: ChatSession) => void
   onDelete: (id: string) => void
+  onDeleteSession: (session: ChatSession) => void
+  onExportSession: (
+    session: ChatSession,
+    action: ChatSessionExportAction,
+  ) => Promise<void>
   onExport: () => void
   onImport: (file: File) => void
-  onResizeStart: (event: PointerEvent) => void
+  onOpenSettings: () => void
+  onResizeStart: (event: ReactPointerEvent) => void
   width: number
 }
 
 export function Sidebar({
   canvases,
   activeCanvasId,
+  activeSessionId,
   collapsed,
+  theme,
   onToggle,
+  onToggleTheme,
   onSelect,
+  onSelectSession,
+  sessions,
   onCreate,
+  onCreateSession,
   onRename,
+  onRenameSession,
   onDelete,
+  onDeleteSession,
+  onExportSession,
   onExport,
   onImport,
+  onOpenSettings,
   onResizeStart,
   width,
 }: SidebarProps) {
-  const handleImport = (event: ChangeEvent<HTMLInputElement>) => {
+  const effectiveSessionId = pickSessionId(sessions, activeSessionId)
+  const [collapsedCanvasIds, setCollapsedCanvasIds] = useState<Set<string>>(
+    () => new Set(),
+  )
+  const [menuCanvasId, setMenuCanvasId] = useState<string>()
+  const [toastMessage, setToastMessage] = useState('')
+
+  useEffect(() => {
+    if (!toastMessage) return
+    const timer = window.setTimeout(() => setToastMessage(''), 1400)
+    return () => window.clearTimeout(timer)
+  }, [toastMessage])
+
+  useEffect(() => {
+    if (!menuCanvasId) return
+
+    const close = (event: globalThis.PointerEvent) => {
+      if (
+        event.target instanceof Element &&
+        event.target.closest('.project-menu-wrap')
+      ) {
+        return
+      }
+      setMenuCanvasId(undefined)
+    }
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuCanvasId(undefined)
+    }
+
+    document.addEventListener('pointerdown', close)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', close)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [menuCanvasId])
+
+  const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file) onImport(file)
+    if (file) {
+      await onImport(file)
+      setToastMessage('导入成功')
+    }
     event.target.value = ''
+  }
+
+  const handleExport = async () => {
+    await onExport()
+    setToastMessage('导出成功')
+  }
+
+  const toggleCanvas = (canvasId: string) => {
+    setCollapsedCanvasIds((current) => {
+      const next = new Set(current)
+      if (next.has(canvasId)) next.delete(canvasId)
+      else next.add(canvasId)
+      return next
+    })
+  }
+
+  const selectAndToggleCanvas = (canvasId: string) => {
+    onSelect(canvasId)
+    toggleCanvas(canvasId)
+  }
+
+  const renameCanvas = (canvas: Canvas) => {
+    const next = prompt('重命名工作台', canvas.title)
+    if (next) onRename(canvas.id, next)
+    setMenuCanvasId(undefined)
   }
 
   return (
@@ -53,6 +158,28 @@ export function Sidebar({
       className={`sidebar ${collapsed ? 'is-collapsed' : ''}`}
       style={{ '--panel-width': `${width}px` } as CSSProperties}
     >
+      <nav className="rail-nav" aria-label="功能区">
+        <IconButton icon={<PanelsTopLeft />} label="工作台" active />
+        <IconButton icon={<Bot />} label="智能体" disabled />
+        <IconButton
+          className="rail-theme"
+          icon={theme === 'dark' ? <Sun /> : <Moon />}
+          label="主题"
+          onClick={onToggleTheme}
+        />
+        <IconButton
+          className="rail-settings"
+          icon={<Settings />}
+          label="设置"
+          onClick={onOpenSettings}
+        />
+        <IconButton
+          className="rail-toggle"
+          icon={collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+          label={collapsed ? '展开' : '收起'}
+          onClick={onToggle}
+        />
+      </nav>
       <div className="sidebar-head">
         {!collapsed && (
           <div className="app-brand">
@@ -65,63 +192,174 @@ export function Sidebar({
             </div>
           </div>
         )}
-        <IconButton
-          icon={collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
-          label={collapsed ? '展开' : '收起'}
-          onClick={onToggle}
-        />
       </div>
 
       {!collapsed && (
         <>
-          <div className="sidebar-actions">
-            <IconButton icon={<Plus />} label="新建" onClick={onCreate} />
-            <label
-              className="icon-button file-button"
-              data-tooltip="导入"
-              onBlur={hideTooltip}
-              onClick={hideTooltip}
-              onFocus={(event) => showTooltip(event.currentTarget, '导入')}
-              onMouseEnter={(event) => showTooltip(event.currentTarget, '导入')}
-              onMouseLeave={hideTooltip}
-              onPointerDown={hideTooltip}
-            >
-              <FileInput />
-              <input accept="application/json" type="file" onChange={handleImport} />
-            </label>
-            <IconButton icon={<Download />} label="导出" onClick={onExport} />
-          </div>
-
-          <div className="canvas-list">
-            {canvases.map((canvas) => (
-              <div
-                className={`canvas-row ${
-                  canvas.id === activeCanvasId ? 'is-active' : ''
-                }`}
-                key={canvas.id}
-              >
-                <button
-                  type="button"
-                  onClick={() => onSelect(canvas.id)}
+          <section className="sidebar-section project-tree-section">
+            <div className="sidebar-section-head">
+              <span>工作台</span>
+              <div className="sidebar-section-actions">
+                <label
+                  className="icon-button file-button"
+                  data-tooltip="导入"
+                  onBlur={hideTooltip}
+                  onClick={hideTooltip}
+                  onFocus={(event) => showTooltip(event.currentTarget, '导入')}
+                  onMouseEnter={(event) => showTooltip(event.currentTarget, '导入')}
+                  onMouseLeave={hideTooltip}
+                  onPointerDown={hideTooltip}
                 >
-                  {canvas.title}
-                </button>
+                  <FileInput />
+                  <input
+                    accept="application/json"
+                    type="file"
+                    onChange={(event) => void handleImport(event)}
+                  />
+                </label>
                 <IconButton
-                  icon={<Pencil />}
-                  label="命名"
-                  onClick={() => {
-                    const next = prompt('重命名', canvas.title)
-                    if (next) onRename(canvas.id, next)
-                  }}
+                  icon={<Download />}
+                  label="导出"
+                  onClick={() => void handleExport()}
                 />
-                <IconButton
-                  icon={<Trash2 />}
-                  label="删除"
-                  onClick={() => onDelete(canvas.id)}
-                />
+                <IconButton icon={<Plus />} label="新建工作台" onClick={onCreate} />
               </div>
-            ))}
-          </div>
+            </div>
+            {toastMessage && <div className="action-toast">{toastMessage}</div>}
+
+            <div className="project-tree">
+              {canvases.map((canvas) => {
+                const canvasSessions = sessions.filter(
+                  (session) => session.canvasId === canvas.id,
+                )
+                const isCollapsed = collapsedCanvasIds.has(canvas.id)
+                const active = canvas.id === activeCanvasId
+                const hasActiveSession = canvasSessions.some(
+                  (session) => session.id === effectiveSessionId,
+                )
+
+                return (
+                  <div className="project-group" key={canvas.id}>
+                    <div
+                      className={`project-row ${
+                        active && !hasActiveSession ? 'is-active' : ''
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        className="project-main"
+                        onClick={() => selectAndToggleCanvas(canvas.id)}
+                        title={canvas.title}
+                      >
+                        {isCollapsed ? <Folder /> : <FolderOpen />}
+                        <span className="project-title">{canvas.title}</span>
+                        <span className="project-chevron" aria-hidden="true">
+                          {isCollapsed ? <ChevronRight /> : <ChevronDown />}
+                        </span>
+                      </button>
+                      <div className="project-row-actions">
+                        <div className="project-menu-wrap">
+                          <IconButton
+                            icon={<MoreHorizontal />}
+                            label="工作台操作"
+                            active={menuCanvasId === canvas.id}
+                            onClick={() =>
+                              setMenuCanvasId((id) =>
+                                id === canvas.id ? undefined : canvas.id,
+                              )
+                            }
+                          />
+                          {menuCanvasId === canvas.id && (
+                            <div className="project-menu">
+                              <button type="button" onClick={() => renameCanvas(canvas)}>
+                                <Pencil />
+                                <span>重命名工作台</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setMenuCanvasId(undefined)
+                                  onDelete(canvas.id)
+                                }}
+                              >
+                                <Trash2 />
+                                <span>删除工作台</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        <IconButton
+                          icon={<Plus />}
+                          label="新建话题"
+                          onClick={() => onCreateSession(canvas.id)}
+                        />
+                      </div>
+                    </div>
+                    {!isCollapsed && (
+                      <div className="project-topic-list">
+                        {canvasSessions.length ? (
+                          canvasSessions.map((session) => (
+                            <div
+                              className={`topic-row ${
+                                session.id === effectiveSessionId ? 'is-active' : ''
+                              }`}
+                              key={session.id}
+                            >
+                              <button
+                                type="button"
+                                title={session.title}
+                                onClick={() => {
+                                  onSelect(canvas.id)
+                                  onSelectSession(session.id)
+                                }}
+                              >
+                                {session.title}
+                              </button>
+                              <TopicActionsMenu
+                                session={session}
+                                onRename={onRenameSession}
+                                onExport={(targetSession, action) => {
+                                  void onExportSession(targetSession, action)
+                                    .then(() => {
+                                      setToastMessage(
+                                        action.startsWith('copy')
+                                          ? '复制成功'
+                                          : '导出成功',
+                                      )
+                                    })
+                                    .catch((error: unknown) => {
+                                      setToastMessage(
+                                        error instanceof Error
+                                          ? error.message
+                                          : '导出失败',
+                                      )
+                                    })
+                                }}
+                              />
+                              <IconButton
+                                className="topic-delete-button"
+                                icon={<Trash2 />}
+                                label="删除话题"
+                                onClick={() => onDeleteSession(session)}
+                              />
+                            </div>
+                          ))
+                        ) : (
+                          <button
+                            type="button"
+                            className="topic-empty-row"
+                            onClick={() => onCreateSession(canvas.id)}
+                          >
+                            新建话题
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </section>
         </>
       )}
       {!collapsed && (
@@ -134,4 +372,8 @@ export function Sidebar({
       )}
     </aside>
   )
+}
+
+function pickSessionId(sessions: ChatSession[], id?: string) {
+  return sessions.some((session) => session.id === id) ? id : sessions[0]?.id
 }

@@ -1,12 +1,17 @@
 import { nowIso } from '@/shared/utils/time'
 import type { ChatSession } from '@/shared/types'
 
-export function createChatSession(promptCardId: string): ChatSession {
+export function createChatSession(
+  canvasId: string,
+  title = '测试',
+  promptCardId?: string,
+): ChatSession {
   const at = nowIso()
   return {
     id: crypto.randomUUID(),
+    canvasId,
     promptCardId,
-    title: '测试',
+    title,
     createdAt: at,
     updatedAt: at,
   }

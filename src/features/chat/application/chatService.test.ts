@@ -3,8 +3,11 @@ import { requestCompletion, requestCompletionStream } from '@/shared/api/ai'
 import { chatRepository } from '@/features/chat/infrastructure/chatRepository'
 import {
   clearChatSession,
+  createChatTopic,
+  deleteChatTopicAndPickNext,
   editChatMessage,
   ensureChatSession,
+  renameChatTopic,
   resendChatMessage,
   runPromptCompare,
   sendChatMessage,
@@ -21,12 +24,15 @@ vi.mock('@/features/chat/infrastructure/chatRepository', () => ({
     addMessage: vi.fn(),
     clearMessages: vi.fn(),
     createSession: vi.fn(),
+    deleteSessionCascade: vi.fn(),
     deleteMessagesAfter: vi.fn(),
+    getSession: vi.fn(),
     saveCompareRun: vi.fn(),
     savePromptVersion: vi.fn(),
     updateAssistantMessage: vi.fn(),
     updateMessageContent: vi.fn(),
     updateSessionAfterReply: vi.fn(),
+    updateSessionTitle: vi.fn(),
   },
 }))
 
@@ -58,18 +64,69 @@ const provider: ProviderConfig = {
 }
 
 describe('chat service', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(requestCompletion).mockReset()
+    vi.mocked(requestCompletionStream).mockReset()
+    vi.mocked(chatRepository.getSession).mockResolvedValue(undefined)
+  })
 
   it('uses existing session when provided', async () => {
-    await expect(ensureChatSession('card', 'session')).resolves.toBe('session')
+    await expect(ensureChatSession('canvas', 'session', 'card')).resolves.toBe(
+      'session',
+    )
     expect(chatRepository.createSession).not.toHaveBeenCalled()
   })
 
   it('creates a session when missing', async () => {
-    const sessionId = await ensureChatSession('card')
+    const sessionId = await ensureChatSession('canvas', undefined, 'card')
 
     expect(sessionId).toBeTruthy()
-    expect(chatRepository.createSession).toHaveBeenCalled()
+    expect(chatRepository.createSession).toHaveBeenCalledWith(
+      expect.objectContaining({ canvasId: 'canvas', promptCardId: 'card' }),
+    )
+  })
+
+  it('creates and renames chat topics through session records', async () => {
+    const topic = await createChatTopic('canvas', '  方案讨论  ', 'card')
+    await renameChatTopic(topic.id, '新标题')
+
+    expect(topic.canvasId).toBe('canvas')
+    expect(topic.promptCardId).toBe('card')
+    expect(topic.title).toBe('方案讨论')
+    expect(chatRepository.createSession).toHaveBeenCalledWith(topic)
+    expect(chatRepository.updateSessionTitle).toHaveBeenCalledWith(
+      topic.id,
+      '新标题',
+    )
+  })
+
+  it('deletes the active topic and picks the next available topic', async () => {
+    await expect(
+      deleteChatTopicAndPickNext({
+        activeSessionId: 'a',
+        sessions: [
+          { id: 'a', updatedAt: '2' },
+          { id: 'b', updatedAt: '1' },
+        ],
+        sessionId: 'a',
+      }),
+    ).resolves.toBe('b')
+
+    expect(chatRepository.deleteSessionCascade).toHaveBeenCalledWith('a')
+  })
+
+  it('keeps the active topic when deleting another topic', async () => {
+    await expect(
+      deleteChatTopicAndPickNext({
+        activeSessionId: 'a',
+        sessions: [
+          { id: 'a', updatedAt: '2' },
+          { id: 'b', updatedAt: '1' },
+        ],
+        sessionId: 'b',
+      }),
+    ).resolves.toBe('a')
   })
 
   it('sends chat messages and updates session', async () => {
@@ -80,6 +137,14 @@ describe('chat service', () => {
         return 'assistant'
       },
     )
+    vi.mocked(chatRepository.getSession).mockResolvedValue({
+      id: 'session',
+      canvasId: 'canvas',
+      promptCardId: 'card',
+      title: '自定义标题',
+      createdAt: 'now',
+      updatedAt: 'now',
+    })
     const history: ChatMessage[] = []
 
     await sendChatMessage({
@@ -102,7 +167,7 @@ describe('chat service', () => {
     )
     expect(chatRepository.updateSessionAfterReply).toHaveBeenCalledWith(
       'session',
-      'hello',
+      'card',
     )
     expect(requestCompletionStream).toHaveBeenCalledWith(
       provider,
@@ -110,6 +175,83 @@ describe('chat service', () => {
       expect.any(Object),
       'on',
       undefined,
+    )
+  })
+
+  it('names default chat topics with the active provider after a reply', async () => {
+    vi.mocked(requestCompletionStream).mockImplementation(
+      async (_provider, _messages, handlers) => {
+        handlers.onText('assistant')
+        return 'assistant'
+      },
+    )
+    vi.mocked(chatRepository.getSession).mockResolvedValue({
+      id: 'session',
+      canvasId: 'canvas',
+      promptCardId: 'card',
+      title: '新话题',
+      createdAt: 'now',
+      updatedAt: 'now',
+    })
+    vi.mocked(requestCompletion).mockResolvedValue('标题：整理课程表。')
+
+    await sendChatMessage({
+      card,
+      history: [],
+      provider,
+      promptInjectionMode: 'system',
+      sessionId: 'session',
+      text: '帮我整理一下明天的课程安排',
+      thinkingMode: 'off',
+    })
+
+    expect(requestCompletion).toHaveBeenCalledWith(
+      provider,
+      expect.arrayContaining([
+        expect.objectContaining({ role: 'system' }),
+        expect.objectContaining({
+          role: 'user',
+          content: '帮我整理一下明天的课程安排',
+        }),
+      ]),
+      'off',
+    )
+    expect(chatRepository.updateSessionTitle).toHaveBeenCalledWith(
+      'session',
+      '整理课程表',
+    )
+  })
+
+  it('falls back to user text when topic naming request fails', async () => {
+    vi.mocked(requestCompletionStream).mockImplementation(
+      async (_provider, _messages, handlers) => {
+        handlers.onText('assistant')
+        return 'assistant'
+      },
+    )
+    vi.mocked(chatRepository.getSession).mockResolvedValue({
+      id: 'session',
+      canvasId: 'canvas',
+      promptCardId: 'card',
+      title: '测试',
+      createdAt: 'now',
+      updatedAt: 'now',
+    })
+    vi.mocked(requestCompletion).mockRejectedValue(new Error('naming failed'))
+
+    await sendChatMessage({
+      card,
+      history: [],
+      provider,
+      promptInjectionMode: 'system',
+      sessionId: 'session',
+      text: '写一个关于乐高机器人的故事',
+      thinkingMode: 'off',
+    })
+
+    expect(chatRepository.updateSessionTitle).toHaveBeenCalledWith(
+      'session',
+      '写一个关于乐高机器人的故事',
     )
   })
 

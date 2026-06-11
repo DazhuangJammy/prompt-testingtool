@@ -20,6 +20,13 @@ export const chatRepository = {
     await db.chatSessions.add(session)
   },
 
+  async deleteSessionCascade(sessionId: string) {
+    await Promise.all([
+      db.chatMessages.where('sessionId').equals(sessionId).delete(),
+      db.chatSessions.delete(sessionId),
+    ])
+  },
+
   async saveCompareRun(run: CompareRun) {
     await db.compareRuns.add(run)
   },
@@ -28,10 +35,24 @@ export const chatRepository = {
     await db.promptVersions.add(version)
   },
 
-  async updateSessionAfterReply(sessionId: string, title: string) {
+  async updateSessionAfterReply(
+    sessionId: string,
+    promptCardId?: string,
+  ) {
     await db.chatSessions.update(sessionId, {
+      promptCardId,
       updatedAt: nowIso(),
-      title: title.slice(0, 20) || '测试',
+    })
+  },
+
+  async getSession(sessionId: string) {
+    return db.chatSessions.get(sessionId)
+  },
+
+  async updateSessionTitle(sessionId: string, title: string) {
+    await db.chatSessions.update(sessionId, {
+      title: title.trim() || '未命名话题',
+      updatedAt: nowIso(),
     })
   },
 
@@ -63,6 +84,23 @@ export const chatRepository = {
       .sortBy('updatedAt')
   },
 
+  async listSessionsByCanvas(canvasId: string) {
+    const cards = await db.promptCards.where('canvasId').equals(canvasId).toArray()
+    const cardIds = cards.map((card) => card.id)
+    const [canvasSessions, legacySessions] = await Promise.all([
+      db.chatSessions.where('canvasId').equals(canvasId).toArray(),
+      cardIds.length
+        ? db.chatSessions.where('promptCardId').anyOf(cardIds).toArray()
+        : Promise.resolve([] as ChatSession[]),
+    ])
+
+    return uniqueSessions([...canvasSessions, ...legacySessions])
+  },
+
+  async listSessionsByUpdatedAt() {
+    return db.chatSessions.reverse().sortBy('updatedAt')
+  },
+
   async listMessagesBySession(sessionId: string) {
     return db.chatMessages.where('sessionId').equals(sessionId).sortBy('createdAt')
   },
@@ -82,4 +120,9 @@ export const chatRepository = {
       .reverse()
       .sortBy('createdAt')
   },
+}
+
+function uniqueSessions(sessions: ChatSession[]) {
+  return Array.from(new Map(sessions.map((session) => [session.id, session])).values())
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
 }

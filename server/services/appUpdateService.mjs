@@ -7,6 +7,7 @@ import { promisify } from 'node:util'
 const execFileAsync = promisify(execFile)
 const root = join(fileURLToPath(new URL('../..', import.meta.url)))
 const timeout = 120_000
+const releaseUrl = 'https://github.com/DazhuangJammy/prompt-testingtool/releases'
 
 export async function checkUpdateStatus() {
   const [version, branch, currentCommit, remoteCommit] = await Promise.all([
@@ -23,7 +24,7 @@ export async function checkUpdateStatus() {
     currentCommit,
     remoteCommit,
     hasUpdate: Boolean(currentCommit && remoteCommit && currentCommit !== remoteCommit),
-    releaseUrl: 'https://github.com/DazhuangJammy/prompt-testingtool',
+    releaseUrl,
   }
 }
 

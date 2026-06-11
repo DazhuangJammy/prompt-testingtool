@@ -25,6 +25,7 @@ import {
 } from '@/features/chat/model/svgPreview'
 import type { ChatAttachment, ChatMessage } from '@/shared/types'
 import { IconButton } from '@/shared/ui/IconButton'
+import { MessageExportMenu } from './MessageExportMenu'
 
 interface MessageListProps {
   messages: ChatMessage[]
@@ -47,6 +48,24 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
     () => new Set(),
   )
   const [draft, setDraft] = useState('')
+  const [exportError, setExportError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+
+  useEffect(() => {
+    if (!successMessage) return
+    const timer = window.setTimeout(() => setSuccessMessage(''), 1400)
+    return () => window.clearTimeout(timer)
+  }, [successMessage])
+
+  const copyMessage = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content)
+      setSuccessMessage('复制成功')
+      setExportError('')
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : '复制失败')
+    }
+  }
 
   useEffect(() => {
     const ids = messages
@@ -94,6 +113,8 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
   return (
     <>
       <div className="message-list">
+        {exportError && <div className="message-export-error">{exportError}</div>}
+        {successMessage && <div className="action-toast">{successMessage}</div>}
         {messages.map((message) => {
           const isEditing = editingId === message.id
           const attachments = message.attachments ?? []
@@ -169,8 +190,18 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
                   <IconButton
                     icon={<Copy />}
                     label="复制"
-                    onClick={() => void navigator.clipboard.writeText(message.content)}
+                    onClick={() => void copyMessage(message.content)}
                   />
+                  {message.role === 'assistant' && (
+                    <MessageExportMenu
+                      message={message}
+                      onError={setExportError}
+                      onSuccess={(value) => {
+                        setSuccessMessage(value)
+                        setExportError('')
+                      }}
+                    />
+                  )}
                   {message.role === 'user' &&
                     (isEditing ? (
                       <>

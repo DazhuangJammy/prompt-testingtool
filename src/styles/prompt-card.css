@@ -85,22 +85,6 @@
   width: 28px;
 }
 
-.copy-toast {
-  background: var(--surface);
-  border: 1px solid var(--line-strong);
-  border-radius: 6px;
-  box-shadow: var(--shadow);
-  color: var(--text);
-  font-size: 12px;
-  line-height: 1;
-  padding: 5px 8px;
-  position: absolute;
-  right: 42px;
-  top: 38px;
-  white-space: nowrap;
-  z-index: 3;
-}
-
 .prompt-import-panel {
   background: var(--panel-2);
   border-bottom: 1px solid var(--line);

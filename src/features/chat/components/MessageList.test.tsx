@@ -1,11 +1,12 @@
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ChatMessage } from '@/shared/types'
 import { MessageList } from './MessageList'
 
 let root: Root | undefined
 let host: HTMLDivElement | undefined
+const writeTextMock = vi.fn()
 
 const imageMessage: ChatMessage = {
   id: 'message-1',
@@ -50,6 +51,15 @@ const streamingSvgMessage: ChatMessage = {
   createdAt: '2026-06-10T10:02:00.000Z',
 }
 
+const assistantMessage: ChatMessage = {
+  id: 'message-4',
+  sessionId: 'session-1',
+  role: 'assistant',
+  content: '可以导出',
+  status: 'complete',
+  createdAt: '2026-06-10T10:03:00.000Z',
+}
+
 function renderMessageList(messages: ChatMessage[]) {
   host = document.createElement('div')
   document.body.append(host)
@@ -74,6 +84,14 @@ afterEach(() => {
 })
 
 describe('MessageList', () => {
+  beforeEach(() => {
+    vi.stubGlobal('navigator', {
+      clipboard: {
+        writeText: writeTextMock,
+      },
+    })
+  })
+
   it('renders image-only user messages as clickable thumbnails', () => {
     renderMessageList([imageMessage])
 
@@ -141,5 +159,45 @@ describe('MessageList', () => {
     expect(image?.getAttribute('src')).toContain('data:image/svg+xml')
     expect(downloadButton?.disabled).toBe(true)
     expect(document.body.textContent).toContain('生成中')
+  })
+
+  it('shows export actions only for assistant messages', () => {
+    renderMessageList([imageMessage, assistantMessage])
+
+    const exportButtons = document.querySelectorAll<HTMLButtonElement>(
+      'button[aria-label="导出"]',
+    )
+
+    expect(exportButtons).toHaveLength(1)
+
+    act(() => {
+      exportButtons[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    const popover = document.body.querySelector<HTMLElement>(
+      '.message-export-popover',
+    )
+
+    expect(popover).toBeTruthy()
+    expect(popover?.parentElement).toBe(document.body)
+    expect(document.body.textContent).toContain('复制为纯文本')
+    expect(document.body.textContent).toContain('导出为 Markdown（包含思考）')
+    expect(document.body.textContent).toContain('导出为 Word')
+  })
+
+  it('shows success feedback after copying a message', async () => {
+    writeTextMock.mockResolvedValue(undefined)
+    renderMessageList([assistantMessage])
+
+    const copyButton = document.querySelector<HTMLButtonElement>(
+      'button[aria-label="复制"]',
+    )
+
+    await act(async () => {
+      copyButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(writeTextMock).toHaveBeenCalledWith('可以导出')
+    expect(document.body.textContent).toContain('复制成功')
   })
 })

@@ -21,8 +21,10 @@ interface ChatPanelProps {
   providers: ProviderConfig[]
   collapsed: boolean
   onResizeStart: (event: PointerEvent) => void
+  activeSessionId?: string
   onToggle: () => void
   onSelectProvider: (id: string) => void
+  onActiveSessionChange: (id?: string) => void
   width: number
 }
 
@@ -33,8 +35,10 @@ export function ChatPanel({
   providers,
   collapsed,
   onResizeStart,
+  activeSessionId,
   onToggle,
   onSelectProvider,
+  onActiveSessionChange,
   width,
 }: ChatPanelProps) {
   const [compareOpen, setCompareOpen] = useState(false)
@@ -44,6 +48,8 @@ export function ChatPanel({
     promptCards,
     providers,
     compareOpen,
+    activeSessionId,
+    onActiveSessionChange,
   )
   const disabled = !provider || !card
   const compareDisabled = promptCards.length < 2

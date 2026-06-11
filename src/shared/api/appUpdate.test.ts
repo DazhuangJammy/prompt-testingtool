@@ -16,7 +16,7 @@ describe('app update api helpers', () => {
           currentCommit: 'a',
           remoteCommit: 'b',
           hasUpdate: true,
-          releaseUrl: 'https://github.com/DazhuangJammy/prompt-testingtool',
+          releaseUrl: 'https://github.com/DazhuangJammy/prompt-testingtool/releases',
         }),
       ),
     )

@@ -62,6 +62,31 @@ class PromptCanvasDatabase extends Dexie {
       chatMessages: 'id, sessionId, createdAt, promptVersionId',
       compareRuns: 'id, promptCardId, createdAt',
     })
+    this.version(4)
+      .stores({
+        canvases: 'id, updatedAt',
+        promptCards: 'id, canvasId, updatedAt',
+        canvasShapeNodes: 'id, canvasId, updatedAt',
+        canvasEdges: 'id, canvasId, sourceId, targetId, updatedAt',
+        canvasStrokes: 'id, canvasId, updatedAt',
+        canvasTextNodes: 'id, canvasId, updatedAt',
+        promptVersions: 'id, promptCardId, createdAt',
+        providerConfigs: 'id, updatedAt',
+        chatSessions: 'id, canvasId, promptCardId, updatedAt',
+        chatMessages: 'id, sessionId, createdAt, promptVersionId',
+        compareRuns: 'id, promptCardId, createdAt',
+      })
+      .upgrade(async (transaction) => {
+        const promptCards = transaction.table<PromptCard, string>('promptCards')
+        const chatSessions = transaction.table<ChatSession, string>('chatSessions')
+        const cards = await promptCards.toArray()
+        const canvasIdByCardId = new Map(cards.map((card) => [card.id, card.canvasId]))
+
+        await chatSessions.toCollection().modify((session) => {
+          if (session.canvasId || !session.promptCardId) return
+          session.canvasId = canvasIdByCardId.get(session.promptCardId)
+        })
+      })
   }
 }
 

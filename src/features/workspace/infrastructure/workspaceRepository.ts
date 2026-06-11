@@ -42,20 +42,12 @@ export const workspaceRepository = {
   },
 
   async deletePromptCardCascade(id: string) {
-    const sessions = await db.chatSessions.where('promptCardId').equals(id).toArray()
     await Promise.all([
       db.promptCards.delete(id),
       db.canvasEdges.where('sourceId').equals(id).delete(),
       db.canvasEdges.where('targetId').equals(id).delete(),
       db.promptVersions.where('promptCardId').equals(id).delete(),
-      db.chatSessions.where('promptCardId').equals(id).delete(),
       db.compareRuns.where('promptCardId').equals(id).delete(),
-      sessions.length
-        ? db.chatMessages
-            .where('sessionId')
-            .anyOf(sessions.map((session) => session.id))
-            .delete()
-        : Promise.resolve(),
     ])
   },
 
@@ -77,10 +69,18 @@ export const workspaceRepository = {
       async () => {
         const cards = await db.promptCards.where('canvasId').equals(id).toArray()
         const cardIds = cards.map((card) => card.id)
-        const sessions = await db.chatSessions
-          .where('promptCardId')
-          .anyOf(cardIds.length ? cardIds : [''])
+        const sessionsByCanvas = await db.chatSessions
+          .where('canvasId')
+          .equals(id)
           .toArray()
+        const legacySessions = cardIds.length
+          ? await db.chatSessions.where('promptCardId').anyOf(cardIds).toArray()
+          : []
+        const sessionIds = Array.from(
+          new Set(
+            [...sessionsByCanvas, ...legacySessions].map((session) => session.id),
+          ),
+        )
         await Promise.all([
           db.canvases.delete(id),
           db.promptCards.where('canvasId').equals(id).delete(),
@@ -91,13 +91,14 @@ export const workspaceRepository = {
           cardIds.length
             ? db.promptVersions.where('promptCardId').anyOf(cardIds).delete()
             : Promise.resolve(),
+          db.chatSessions.where('canvasId').equals(id).delete(),
           cardIds.length
             ? db.chatSessions.where('promptCardId').anyOf(cardIds).delete()
             : Promise.resolve(),
-          sessions.length
+          sessionIds.length
             ? db.chatMessages
                 .where('sessionId')
-                .anyOf(sessions.map((session) => session.id))
+                .anyOf(sessionIds)
                 .delete()
             : Promise.resolve(),
           cardIds.length
@@ -110,7 +111,7 @@ export const workspaceRepository = {
 
   async exportWorkspace(): Promise<ExportPayload> {
     return {
-      version: 3,
+      version: 4,
       exportedAt: nowIso(),
       canvases: await db.canvases.toArray(),
       promptCards: await db.promptCards.toArray(),
@@ -127,7 +128,12 @@ export const workspaceRepository = {
   },
 
   async importWorkspace(payload: ExportPayload) {
-    if (payload.version !== 1 && payload.version !== 2 && payload.version !== 3) {
+    if (
+      payload.version !== 1 &&
+      payload.version !== 2 &&
+      payload.version !== 3 &&
+      payload.version !== 4
+    ) {
       throw new Error('Unsupported file')
     }
     await db.transaction(

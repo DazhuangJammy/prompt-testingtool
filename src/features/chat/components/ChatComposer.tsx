@@ -9,10 +9,9 @@ import {
   Square,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   type ChatAttachmentCapability,
-  estimateChatTokenCount,
   formatAttachmentSize,
   getFileAttachmentError,
 } from '@/features/chat/model/attachments'
@@ -75,10 +74,6 @@ export function ChatComposer({
   const [attachmentError, setAttachmentError] = useState('')
   const [promptModeMenuOpen, setPromptModeMenuOpen] = useState(false)
   const [thinkingMenuOpen, setThinkingMenuOpen] = useState(false)
-  const tokenCount = useMemo(
-    () => estimateChatTokenCount(input, attachments),
-    [attachments, input],
-  )
   const activeThinkingOption = getThinkingOption(thinkingMode)
   const promptModeLabel =
     promptInjectionMode === 'system' ? '系统提示词' : '用户提示词'
@@ -280,7 +275,6 @@ export function ChatComposer({
           />
         </div>
         <div className="composer-status">
-          <span>{tokenCount} tok</span>
           <IconButton
             className="send-button"
             icon={generating ? <Square /> : <ArrowUp />}

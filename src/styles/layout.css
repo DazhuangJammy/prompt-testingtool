@@ -24,6 +24,9 @@
 
 .sidebar {
   border-width: 0 1px 0 0;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  grid-template-rows: 74px minmax(0, 1fr);
 }
 
 .chat-panel {
@@ -36,6 +39,11 @@
   width: 48px;
 }
 
+.sidebar.is-collapsed {
+  grid-template-columns: 48px;
+  grid-template-rows: 1fr;
+}
+
 .sidebar-head,
 .panel-head {
   border-bottom: 1px solid var(--line);
@@ -44,10 +52,12 @@
 }
 
 .sidebar-head {
+  grid-column: 2;
   min-height: 74px;
 }
 
 .sidebar.is-collapsed .sidebar-head {
+  display: none;
   min-height: 48px;
 }
 

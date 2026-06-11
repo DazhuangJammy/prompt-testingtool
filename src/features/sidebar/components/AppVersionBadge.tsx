@@ -7,6 +7,9 @@ import {
 } from '@/shared/api/appUpdate'
 import { IconButton } from '@/shared/ui/IconButton'
 
+const releaseUrl = 'https://github.com/DazhuangJammy/prompt-testingtool/releases'
+const localVersion = __APP_VERSION__ || '0.0.0'
+
 export function AppVersionBadge() {
   const [open, setOpen] = useState(false)
   const [status, setStatus] = useState<AppUpdateStatus>()
@@ -29,10 +32,19 @@ export function AppVersionBadge() {
   }, [])
 
   useEffect(() => {
-    if (!open) return
-    if (!status) {
-      window.setTimeout(() => void refreshStatus(false), 0)
+    let cancelled = false
+    void checkAppUpdate()
+      .then((next) => {
+        if (!cancelled) setStatus(next)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
     }
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
     const closeOnPointer = (event: PointerEvent) => {
       if (popoverRef.current?.contains(event.target as Node)) return
       setOpen(false)
@@ -62,7 +74,7 @@ export function AppVersionBadge() {
     }
   }
 
-  const version = status?.version ? `v${status.version}` : 'v0.0.0'
+  const version = `v${status?.version || localVersion}`
 
   return (
     <div className="version-shell" ref={popoverRef}>
@@ -72,6 +84,7 @@ export function AppVersionBadge() {
         onClick={() => setOpen((value) => !value)}
       >
         {version}
+        {status?.hasUpdate && <span className="version-update-dot" />}
       </button>
 
       {open && (
@@ -103,7 +116,11 @@ export function AppVersionBadge() {
             </p>
             {message && <small>{message}</small>}
             <div className="version-actions">
-              <a href={status?.releaseUrl} target="_blank" rel="noreferrer">
+              <a
+                href={status?.releaseUrl || releaseUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
                 <ExternalLink />
                 查看发布
               </a>

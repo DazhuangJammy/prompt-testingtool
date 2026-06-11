@@ -137,18 +137,7 @@ describe('workspace repository', () => {
     expect(db.promptCards.delete).toHaveBeenCalledWith('card')
     expect(db.canvasEdges.where).toHaveBeenCalledWith('sourceId')
     expect(db.canvasEdges.where).toHaveBeenCalledWith('targetId')
-    expect(db.chatSessions.where).toHaveBeenCalledWith('promptCardId')
-  })
-
-  it('deletes prompt card messages when sessions exist', async () => {
-    vi.mocked(db.chatSessions.where).mockReturnValueOnce(
-      chain([{ id: 'session' }]) as never,
-    )
-
-    await workspaceRepository.deletePromptCardCascade('card')
-
-    expect(db.chatMessages.where).toHaveBeenCalledWith('sessionId')
-    expect(anyOfDeleteMock).toHaveBeenCalled()
+    expect(db.chatSessions.where).not.toHaveBeenCalled()
   })
 
   it('deletes canvases in a transaction', async () => {
@@ -169,6 +158,7 @@ describe('workspace repository', () => {
     await workspaceRepository.deleteCanvasCascade('canvas')
 
     expect(db.promptVersions.where).toHaveBeenCalledWith('promptCardId')
+    expect(db.chatSessions.where).toHaveBeenCalledWith('canvasId')
     expect(db.chatMessages.where).toHaveBeenCalledWith('sessionId')
     expect(anyOfDeleteMock).toHaveBeenCalled()
   })
@@ -187,7 +177,7 @@ describe('workspace repository', () => {
     }
 
     await expect(workspaceRepository.exportWorkspace()).resolves.toMatchObject({
-      version: 3,
+      version: 4,
       canvasShapeNodes: [],
       canvasEdges: [],
       canvasStrokes: [],
@@ -205,7 +195,7 @@ describe('workspace repository', () => {
 
   it('rejects unsupported imports and lists canvases', async () => {
     await expect(
-      workspaceRepository.importWorkspace({ version: 4 } as never),
+      workspaceRepository.importWorkspace({ version: 5 } as never),
     ).rejects.toThrow('Unsupported file')
     await expect(workspaceRepository.listCanvasesByUpdatedAt()).resolves.toEqual([
       { id: 'canvas' },

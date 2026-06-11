@@ -9,6 +9,7 @@ import {
 } from '@/features/chat/application/chatService'
 import { chatRepository } from '@/features/chat/infrastructure/chatRepository'
 import { useActiveChatRequests } from '@/features/chat/hooks/useActiveChatRequests'
+import { useChatTopics } from '@/features/chat/hooks/useChatTopics'
 import {
   getAttachmentCapability,
   getUnsupportedAttachmentReason,
@@ -35,7 +36,6 @@ import {
 import type {
   ChatAttachment,
   ChatMessage,
-  ChatSession,
   PromptCard,
   PromptInjectionMode,
   ProviderConfig,
@@ -49,13 +49,14 @@ export function useChatPanelState(
   promptCards: PromptCard[],
   providers: ProviderConfig[],
   compareOpen = false,
+  activeSessionId?: string,
+  onActiveSessionChange?: (id?: string) => void,
 ) {
   const [input, setInput] = useState('')
   const [attachments, setAttachments] = useState<ChatAttachment[]>([])
   const [comparePanes, setComparePanes] = useState<ComparePaneState[]>(() =>
     createInitialComparePanes(),
   )
-  const [sessionId, setSessionId] = useState<string>()
   const [error, setError] = useState('')
   const chatRequests = useActiveChatRequests()
   const [thinkingModesByProvider, setThinkingModesByProvider] = useState<
@@ -64,15 +65,19 @@ export function useChatPanelState(
   const [promptInjectionMode, setPromptInjectionMode] =
     useState<PromptInjectionMode>('system')
 
-  const sessions = useLiveQuery<ChatSession[], ChatSession[]>(
-    () =>
-      card
-        ? chatRepository.listSessionsByPromptCard(card.id)
-        : Promise.resolve([] as ChatSession[]),
-    [card?.id],
-    [],
+  const {
+    createMainTopic,
+    deleteMainTopic,
+    effectiveSessionId,
+    renameMainTopic,
+    sessions,
+    setMainSessionId,
+  } = useChatTopics(
+    card?.canvasId,
+    activeSessionId,
+    onActiveSessionChange,
+    card?.id,
   )
-  const effectiveSessionId = pickSessionId(sessions, sessionId)
   const messages = useMessages(effectiveSessionId)
 
   const paneSessionKey = comparePanes
@@ -160,7 +165,7 @@ export function useChatPanelState(
       provider,
       promptInjectionMode,
       sessionId: effectiveSessionId,
-      setSessionId,
+      setSessionId: setMainSessionId,
       text,
       thinkingMode: effectiveThinkingMode,
       requestKey: 'main',
@@ -205,7 +210,7 @@ export function useChatPanelState(
       provider,
       promptInjectionMode,
       sessionId: effectiveSessionId,
-      setSessionId,
+      setSessionId: setMainSessionId,
       text: content,
       thinkingMode: effectiveThinkingMode,
       requestKey: 'main',
@@ -261,7 +266,11 @@ export function useChatPanelState(
     setError('')
 
     try {
-      const activeSessionId = await ensureChatSession(card.id, sessionId)
+      const activeSessionId = await ensureChatSession(
+        card.canvasId,
+        sessionId,
+        card.id,
+      )
       if (!sessionId) setSessionId(activeSessionId)
       await sendChatMessage({
         card,
@@ -308,7 +317,11 @@ export function useChatPanelState(
     setError('')
 
     try {
-      const activeSessionId = await ensureChatSession(card.id, sessionId)
+      const activeSessionId = await ensureChatSession(
+        card.canvasId,
+        sessionId,
+        card.id,
+      )
       if (!sessionId) setSessionId(activeSessionId)
       await resendChatMessage({
         card,
@@ -432,17 +445,23 @@ export function useChatPanelState(
     clearMainMessages,
     comparePaneLimit: MAX_COMPARE_PANES,
     comparePanes: paneViews,
+    createMainTopic,
+    deleteMainTopic,
     editMessage,
     error,
+    mainSessionId: effectiveSessionId,
     input,
     isRequestActive: chatRequests.isRequestActive,
     mainMessages: messages,
+    mainSessions: sessions ?? [],
     promptInjectionMode,
     removeComparePane,
     resendCompareMessage,
     resendMainMessage,
+    renameMainTopic,
     sendCompareMessage,
     sendMainMessage,
+    setMainSessionId,
     setComparePaneCard,
     setComparePaneAttachments: (paneId: ComparePaneId, value: ChatAttachment[]) =>
       updateComparePane(paneId, { attachments: value }),
@@ -471,8 +490,4 @@ function useMessages(sessionId?: string) {
     [sessionId],
     [],
   )
-}
-
-function pickSessionId(sessions: ChatSession[] | undefined, id?: string) {
-  return sessions?.some((session) => session.id === id) ? id : sessions?.[0]?.id
 }

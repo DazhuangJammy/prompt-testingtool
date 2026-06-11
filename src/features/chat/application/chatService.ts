@@ -16,17 +16,51 @@ import {
   createPromptVersion,
 } from '@/features/chat/model/chatCompletion'
 import { splitThinkingBlock } from '@/features/chat/model/thinking'
+import {
+  createTopicTitleMessages,
+  normalizeGeneratedChatTopicTitle,
+  shouldAutoNameChatTopic,
+} from '@/features/chat/model/topicTitle'
 import { createChatSession } from '@/features/chat/model/chatSession'
 import { chatRepository } from '@/features/chat/infrastructure/chatRepository'
 
 export async function ensureChatSession(
-  promptCardId: string,
+  canvasId: string,
   effectiveSessionId?: string,
+  promptCardId?: string,
 ) {
   if (effectiveSessionId) return effectiveSessionId
-  const session = createChatSession(promptCardId)
+  const session = createChatSession(canvasId, '测试', promptCardId)
   await chatRepository.createSession(session)
   return session.id
+}
+
+export async function createChatTopic(
+  canvasId: string,
+  title?: string,
+  promptCardId?: string,
+) {
+  const session = createChatSession(canvasId, title?.trim() || '新话题', promptCardId)
+  await chatRepository.createSession(session)
+  return session
+}
+
+export async function renameChatTopic(sessionId: string, title: string) {
+  await chatRepository.updateSessionTitle(sessionId, title)
+}
+
+export async function deleteChatTopicAndPickNext({
+  activeSessionId,
+  sessions,
+  sessionId,
+}: {
+  activeSessionId?: string
+  sessions: { id: string; updatedAt: string }[]
+  sessionId: string
+}) {
+  await chatRepository.deleteSessionCascade(sessionId)
+  if (activeSessionId !== sessionId) return activeSessionId
+  return sessions.find((session) => session.id !== sessionId)?.id
 }
 
 export async function clearChatSession(sessionId?: string) {
@@ -123,7 +157,8 @@ export async function sendChatMessage({
       : undefined,
     status: 'complete',
   })
-  await chatRepository.updateSessionAfterReply(sessionId, userMessage.content)
+  await chatRepository.updateSessionAfterReply(sessionId, card.id)
+  await autoNameChatTopic(sessionId, userMessage.content, provider)
 }
 
 async function requestAssistantReply({
@@ -197,7 +232,34 @@ async function requestAssistantReply({
       : undefined,
     status: 'complete',
   })
-  await chatRepository.updateSessionAfterReply(sessionId, text)
+  await chatRepository.updateSessionAfterReply(sessionId, card.id)
+  await autoNameChatTopic(sessionId, text, provider)
+}
+
+async function autoNameChatTopic(
+  sessionId: string,
+  userText: string,
+  provider: ProviderConfig,
+) {
+  if (!userText.trim()) return
+  const session = await chatRepository.getSession(sessionId)
+  if (!session || !shouldAutoNameChatTopic(session.title)) return
+
+  try {
+    const title = normalizeGeneratedChatTopicTitle(
+      await requestCompletion(
+        provider,
+        createTopicTitleMessages(userText),
+        'off',
+      ),
+    )
+    if (title) await chatRepository.updateSessionTitle(sessionId, title)
+  } catch {
+    await chatRepository.updateSessionTitle(
+      sessionId,
+      normalizeGeneratedChatTopicTitle(userText) || '新话题',
+    )
+  }
 }
 
 function mergeThinkingContent(
