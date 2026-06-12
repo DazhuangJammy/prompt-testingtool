@@ -3,12 +3,14 @@ import type { PromptCard, ProviderConfig } from '@/shared/types'
 import {
   MAX_COMPARE_PANES,
   areComparePanesEqual,
+  canRemoveComparePane,
   createComparePane,
   createInitialComparePanes,
   ensureMinimumComparePanes,
   getPaneThinkingMode,
   getProviderThinkingMode,
   pickCardForPane,
+  removeComparePaneById,
   resolvePaneCard,
   syncComparePanes,
 } from './comparePanes'
@@ -68,6 +70,32 @@ describe('compare panes model', () => {
         ),
       ),
     ).toHaveLength(MAX_COMPARE_PANES)
+  })
+
+  it('allows removing from two panes and asks compare mode to exit at one pane', () => {
+    const panes = [
+      createComparePane({ cardId: 'card-1', id: 'pane-1' }),
+      createComparePane({ cardId: 'card-2', id: 'pane-2' }),
+    ]
+
+    const result = removeComparePaneById(panes, 'pane-2')
+
+    expect(canRemoveComparePane(panes)).toBe(true)
+    expect(result.removed).toBe(true)
+    expect(result.shouldExitCompare).toBe(true)
+    expect(result.panes).toHaveLength(1)
+    expect(result.panes[0].id).toBe('pane-1')
+  })
+
+  it('keeps the last pane when compare mode already has one pane', () => {
+    const panes = [createComparePane({ cardId: 'card-1', id: 'pane-1' })]
+
+    const result = removeComparePaneById(panes, 'pane-1')
+
+    expect(canRemoveComparePane(panes)).toBe(false)
+    expect(result.removed).toBe(false)
+    expect(result.shouldExitCompare).toBe(false)
+    expect(result.panes).toBe(panes)
   })
 
   it('syncs panes to active cards when compare mode is closed', () => {

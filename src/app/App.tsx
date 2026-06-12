@@ -189,6 +189,7 @@ function App() {
           onToggle={panels.toggleChat}
           onSelectProvider={workspace.setActiveProviderId}
           onActiveSessionChange={setActiveChatSessionId}
+          onActiveCardChange={workspace.setSelectedCardId}
           width={resizablePanels.chatWidth}
         />
 

@@ -20,12 +20,13 @@ import {
 } from '@/features/chat/model/thinking'
 import {
   MAX_COMPARE_PANES,
-  MIN_COMPARE_PANES,
+  canRemoveComparePane,
   createComparePane,
   createInitialComparePanes,
   getPaneThinkingMode,
   getProviderThinkingMode,
   pickCardForPane,
+  removeComparePaneById,
   resolvePaneCard,
   syncComparePanes,
   type ActiveRequest,
@@ -51,6 +52,8 @@ export function useChatPanelState(
   compareOpen = false,
   activeSessionId?: string,
   onActiveSessionChange?: (id?: string) => void,
+  onCompareOpenChange?: (open: boolean) => void,
+  onActiveCardChange?: (id: string) => void,
 ) {
   const [input, setInput] = useState('')
   const [attachments, setAttachments] = useState<ChatAttachment[]>([])
@@ -62,8 +65,7 @@ export function useChatPanelState(
   const [thinkingModesByProvider, setThinkingModesByProvider] = useState<
     Record<string, ThinkingMode>
   >({})
-  const [promptInjectionMode, setPromptInjectionMode] =
-    useState<PromptInjectionMode>('system')
+  const [promptInjectionMode, setPromptInjectionMode] = useState<PromptInjectionMode>('system')
 
   const {
     createMainTopic,
@@ -413,13 +415,20 @@ export function useChatPanelState(
   }
 
   const removeComparePane = (paneId: ComparePaneId) => {
-    if (comparePanes.length <= MIN_COMPARE_PANES) return
+    const result = removeComparePaneById(comparePanes, paneId)
+    if (!result.removed) return
+
     chatRequests.stopGeneration(paneId)
-    setComparePanes((current) =>
-      current.length <= MIN_COMPARE_PANES
-        ? current
-        : current.filter((pane) => pane.id !== paneId),
-    )
+    setComparePanes(result.panes)
+
+    if (result.shouldExitCompare) {
+      onCompareOpenChange?.(false)
+      const remaining = result.panes[0]
+      const remainingCardId =
+        remaining?.cardId ?? paneViews.find((pane) => pane.id === remaining?.id)?.card?.id
+      if (remainingCardId) onActiveCardChange?.(remainingCardId)
+      if (remaining?.sessionId) setMainSessionId(remaining.sessionId)
+    }
   }
 
   const setThinkingModeForProvider = (
@@ -440,10 +449,9 @@ export function useChatPanelState(
     attachments,
     busy: chatRequests.busy,
     canAddComparePane: comparePanes.length < MAX_COMPARE_PANES,
-    canRemoveComparePane: comparePanes.length > MIN_COMPARE_PANES,
+    canRemoveComparePane: canRemoveComparePane(comparePanes),
     clearCompareMessages,
     clearMainMessages,
-    comparePaneLimit: MAX_COMPARE_PANES,
     comparePanes: paneViews,
     createMainTopic,
     deleteMainTopic,
@@ -483,10 +491,9 @@ export function useChatPanelState(
 
 function useMessages(sessionId?: string) {
   return useLiveQuery<ChatMessage[], ChatMessage[]>(
-    () =>
-      sessionId
-        ? chatRepository.listMessagesBySession(sessionId)
-        : Promise.resolve([] as ChatMessage[]),
+    () => sessionId
+      ? chatRepository.listMessagesBySession(sessionId)
+      : Promise.resolve([] as ChatMessage[]),
     [sessionId],
     [],
   )

@@ -14,6 +14,7 @@ import type {
 import { createId } from '@/shared/utils/identity'
 
 export const MIN_COMPARE_PANES = 2
+export const MIN_RETAINED_COMPARE_PANES = 1
 export const MAX_COMPARE_PANES = 6
 
 export type ComparePaneId = string
@@ -98,6 +99,30 @@ export function ensureMinimumComparePanes(panes: ComparePaneState[]) {
       createComparePane(),
     ),
   ]
+}
+
+export function canRemoveComparePane(panes: ComparePaneState[]) {
+  return panes.length > MIN_RETAINED_COMPARE_PANES
+}
+
+export function removeComparePaneById(
+  panes: ComparePaneState[],
+  paneId: ComparePaneId,
+) {
+  if (!canRemoveComparePane(panes)) {
+    return { panes, removed: false, shouldExitCompare: false }
+  }
+
+  const nextPanes = panes.filter((pane) => pane.id !== paneId)
+  if (nextPanes.length === panes.length) {
+    return { panes, removed: false, shouldExitCompare: false }
+  }
+
+  return {
+    panes: nextPanes,
+    removed: true,
+    shouldExitCompare: nextPanes.length === MIN_RETAINED_COMPARE_PANES,
+  }
 }
 
 export function resolvePaneCard(
