@@ -4,6 +4,7 @@ import {
   toStrokeViewPoints,
 } from '@/features/canvas/model/strokeGeometry'
 import type {
+  CanvasImageFlowNode,
   CanvasShapeFlowNode,
   CanvasStrokeFlowNode,
   CanvasTextFlowNode,
@@ -11,6 +12,7 @@ import type {
 import type { PromptFlowNode } from '@/features/prompt-card/PromptCardNode.types'
 import type {
   CanvasEdge,
+  CanvasImageNode,
   CanvasShapeNode,
   CanvasStroke,
   CanvasTextNode,
@@ -19,6 +21,7 @@ import type {
 
 export type CanvasFlowNode =
   | PromptFlowNode
+  | CanvasImageFlowNode
   | CanvasShapeFlowNode
   | CanvasTextFlowNode
   | CanvasStrokeFlowNode
@@ -26,13 +29,19 @@ export type CanvasFlowNode =
 interface CreateCanvasNodesOptions {
   promptCards: PromptCard[]
   selectedNodeIds: string[]
+  imageNodes: CanvasImageNode[]
   shapeNodes: CanvasShapeNode[]
   strokes: CanvasStroke[]
   textNodes: CanvasTextNode[]
   onSavePromptCard: (card: PromptCard) => void
   onSelectPrompt: (id: string) => void
   onSelectShape: (id: string) => void
+  onSelectImage: (id: string) => void
   onSelectText: (id: string) => void
+  onUpdateImage: (
+    id: string,
+    updates: Partial<Pick<CanvasImageNode, 'height' | 'position' | 'width'>>,
+  ) => void
   onUpdateShape: (
     id: string,
     updates: Partial<
@@ -53,12 +62,15 @@ interface CreateCanvasNodesOptions {
 export function createCanvasFlowNodes({
   onSavePromptCard,
   onSelectPrompt,
+  onSelectImage,
   onSelectShape,
   onSelectText,
+  onUpdateImage,
   onUpdateShape,
   onUpdateText,
   promptCards,
   selectedNodeIds,
+  imageNodes,
   shapeNodes,
   strokes,
   textNodes,
@@ -95,6 +107,25 @@ export function createCanvasFlowNodes({
           selectedNodeId: selectedNodeIds.includes(node.id) ? node.id : undefined,
           onSelect: onSelectShape,
           onUpdate: onUpdateShape,
+        },
+      }),
+    ),
+    ...imageNodes.map(
+      (node): CanvasImageFlowNode => ({
+        id: node.id,
+        dragHandle: '.canvas-image-drag-area',
+        selected: selectedNodeIds.includes(node.id),
+        style: {
+          height: node.height,
+          width: node.width,
+        },
+        type: 'canvasImage',
+        position: node.position,
+        data: {
+          node,
+          selectedNodeId: selectedNodeIds.includes(node.id) ? node.id : undefined,
+          onSelect: onSelectImage,
+          onUpdate: onUpdateImage,
         },
       }),
     ),

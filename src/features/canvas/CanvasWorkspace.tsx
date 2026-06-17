@@ -15,17 +15,12 @@ import {
   type OnConnect,
   type OnEdgesChange,
   type OnReconnect,
-  type OnNodeDrag,
   type OnSelectionChangeFunc,
   useReactFlow,
 } from '@xyflow/react'
 import { useCallback, useMemo, useState } from 'react'
 import {
   deleteCanvasEdge,
-  persistCanvasStrokePosition,
-  persistPromptNodePosition,
-  persistShapeNodePosition,
-  persistTextNodePosition,
   reconnectCanvasEdge,
 } from '@/features/canvas/application/canvasService'
 import { CanvasWorkspaceToolbar } from '@/features/canvas/components/CanvasWorkspaceToolbar'
@@ -34,6 +29,7 @@ import { useCanvasClipboard } from '@/features/canvas/hooks/useCanvasClipboard'
 import { useCanvasDeletion } from '@/features/canvas/hooks/useCanvasDeletion'
 import { useCanvasElements } from '@/features/canvas/hooks/useCanvasElements'
 import { useCanvasFlowState } from '@/features/canvas/hooks/useCanvasFlowState'
+import { useCanvasNodePersistence } from '@/features/canvas/hooks/useCanvasNodePersistence'
 import { useDraftStroke } from '@/features/canvas/hooks/useDraftStroke'
 import { canvasRepository } from '@/features/canvas/infrastructure/canvasRepository'
 import {
@@ -85,6 +81,7 @@ export function CanvasWorkspace({
   const [textStyle, setTextStyle] = useState<CanvasTextStyle>(defaultTextStyle)
   const {
     canvasEdges: canvasFlowEdges,
+    imageNodes: canvasImageNodes,
     shapeNodes: canvasShapeNodes,
     strokes: canvasStrokes,
     textNodes: canvasTextNodes,
@@ -100,12 +97,21 @@ export function CanvasWorkspace({
     () => updateSelection(emptyFlowSelection),
     [updateSelection],
   )
+  const nodePersistence = useCanvasNodePersistence({
+    canvasId: effectiveCanvasId,
+    imageNodes: canvasImageNodes,
+    promptCards,
+    shapeNodes: canvasShapeNodes,
+    strokes: canvasStrokes,
+    textNodes: canvasTextNodes,
+  })
 
   const businessNodes = useMemo(
     () =>
       createCanvasFlowNodes({
         promptCards,
         selectedNodeIds: selectedFlowIds.nodes,
+        imageNodes: canvasImageNodes,
         shapeNodes: canvasShapeNodes,
         strokes: canvasStrokes,
         textNodes: canvasTextNodes,
@@ -116,6 +122,9 @@ export function CanvasWorkspace({
           onSelectCard(id)
         },
         onSelectShape: () => undefined,
+        onSelectImage: (id) => {
+          updateSelection({ edges: [], nodes: [id] })
+        },
         onSelectText: (id) => {
           updateSelection({ edges: [], nodes: [id] })
           const selectedText = canvasTextNodes.find((node) => node.id === id)
@@ -127,30 +136,18 @@ export function CanvasWorkspace({
             })
           }
         },
-        onUpdateShape: (id, updates) => {
-          void canvasRepository
-            .updateShapeNode(id, updates)
-            .then(() =>
-              effectiveCanvasId
-                ? canvasRepository.touchCanvas(effectiveCanvasId)
-                : undefined,
-            )
-        },
-        onUpdateText: (id, updates) => {
-          void canvasRepository
-            .updateTextNode(id, updates)
-            .then(() =>
-              effectiveCanvasId
-                ? canvasRepository.touchCanvas(effectiveCanvasId)
-                : undefined,
-            )
-        },
+        onUpdateImage: nodePersistence.updateImageNode,
+        onUpdateShape: nodePersistence.updateShapeNode,
+        onUpdateText: nodePersistence.updateTextNode,
       }),
     [
       canvasShapeNodes,
+      canvasImageNodes,
       canvasStrokes,
       canvasTextNodes,
-      effectiveCanvasId,
+      nodePersistence.updateImageNode,
+      nodePersistence.updateShapeNode,
+      nodePersistence.updateTextNode,
       onSelectCard,
       promptCards,
       selectedFlowIds.nodes,
@@ -175,54 +172,6 @@ export function CanvasWorkspace({
     penColor,
     reactFlow,
   })
-
-  const handleNodeDragStop = useCallback<OnNodeDrag<CanvasFlowNode>>(
-    (_, node) => {
-      if (node.type === 'promptCard') {
-        void persistPromptNodePosition(
-          node.id,
-          node.position,
-          promptCards,
-          effectiveCanvasId,
-        )
-        return
-      }
-
-      if (node.type === 'freehandStroke') {
-        void persistCanvasStrokePosition(
-          node.id,
-          node.position,
-          canvasStrokes,
-          effectiveCanvasId,
-        )
-        return
-      }
-
-      if (node.type === 'freeText') {
-        void persistTextNodePosition(
-          node.id,
-          node.position,
-          canvasTextNodes,
-          effectiveCanvasId,
-        )
-        return
-      }
-
-      void persistShapeNodePosition(
-        node.id,
-        node.position,
-        canvasShapeNodes,
-        effectiveCanvasId,
-      )
-    },
-    [
-      canvasShapeNodes,
-      canvasStrokes,
-      canvasTextNodes,
-      effectiveCanvasId,
-      promptCards,
-    ],
-  )
 
   const handleSelectionChange = useCallback<
     OnSelectionChangeFunc<CanvasFlowNode, Edge>
@@ -405,6 +354,7 @@ export function CanvasWorkspace({
     selectedFlowIds,
     shapeNodes: canvasShapeNodes,
     strokes: canvasStrokes,
+    imageNodes: canvasImageNodes,
     textNodes: canvasTextNodes,
   })
   const selectTool = useCallback((tool: CanvasTool) => {
@@ -430,7 +380,7 @@ export function CanvasWorkspace({
             onSelectCard(node.id)
           }
         }}
-        onNodeDragStop={handleNodeDragStop}
+        onNodeDragStop={nodePersistence.onNodeDragStop}
         onEdgesChange={handleEdgesChange}
         onNodesChange={handleNodeChanges}
         onPaneClick={handlePaneClick}

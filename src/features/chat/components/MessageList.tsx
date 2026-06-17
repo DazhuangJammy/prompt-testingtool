@@ -10,7 +10,6 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
 import ReactMarkdown from 'react-markdown'
 import {
   formatGenerationDuration,
@@ -25,6 +24,7 @@ import {
 } from '@/features/chat/model/svgPreview'
 import type { ChatAttachment, ChatMessage } from '@/shared/types'
 import { IconButton } from '@/shared/ui/IconButton'
+import { ImagePreviewDialog } from '@/shared/ui/ImagePreviewDialog'
 import { MessageExportMenu } from './MessageExportMenu'
 
 interface MessageListProps {
@@ -258,7 +258,8 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
       </div>
       {previewItem && (
         <ImagePreviewDialog
-          item={previewItem}
+          name={previewItem.name}
+          src={previewItem.src}
           onClose={() => setPreviewItem(undefined)}
         />
       )}
@@ -366,29 +367,6 @@ function MessageAttachments({ attachments, onPreview }: MessageAttachmentsProps)
         </div>
       )}
     </div>
-  )
-}
-
-interface ImagePreviewDialogProps {
-  item: ImagePreviewItem
-  onClose: () => void
-}
-
-function ImagePreviewDialog({ item, onClose }: ImagePreviewDialogProps) {
-  return createPortal(
-    <div className="image-preview-backdrop" onMouseDown={onClose}>
-      <div
-        className="image-preview-dialog"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <div className="image-preview-head">
-          <span>{item.name}</span>
-          <IconButton icon={<X />} label="关闭" onClick={onClose} />
-        </div>
-        <img src={item.src} alt={item.name} />
-      </div>
-    </div>,
-    document.body,
   )
 }
 

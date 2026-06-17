@@ -1,13 +1,20 @@
 import { useCallback, useEffect, useRef } from 'react'
 import type { Edge, ReactFlowInstance } from '@xyflow/react'
 import { pasteCanvasClipboard } from '@/features/canvas/application/canvasService'
+import { canvasRepository } from '@/features/canvas/infrastructure/canvasRepository'
 import type { CanvasFlowNode } from '@/features/canvas/model/canvasFlowMapping'
 import {
   createCanvasClipboard,
   type CanvasClipboardSnapshot,
 } from '@/features/canvas/model/canvasClipboard'
+import { createCanvasImageNode } from '@/features/canvas/model/canvasElements'
+import {
+  getClipboardImageFiles,
+  readClipboardImage,
+} from '@/features/canvas/model/canvasImageClipboard'
 import type {
   CanvasEdge,
+  CanvasImageNode,
   CanvasPoint,
   CanvasShapeNode,
   CanvasStroke,
@@ -26,6 +33,7 @@ interface UseCanvasClipboardOptions {
   }
   shapeNodes: CanvasShapeNode[]
   strokes: CanvasStroke[]
+  imageNodes: CanvasImageNode[]
   textNodes: CanvasTextNode[]
   onPasteSelection: (ids: string[]) => void
   onSelectPrompt: (id: string) => void
@@ -41,10 +49,12 @@ export function useCanvasClipboard({
   selectedFlowIds,
   shapeNodes,
   strokes,
+  imageNodes,
   textNodes,
 }: UseCanvasClipboardOptions) {
   const clipboardRef = useRef<CanvasClipboardSnapshot | undefined>(undefined)
   const cursorPositionRef = useRef<CanvasPoint>({ x: 120, y: 120 })
+  const keyboardPasteRef = useRef(false)
 
   const updateCursorPosition = useCallback(
     (event: React.MouseEvent) => {
@@ -59,6 +69,7 @@ export function useCanvasClipboard({
   const copySelection = useCallback(() => {
     const nextClipboard = createCanvasClipboard({
       edges: canvasEdges,
+      imageNodes,
       promptCards,
       selectedNodeIds: selectedFlowIds.nodes,
       shapeNodes,
@@ -69,6 +80,7 @@ export function useCanvasClipboard({
     if (nextClipboard) clipboardRef.current = nextClipboard
   }, [
     canvasEdges,
+    imageNodes,
     promptCards,
     selectedFlowIds.nodes,
     shapeNodes,
@@ -89,6 +101,27 @@ export function useCanvasClipboard({
     if (selectedPromptId) onSelectPrompt(selectedPromptId)
   }, [canvasId, onPasteSelection, onSelectPrompt])
 
+  const pasteImages = useCallback(
+    async (files: File[]) => {
+      if (!canvasId || !files.length) return false
+      const createdNodeIds: string[] = []
+
+      for (const [index, file] of files.entries()) {
+        const image = await readClipboardImage(file)
+        const node = createCanvasImageNode(canvasId, {
+          x: cursorPositionRef.current.x + index * 24,
+          y: cursorPositionRef.current.y + index * 24,
+        }, image)
+        await canvasRepository.saveImageNode(node)
+        createdNodeIds.push(node.id)
+      }
+
+      onPasteSelection(createdNodeIds)
+      return true
+    },
+    [canvasId, onPasteSelection],
+  )
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!isCopyPasteModifier(event) || isEditableTarget(event.target)) return
@@ -99,14 +132,33 @@ export function useCanvasClipboard({
         copySelection()
       }
       if (key === 'v') {
-        event.preventDefault()
-        void pasteSelection()
+        keyboardPasteRef.current = true
       }
     }
 
+    const handlePaste = (event: ClipboardEvent) => {
+      const shouldHandlePaste = keyboardPasteRef.current
+      keyboardPasteRef.current = false
+      if (!shouldHandlePaste || isEditableTarget(event.target)) return
+
+      const imageFiles = getClipboardImageFiles(event.clipboardData)
+      if (imageFiles.length) {
+        event.preventDefault()
+        void pasteImages(imageFiles)
+        return
+      }
+
+      event.preventDefault()
+      void pasteSelection()
+    }
+
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [copySelection, pasteSelection])
+    window.addEventListener('paste', handlePaste)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('paste', handlePaste)
+    }
+  }, [copySelection, pasteImages, pasteSelection])
 
   return {
     updateCursorPosition,

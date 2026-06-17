@@ -2,6 +2,7 @@ import Dexie, { type Table } from 'dexie'
 import type {
   Canvas,
   CanvasEdge,
+  CanvasImageNode,
   CanvasShapeNode,
   CanvasStroke,
   CanvasTextNode,
@@ -18,6 +19,7 @@ class PromptCanvasDatabase extends Dexie {
   promptCards!: Table<PromptCard, string>
   canvasShapeNodes!: Table<CanvasShapeNode, string>
   canvasEdges!: Table<CanvasEdge, string>
+  canvasImageNodes!: Table<CanvasImageNode, string>
   canvasStrokes!: Table<CanvasStroke, string>
   canvasTextNodes!: Table<CanvasTextNode, string>
   promptVersions!: Table<PromptVersion, string>
@@ -87,6 +89,20 @@ class PromptCanvasDatabase extends Dexie {
           session.canvasId = canvasIdByCardId.get(session.promptCardId)
         })
       })
+    this.version(5).stores({
+      canvases: 'id, updatedAt',
+      promptCards: 'id, canvasId, updatedAt',
+      canvasShapeNodes: 'id, canvasId, updatedAt',
+      canvasEdges: 'id, canvasId, sourceId, targetId, updatedAt',
+      canvasStrokes: 'id, canvasId, updatedAt',
+      canvasTextNodes: 'id, canvasId, updatedAt',
+      canvasImageNodes: 'id, canvasId, updatedAt',
+      promptVersions: 'id, promptCardId, createdAt',
+      providerConfigs: 'id, updatedAt',
+      chatSessions: 'id, canvasId, promptCardId, updatedAt',
+      chatMessages: 'id, sessionId, createdAt, promptVersionId',
+      compareRuns: 'id, promptCardId, createdAt',
+    })
   }
 }
 

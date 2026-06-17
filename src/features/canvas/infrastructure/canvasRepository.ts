@@ -1,6 +1,7 @@
 import { db } from '@/shared/storage/db'
 import type {
   CanvasEdge,
+  CanvasImageNode,
   CanvasShapeNode,
   CanvasStroke,
   CanvasTextNode,
@@ -97,9 +98,15 @@ export const canvasRepository = {
     await this.touchCanvas(textNode.canvasId)
   },
 
+  async saveImageNode(imageNode: CanvasImageNode) {
+    await db.canvasImageNodes.put(imageNode)
+    await this.touchCanvas(imageNode.canvasId)
+  },
+
   async savePastedElements({
     canvasId,
     edges,
+    imageNodes,
     promptCards,
     shapeNodes,
     strokes,
@@ -107,6 +114,7 @@ export const canvasRepository = {
   }: {
     canvasId: string
     edges: CanvasEdge[]
+    imageNodes: CanvasImageNode[]
     promptCards: PromptCard[]
     shapeNodes: CanvasShapeNode[]
     strokes: CanvasStroke[]
@@ -119,6 +127,7 @@ export const canvasRepository = {
         db.promptCards,
         db.canvasShapeNodes,
         db.canvasEdges,
+        db.canvasImageNodes,
         db.canvasStrokes,
         db.canvasTextNodes,
       ],
@@ -126,6 +135,7 @@ export const canvasRepository = {
         await Promise.all([
           promptCards.length ? db.promptCards.bulkPut(promptCards) : undefined,
           shapeNodes.length ? db.canvasShapeNodes.bulkPut(shapeNodes) : undefined,
+          imageNodes.length ? db.canvasImageNodes.bulkPut(imageNodes) : undefined,
           textNodes.length ? db.canvasTextNodes.bulkPut(textNodes) : undefined,
           strokes.length ? db.canvasStrokes.bulkPut(strokes) : undefined,
           edges.length ? db.canvasEdges.bulkPut(edges) : undefined,
@@ -158,6 +168,21 @@ export const canvasRepository = {
 
   async listTextNodesByCanvas(canvasId: string) {
     return db.canvasTextNodes.where('canvasId').equals(canvasId).sortBy('updatedAt')
+  },
+
+  async updateImageNode(
+    id: string,
+    updates: Partial<Pick<CanvasImageNode, 'height' | 'position' | 'width'>>,
+  ) {
+    await db.canvasImageNodes.update(id, { ...updates, updatedAt: nowIso() })
+  },
+
+  async deleteImageNode(id: string) {
+    await db.canvasImageNodes.delete(id)
+  },
+
+  async listImageNodesByCanvas(canvasId: string) {
+    return db.canvasImageNodes.where('canvasId').equals(canvasId).sortBy('updatedAt')
   },
 
   async touchCanvas(canvasId: string) {

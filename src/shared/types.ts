@@ -74,6 +74,19 @@ export interface CanvasTextNode {
   updatedAt: string
 }
 
+export interface CanvasImageNode {
+  id: string
+  canvasId: string
+  name: string
+  mimeType: string
+  dataUrl: string
+  position: CanvasPoint
+  width: number
+  height: number
+  createdAt: string
+  updatedAt: string
+}
+
 export interface PromptSection {
   markdown: string
   workflowSteps?: WorkflowStep[]
@@ -165,7 +178,7 @@ export interface CompareRun {
 }
 
 export interface ExportPayload {
-  version: 1 | 2 | 3 | 4
+  version: 1 | 2 | 3 | 4 | 5
   exportedAt: string
   canvases: Canvas[]
   promptCards: PromptCard[]
@@ -173,6 +186,7 @@ export interface ExportPayload {
   canvasEdges?: CanvasEdge[]
   canvasStrokes?: CanvasStroke[]
   canvasTextNodes?: CanvasTextNode[]
+  canvasImageNodes?: CanvasImageNode[]
   promptVersions: PromptVersion[]
   providerConfigs: ProviderConfig[]
   chatSessions: ChatSession[]

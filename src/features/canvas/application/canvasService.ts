@@ -16,6 +16,7 @@ import {
 import type { PromptNodeData } from '@/features/prompt-card/PromptCardNode.types'
 import type {
   CanvasEdge,
+  CanvasImageNode,
   CanvasPoint,
   CanvasShapeNode,
   CanvasStroke,
@@ -102,6 +103,24 @@ export async function persistTextNodePosition(
   if (canvasId) await canvasRepository.touchCanvas(canvasId)
 }
 
+export async function persistImageNodePosition(
+  id: string,
+  position: XYPosition,
+  imageNodes: CanvasImageNode[],
+  canvasId?: string,
+) {
+  const original = imageNodes.find((node) => node.id === id)
+  if (
+    !original ||
+    (original.position.x === position.x && original.position.y === position.y)
+  ) {
+    return
+  }
+
+  await canvasRepository.updateImageNode(id, { position })
+  if (canvasId) await canvasRepository.touchCanvas(canvasId)
+}
+
 export async function persistCanvasStrokePosition(
   id: string,
   position: XYPosition,
@@ -134,6 +153,12 @@ export async function deleteShapeNodeCascade(id: string, canvasId?: string) {
 export async function deleteTextNodeCascade(id: string, canvasId?: string) {
   await canvasRepository.deleteEdgesForNode(id)
   await canvasRepository.deleteTextNode(id)
+  if (canvasId) await canvasRepository.touchCanvas(canvasId)
+}
+
+export async function deleteImageNodeCascade(id: string, canvasId?: string) {
+  await canvasRepository.deleteEdgesForNode(id)
+  await canvasRepository.deleteImageNode(id)
   if (canvasId) await canvasRepository.touchCanvas(canvasId)
 }
 

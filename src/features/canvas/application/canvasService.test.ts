@@ -3,9 +3,11 @@ import { canvasRepository } from '@/features/canvas/infrastructure/canvasReposit
 import {
   deleteCanvasEdge,
   deleteCanvasStroke,
+  deleteImageNodeCascade,
   deleteShapeNodeCascade,
   deleteTextNodeCascade,
   persistCanvasStrokePosition,
+  persistImageNodePosition,
   persistPromptNodeChanges,
   persistPromptNodePosition,
   persistShapeNodePosition,
@@ -21,12 +23,14 @@ vi.mock('@/features/canvas/infrastructure/canvasRepository', () => ({
     deleteEdgesForNode: vi.fn(),
     deleteEdge: vi.fn(),
     deleteShapeNode: vi.fn(),
+    deleteImageNode: vi.fn(),
     deleteStroke: vi.fn(),
     deleteTextNode: vi.fn(),
     touchCanvas: vi.fn(),
     updateEdge: vi.fn(),
     savePastedElements: vi.fn(),
     updateStroke: vi.fn(),
+    updateImageNode: vi.fn(),
     updateShapeNode: vi.fn(),
     updateTextNode: vi.fn(),
     updatePromptCardPosition: vi.fn(),
@@ -166,6 +170,36 @@ describe('canvas service', () => {
     expect(canvasRepository.touchCanvas).toHaveBeenCalledWith('canvas-1')
   })
 
+  it('persists image node positions', async () => {
+    vi.clearAllMocks()
+
+    await persistImageNodePosition(
+      'image',
+      { x: 12, y: 18 },
+      [
+        {
+          id: 'image',
+          canvasId: 'canvas-1',
+          name: 'chart.png',
+          mimeType: 'image/png',
+          dataUrl: 'data:image/png;base64,abc',
+          position: { x: 0, y: 0 },
+          width: 200,
+          height: 120,
+          createdAt: 'now',
+          updatedAt: 'now',
+        },
+      ],
+      'canvas-1',
+    )
+
+    expect(canvasRepository.updateImageNode).toHaveBeenCalledWith('image', {
+      position: { x: 12, y: 18 },
+    })
+    expect(canvasRepository.touchCanvas).toHaveBeenCalledWith('canvas-1')
+  })
+
+
   it('persists moved stroke points from the final node position', async () => {
     vi.clearAllMocks()
 
@@ -242,6 +276,17 @@ describe('canvas service', () => {
     expect(canvasRepository.touchCanvas).toHaveBeenCalledWith('canvas-1')
   })
 
+  it('deletes image nodes with related edges', async () => {
+    vi.clearAllMocks()
+
+    await deleteImageNodeCascade('image', 'canvas-1')
+
+    expect(canvasRepository.deleteEdgesForNode).toHaveBeenCalledWith('image')
+    expect(canvasRepository.deleteImageNode).toHaveBeenCalledWith('image')
+    expect(canvasRepository.touchCanvas).toHaveBeenCalledWith('canvas-1')
+  })
+
+
   it('deletes selected edges and strokes', async () => {
     vi.clearAllMocks()
 
@@ -283,6 +328,7 @@ describe('canvas service', () => {
       'canvas-1',
       {
         edges: [],
+        imageNodes: [],
         origin: { x: 0, y: 0 },
         promptCards: [card],
         shapeNodes: [],

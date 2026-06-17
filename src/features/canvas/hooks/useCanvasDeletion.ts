@@ -3,6 +3,7 @@ import type { Edge, OnDelete } from '@xyflow/react'
 import {
   deleteCanvasEdge,
   deleteCanvasStroke,
+  deleteImageNodeCascade,
   deleteShapeNodeCascade,
   deleteTextNodeCascade,
 } from '@/features/canvas/application/canvasService'
@@ -38,6 +39,10 @@ export function useCanvasDeletion({
       }
       if (node.type === 'freeText') {
         void deleteTextNodeCascade(node.id, canvasId)
+        return
+      }
+      if (node.type === 'canvasImage') {
+        void deleteImageNodeCascade(node.id, canvasId)
         return
       }
       void deleteShapeNodeCascade(node.id, canvasId)

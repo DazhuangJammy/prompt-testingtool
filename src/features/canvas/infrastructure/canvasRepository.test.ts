@@ -25,6 +25,13 @@ vi.mock('@/shared/storage/db', () => ({
       update: vi.fn(),
       where: vi.fn(() => ({ equals: vi.fn(() => ({ sortBy: vi.fn(() => []) })) })),
     },
+    canvasImageNodes: {
+      bulkPut: vi.fn(),
+      delete: vi.fn(),
+      put: vi.fn(),
+      update: vi.fn(),
+      where: vi.fn(() => ({ equals: vi.fn(() => ({ sortBy: vi.fn(() => []) })) })),
+    },
     canvasStrokes: {
       bulkPut: vi.fn(),
       delete: vi.fn(),
@@ -221,6 +228,38 @@ describe('canvas repository', () => {
     expect(db.canvasTextNodes.where).toHaveBeenCalledWith('canvasId')
   })
 
+  it('saves, updates, deletes and lists image nodes', async () => {
+    await canvasRepository.saveImageNode({
+      id: 'image',
+      canvasId: 'canvas',
+      name: 'chart.png',
+      mimeType: 'image/png',
+      dataUrl: 'data:image/png;base64,abc',
+      position: { x: 1, y: 2 },
+      width: 200,
+      height: 120,
+      createdAt: 'now',
+      updatedAt: 'now',
+    })
+    await canvasRepository.updateImageNode('image', {
+      height: 160,
+      width: 240,
+    })
+    await canvasRepository.deleteImageNode('image')
+    await canvasRepository.listImageNodesByCanvas('canvas')
+
+    expect(db.canvasImageNodes.put).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'image' }),
+    )
+    expect(db.canvasImageNodes.update).toHaveBeenCalledWith('image', {
+      height: 160,
+      width: 240,
+      updatedAt: expect.any(String),
+    })
+    expect(db.canvasImageNodes.delete).toHaveBeenCalledWith('image')
+    expect(db.canvasImageNodes.where).toHaveBeenCalledWith('canvasId')
+  })
+
   it('saves pasted elements in one transaction and touches canvas', async () => {
     await canvasRepository.savePastedElements({
       canvasId: 'canvas',
@@ -230,6 +269,20 @@ describe('canvas repository', () => {
           canvasId: 'canvas',
           sourceId: 'card',
           targetId: 'shape',
+          createdAt: 'now',
+          updatedAt: 'now',
+        },
+      ],
+      imageNodes: [
+        {
+          id: 'image',
+          canvasId: 'canvas',
+          name: 'chart.png',
+          mimeType: 'image/png',
+          dataUrl: 'data:image/png;base64,abc',
+          position: { x: 1, y: 2 },
+          width: 200,
+          height: 120,
           createdAt: 'now',
           updatedAt: 'now',
         },
@@ -279,6 +332,7 @@ describe('canvas repository', () => {
     expect(db.transaction).toHaveBeenCalled()
     expect(db.promptCards.bulkPut).toHaveBeenCalledWith([card])
     expect(db.canvasShapeNodes.bulkPut).toHaveBeenCalled()
+    expect(db.canvasImageNodes.bulkPut).toHaveBeenCalled()
     expect(db.canvasTextNodes.bulkPut).toHaveBeenCalled()
     expect(db.canvasStrokes.bulkPut).toHaveBeenCalled()
     expect(db.canvasEdges.bulkPut).toHaveBeenCalled()

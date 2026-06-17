@@ -197,7 +197,8 @@
 }
 
 .flow-shape-resize-handle,
-.free-text-resize-handle {
+.free-text-resize-handle,
+.canvas-image-resize-handle {
   background: var(--panel);
   border: 1px solid var(--ok);
   border-radius: 999px;
@@ -205,6 +206,79 @@
   height: 7px;
   width: 7px;
   z-index: 13;
+}
+
+.react-flow__node-canvasImage {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.canvas-image-node {
+  background: color-mix(in srgb, var(--panel) 94%, var(--surface));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 72px;
+  min-width: 96px;
+  overflow: visible;
+  position: relative;
+  width: 100%;
+}
+
+.canvas-image-node.is-selected,
+.canvas-image-node.is-hovered {
+  border-color: var(--line-strong);
+}
+
+.canvas-image-drag-area {
+  background:
+    linear-gradient(45deg, color-mix(in srgb, var(--line) 30%, transparent) 25%, transparent 25%),
+    linear-gradient(-45deg, color-mix(in srgb, var(--line) 30%, transparent) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, color-mix(in srgb, var(--line) 30%, transparent) 75%),
+    linear-gradient(-45deg, transparent 75%, color-mix(in srgb, var(--line) 30%, transparent) 75%),
+    var(--surface);
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  background-size: 16px 16px;
+  border-radius: inherit;
+  cursor: grab;
+  height: 100%;
+  overflow: hidden;
+  width: 100%;
+}
+
+.canvas-image-drag-area:active {
+  cursor: grabbing;
+}
+
+.canvas-image-drag-area img {
+  display: block;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  width: 100%;
+}
+
+.canvas-image-actions {
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  box-shadow: var(--shadow);
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  z-index: 14;
+}
+
+.canvas-image-actions .icon-button {
+  height: 28px;
+  width: 28px;
 }
 
 .react-flow__node-freeText {
@@ -333,21 +407,25 @@
 }
 
 .flow-shape .react-flow__handle-top,
+.canvas-image-node .react-flow__handle-top,
 .prompt-node .react-flow__handle-top {
   top: -8px;
 }
 
 .flow-shape .react-flow__handle-right,
+.canvas-image-node .react-flow__handle-right,
 .prompt-node .react-flow__handle-right {
   right: -8px;
 }
 
 .flow-shape .react-flow__handle-bottom,
+.canvas-image-node .react-flow__handle-bottom,
 .prompt-node .react-flow__handle-bottom {
   bottom: -8px;
 }
 
 .flow-shape .react-flow__handle-left,
+.canvas-image-node .react-flow__handle-left,
 .prompt-node .react-flow__handle-left {
   left: -8px;
 }
@@ -363,6 +441,9 @@
 .flow-shape:hover .react-flow__handle,
 .flow-shape.is-hovered .react-flow__handle,
 .flow-shape.is-selected .react-flow__handle,
+.canvas-image-node:hover .react-flow__handle,
+.canvas-image-node.is-hovered .react-flow__handle,
+.canvas-image-node.is-selected .react-flow__handle,
 .react-flow__handle.connecting,
 .react-flow__handle.valid {
   opacity: 1;

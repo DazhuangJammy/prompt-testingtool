@@ -58,6 +58,7 @@ export const workspaceRepository = {
         db.canvases,
         db.promptCards,
       db.canvasShapeNodes,
+      db.canvasImageNodes,
       db.canvasEdges,
       db.canvasStrokes,
       db.canvasTextNodes,
@@ -85,6 +86,7 @@ export const workspaceRepository = {
           db.canvases.delete(id),
           db.promptCards.where('canvasId').equals(id).delete(),
           db.canvasShapeNodes.where('canvasId').equals(id).delete(),
+          db.canvasImageNodes.where('canvasId').equals(id).delete(),
           db.canvasEdges.where('canvasId').equals(id).delete(),
           db.canvasStrokes.where('canvasId').equals(id).delete(),
           db.canvasTextNodes.where('canvasId').equals(id).delete(),
@@ -111,11 +113,12 @@ export const workspaceRepository = {
 
   async exportWorkspace(): Promise<ExportPayload> {
     return {
-      version: 4,
+      version: 5,
       exportedAt: nowIso(),
       canvases: await db.canvases.toArray(),
       promptCards: await db.promptCards.toArray(),
       canvasShapeNodes: await db.canvasShapeNodes.toArray(),
+      canvasImageNodes: await db.canvasImageNodes.toArray(),
       canvasEdges: await db.canvasEdges.toArray(),
       canvasStrokes: await db.canvasStrokes.toArray(),
       canvasTextNodes: await db.canvasTextNodes.toArray(),
@@ -132,7 +135,8 @@ export const workspaceRepository = {
       payload.version !== 1 &&
       payload.version !== 2 &&
       payload.version !== 3 &&
-      payload.version !== 4
+      payload.version !== 4 &&
+      payload.version !== 5
     ) {
       throw new Error('Unsupported file')
     }
@@ -142,6 +146,7 @@ export const workspaceRepository = {
         db.canvases,
         db.promptCards,
         db.canvasShapeNodes,
+        db.canvasImageNodes,
         db.canvasEdges,
         db.canvasStrokes,
         db.canvasTextNodes,
@@ -156,6 +161,7 @@ export const workspaceRepository = {
           db.canvases.clear(),
           db.promptCards.clear(),
           db.canvasShapeNodes.clear(),
+          db.canvasImageNodes.clear(),
           db.canvasEdges.clear(),
           db.canvasStrokes.clear(),
           db.canvasTextNodes.clear(),
@@ -170,6 +176,7 @@ export const workspaceRepository = {
           db.canvases.bulkPut(payload.canvases ?? []),
           db.promptCards.bulkPut(payload.promptCards ?? []),
           db.canvasShapeNodes.bulkPut(payload.canvasShapeNodes ?? []),
+          db.canvasImageNodes.bulkPut(payload.canvasImageNodes ?? []),
           db.canvasEdges.bulkPut(payload.canvasEdges ?? []),
           db.canvasStrokes.bulkPut(payload.canvasStrokes ?? []),
           db.canvasTextNodes.bulkPut(payload.canvasTextNodes ?? []),

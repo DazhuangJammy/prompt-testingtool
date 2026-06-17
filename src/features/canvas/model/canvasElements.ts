@@ -1,5 +1,6 @@
 import type {
   CanvasEdge,
+  CanvasImageNode,
   CanvasPoint,
   CanvasShapeKind,
   CanvasShapeNode,
@@ -26,6 +27,9 @@ const shapeDefaults = {
   Exclude<CanvasShapeKind, 'text'>,
   { body: string; height: number; title: string; width: number }
 >
+
+const DEFAULT_IMAGE_MAX_WIDTH = 420
+const DEFAULT_IMAGE_MAX_HEIGHT = 280
 
 export function createCanvasShapeNode(
   canvasId: string,
@@ -111,5 +115,49 @@ export function createCanvasTextNode(
     backgroundColor: style.backgroundColor,
     createdAt: at,
     updatedAt: at,
+  }
+}
+
+export function createCanvasImageNode(
+  canvasId: string,
+  position: CanvasPoint,
+  image: Pick<CanvasImageNode, 'dataUrl' | 'mimeType' | 'name'> & {
+    naturalHeight?: number
+    naturalWidth?: number
+  },
+): CanvasImageNode {
+  const at = nowIso()
+  const size = fitImageSize(
+    image.naturalWidth ?? DEFAULT_IMAGE_MAX_WIDTH,
+    image.naturalHeight ?? DEFAULT_IMAGE_MAX_HEIGHT,
+  )
+
+  return {
+    id: createId(),
+    canvasId,
+    name: image.name.trim() || '粘贴图片',
+    mimeType: image.mimeType || 'image/png',
+    dataUrl: image.dataUrl,
+    position,
+    width: size.width,
+    height: size.height,
+    createdAt: at,
+    updatedAt: at,
+  }
+}
+
+function fitImageSize(width: number, height: number) {
+  const safeWidth = Number.isFinite(width) && width > 0 ? width : DEFAULT_IMAGE_MAX_WIDTH
+  const safeHeight =
+    Number.isFinite(height) && height > 0 ? height : DEFAULT_IMAGE_MAX_HEIGHT
+  const ratio = Math.min(
+    1,
+    DEFAULT_IMAGE_MAX_WIDTH / safeWidth,
+    DEFAULT_IMAGE_MAX_HEIGHT / safeHeight,
+  )
+
+  return {
+    width: Math.max(80, Math.round(safeWidth * ratio)),
+    height: Math.max(60, Math.round(safeHeight * ratio)),
   }
 }

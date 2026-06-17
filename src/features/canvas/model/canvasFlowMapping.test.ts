@@ -6,6 +6,7 @@ import {
   syncCanvasNodes,
 } from './canvasFlowMapping'
 import type {
+  CanvasImageNode,
   CanvasShapeNode,
   CanvasStroke,
   CanvasTextNode,
@@ -31,6 +32,19 @@ const shape: CanvasShapeNode = {
   position: { x: 3, y: 4 },
   width: 200,
   height: 100,
+  createdAt: 'now',
+  updatedAt: 'now',
+}
+
+const imageNode: CanvasImageNode = {
+  id: 'image',
+  canvasId: 'canvas',
+  name: 'chart.png',
+  mimeType: 'image/png',
+  dataUrl: 'data:image/png;base64,abc',
+  position: { x: 11, y: 12 },
+  width: 260,
+  height: 180,
   createdAt: 'now',
   updatedAt: 'now',
 }
@@ -64,8 +78,10 @@ const textNode: CanvasTextNode = {
 const baseHandlers = {
   onSavePromptCard: vi.fn(),
   onSelectPrompt: vi.fn(),
+  onSelectImage: vi.fn(),
   onSelectShape: vi.fn(),
   onSelectText: vi.fn(),
+  onUpdateImage: vi.fn(),
   onUpdateShape: vi.fn(),
   onUpdateText: vi.fn(),
 }
@@ -75,6 +91,7 @@ describe('canvas flow mapping', () => {
     const nodes = createCanvasFlowNodes({
       promptCards: [card],
       selectedNodeIds: ['card'],
+      imageNodes: [],
       shapeNodes: [shape],
       strokes: [],
       textNodes: [],
@@ -102,6 +119,7 @@ describe('canvas flow mapping', () => {
     const nodes = createCanvasFlowNodes({
       promptCards: [],
       selectedNodeIds: ['text'],
+      imageNodes: [],
       shapeNodes: [],
       strokes: [],
       textNodes: [textNode],
@@ -119,10 +137,33 @@ describe('canvas flow mapping', () => {
     expect(nodes[0].data.selectedNodeId).toBe('text')
   })
 
+  it('maps pasted image nodes with resize dimensions', () => {
+    const nodes = createCanvasFlowNodes({
+      promptCards: [],
+      selectedNodeIds: ['image'],
+      imageNodes: [imageNode],
+      shapeNodes: [],
+      strokes: [],
+      textNodes: [],
+      ...baseHandlers,
+    })
+
+    expect(nodes[0]).toMatchObject({
+      dragHandle: '.canvas-image-drag-area',
+      id: 'image',
+      position: { x: 11, y: 12 },
+      selected: true,
+      style: { height: 180, width: 260 },
+      type: 'canvasImage',
+    })
+    expect(nodes[0].data.selectedNodeId).toBe('image')
+  })
+
   it('maps freehand strokes to draggable flow nodes', () => {
     const nodes = createCanvasFlowNodes({
       promptCards: [],
       selectedNodeIds: ['stroke'],
+      imageNodes: [],
       shapeNodes: [],
       strokes: [stroke],
       textNodes: [],
@@ -173,6 +214,7 @@ describe('canvas flow mapping', () => {
     const [businessNode] = createCanvasFlowNodes({
       promptCards: [card],
       selectedNodeIds: [],
+      imageNodes: [],
       shapeNodes: [],
       strokes: [],
       textNodes: [],
@@ -190,6 +232,7 @@ describe('canvas flow mapping', () => {
     const [businessNode] = createCanvasFlowNodes({
       promptCards: [card],
       selectedNodeIds: [],
+      imageNodes: [],
       shapeNodes: [],
       strokes: [],
       textNodes: [],

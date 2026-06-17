@@ -39,6 +39,12 @@ vi.mock('@/shared/storage/db', () => ({
       toArray: vi.fn(() => []),
       where: vi.fn(() => chain([])),
     },
+    canvasImageNodes: {
+      bulkPut: vi.fn(),
+      clear: vi.fn(),
+      toArray: vi.fn(() => []),
+      where: vi.fn(() => chain([])),
+    },
     canvasStrokes: {
       bulkPut: vi.fn(),
       clear: vi.fn(),
@@ -177,8 +183,9 @@ describe('workspace repository', () => {
     }
 
     await expect(workspaceRepository.exportWorkspace()).resolves.toMatchObject({
-      version: 4,
+      version: 5,
       canvasShapeNodes: [],
+      canvasImageNodes: [],
       canvasEdges: [],
       canvasStrokes: [],
       canvasTextNodes: [],
@@ -188,6 +195,7 @@ describe('workspace repository', () => {
     expect(db.canvases.clear).toHaveBeenCalled()
     expect(db.canvases.bulkPut).toHaveBeenCalledWith([])
     expect(db.canvasShapeNodes.bulkPut).toHaveBeenCalledWith([])
+    expect(db.canvasImageNodes.bulkPut).toHaveBeenCalledWith([])
     expect(db.canvasEdges.bulkPut).toHaveBeenCalledWith([])
     expect(db.canvasStrokes.bulkPut).toHaveBeenCalledWith([])
     expect(db.canvasTextNodes.bulkPut).toHaveBeenCalledWith([])
@@ -195,7 +203,7 @@ describe('workspace repository', () => {
 
   it('rejects unsupported imports and lists canvases', async () => {
     await expect(
-      workspaceRepository.importWorkspace({ version: 5 } as never),
+      workspaceRepository.importWorkspace({ version: 6 } as never),
     ).rejects.toThrow('Unsupported file')
     await expect(workspaceRepository.listCanvasesByUpdatedAt()).resolves.toEqual([
       { id: 'canvas' },

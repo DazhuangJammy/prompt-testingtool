@@ -1,6 +1,7 @@
 import { getStrokeBounds, movePoints } from '@/features/canvas/model/strokeGeometry'
 import type {
   CanvasEdge,
+  CanvasImageNode,
   CanvasPoint,
   CanvasShapeNode,
   CanvasStroke,
@@ -12,6 +13,7 @@ import { nowIso } from '@/shared/utils/time'
 
 export interface CanvasClipboardElements {
   edges: CanvasEdge[]
+  imageNodes: CanvasImageNode[]
   promptCards: PromptCard[]
   shapeNodes: CanvasShapeNode[]
   strokes: CanvasStroke[]
@@ -46,6 +48,7 @@ interface CreateCanvasPasteOptions {
 
 export function createCanvasClipboard({
   edges,
+  imageNodes,
   promptCards,
   selectedNodeIds,
   shapeNodes,
@@ -54,12 +57,14 @@ export function createCanvasClipboard({
 }: CreateCanvasClipboardOptions): CanvasClipboardSnapshot | undefined {
   const selectedIds = new Set(selectedNodeIds)
   const selectedPromptCards = promptCards.filter((card) => selectedIds.has(card.id))
+  const selectedImageNodes = imageNodes.filter((node) => selectedIds.has(node.id))
   const selectedShapeNodes = shapeNodes.filter((node) => selectedIds.has(node.id))
   const selectedTextNodes = textNodes.filter((node) => selectedIds.has(node.id))
   const selectedStrokes = strokes.filter((stroke) => selectedIds.has(stroke.id))
 
   if (
     !selectedPromptCards.length &&
+    !selectedImageNodes.length &&
     !selectedShapeNodes.length &&
     !selectedTextNodes.length &&
     !selectedStrokes.length
@@ -71,11 +76,13 @@ export function createCanvasClipboard({
     edges: cloneEdgesBetweenSelectedNodes(edges, selectedIds),
     origin: getClipboardOrigin({
       promptCards: selectedPromptCards,
+      imageNodes: selectedImageNodes,
       shapeNodes: selectedShapeNodes,
       strokes: selectedStrokes,
       textNodes: selectedTextNodes,
     }),
     promptCards: structuredClone(selectedPromptCards),
+    imageNodes: structuredClone(selectedImageNodes),
     shapeNodes: structuredClone(selectedShapeNodes),
     strokes: structuredClone(selectedStrokes),
     textNodes: structuredClone(selectedTextNodes),
@@ -112,6 +119,19 @@ export function createCanvasPastePayload({
     }
   })
   const shapeNodes = clipboard.shapeNodes.map((node) => {
+    const id = createNextId()
+    nodeIdMap.set(node.id, id)
+
+    return {
+      ...structuredClone(node),
+      canvasId,
+      createdAt: at,
+      id,
+      position: movePoint(node.position, delta),
+      updatedAt: at,
+    }
+  })
+  const imageNodes = clipboard.imageNodes.map((node) => {
     const id = createNextId()
     nodeIdMap.set(node.id, id)
 
@@ -170,12 +190,14 @@ export function createCanvasPastePayload({
     nodeIds: [
       ...promptCards.map((card) => card.id),
       ...shapeNodes.map((node) => node.id),
+      ...imageNodes.map((node) => node.id),
       ...textNodes.map((node) => node.id),
       ...strokes.map((stroke) => stroke.id),
     ],
     payload: {
       canvasId,
       edges,
+      imageNodes,
       promptCards,
       shapeNodes,
       strokes,
@@ -198,12 +220,14 @@ function cloneEdgesBetweenSelectedNodes(
 
 function getClipboardOrigin({
   promptCards,
+  imageNodes,
   shapeNodes,
   strokes,
   textNodes,
 }: Omit<CanvasClipboardElements, 'edges'>): CanvasPoint {
   const points = [
     ...promptCards.map((card) => card.position),
+    ...imageNodes.map((node) => node.position),
     ...shapeNodes.map((node) => node.position),
     ...textNodes.map((node) => node.position),
     ...strokes.map((stroke) => {

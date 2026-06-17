@@ -1,6 +1,7 @@
 import type { Node } from '@xyflow/react'
 import type {
   CanvasPoint,
+  CanvasImageNode,
   CanvasShapeNode,
   CanvasStroke,
   CanvasTextNode,
@@ -45,6 +46,18 @@ export interface CanvasTextNodeData extends Record<string, unknown> {
 }
 
 export type CanvasTextFlowNode = Node<CanvasTextNodeData, 'freeText'>
+
+export interface CanvasImageNodeData extends Record<string, unknown> {
+  node: CanvasImageNode
+  selectedNodeId?: string
+  onSelect: (id: string) => void
+  onUpdate: (
+    id: string,
+    updates: Partial<Pick<CanvasImageNode, 'height' | 'position' | 'width'>>,
+  ) => void
+}
+
+export type CanvasImageFlowNode = Node<CanvasImageNodeData, 'canvasImage'>
 
 export interface CanvasStrokeNodeData extends Record<string, unknown> {
   bounds: {

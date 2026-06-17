@@ -1,10 +1,12 @@
 import type { NodeTypes } from '@xyflow/react'
+import CanvasImageNode from '@/features/canvas/components/CanvasImageNode'
 import FlowShapeNode from '@/features/canvas/components/FlowShapeNode'
 import FreeTextNode from '@/features/canvas/components/FreeTextNode'
 import FreehandStrokeNode from '@/features/canvas/components/FreehandStrokeNode'
 import PromptCardNode from '@/features/prompt-card/PromptCardNode'
 
 export const canvasNodeTypes = {
+  canvasImage: CanvasImageNode,
   freeText: FreeTextNode,
   freehandStroke: FreehandStrokeNode,
   flowShape: FlowShapeNode,

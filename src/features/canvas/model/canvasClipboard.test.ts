@@ -6,6 +6,7 @@ import {
 } from './canvasClipboard'
 import type {
   CanvasEdge,
+  CanvasImageNode,
   CanvasShapeNode,
   CanvasStroke,
   CanvasTextNode,
@@ -36,6 +37,19 @@ const shape: CanvasShapeNode = {
   position: { x: 120, y: 80 },
   width: 200,
   height: 100,
+  createdAt: 'old',
+  updatedAt: 'old',
+}
+
+const imageNode: CanvasImageNode = {
+  id: 'image',
+  canvasId: 'canvas',
+  name: 'chart.png',
+  mimeType: 'image/png',
+  dataUrl: 'data:image/png;base64,abc',
+  position: { x: 90, y: 110 },
+  width: 220,
+  height: 140,
   createdAt: 'old',
   updatedAt: 'old',
 }
@@ -90,6 +104,7 @@ describe('canvas clipboard', () => {
   it('captures selected elements and only keeps internal edges', () => {
     const clipboard = createCanvasClipboard({
       edges: [internalEdge, externalEdge],
+      imageNodes: [imageNode],
       promptCards: [card],
       selectedNodeIds: ['card', 'shape'],
       shapeNodes: [shape],
@@ -98,6 +113,7 @@ describe('canvas clipboard', () => {
     })
 
     expect(clipboard?.promptCards).toHaveLength(1)
+    expect(clipboard?.imageNodes).toHaveLength(0)
     expect(clipboard?.shapeNodes).toHaveLength(1)
     expect(clipboard?.textNodes).toHaveLength(0)
     expect(clipboard?.strokes).toHaveLength(0)
@@ -109,6 +125,7 @@ describe('canvas clipboard', () => {
     expect(
       createCanvasClipboard({
         edges: [internalEdge],
+        imageNodes: [imageNode],
         promptCards: [card],
         selectedNodeIds: [],
         shapeNodes: [shape],
@@ -119,12 +136,21 @@ describe('canvas clipboard', () => {
   })
 
   it('pastes elements at the cursor while preserving relative positions', () => {
-    const ids = ['new-card', 'new-step', 'new-shape', 'new-text', 'new-stroke', 'new-edge']
+    const ids = [
+      'new-card',
+      'new-step',
+      'new-shape',
+      'new-image',
+      'new-text',
+      'new-stroke',
+      'new-edge',
+    ]
     const result = createCanvasPastePayload({
       anchor: { x: 200, y: 240 },
       canvasId: 'next-canvas',
       clipboard: {
         edges: [internalEdge],
+        imageNodes: [imageNode],
         origin: { x: 20, y: 30 },
         promptCards: [card],
         shapeNodes: [shape],
@@ -135,7 +161,13 @@ describe('canvas clipboard', () => {
       now: () => 'now',
     })
 
-    expect(result.nodeIds).toEqual(['new-card', 'new-shape', 'new-text', 'new-stroke'])
+    expect(result.nodeIds).toEqual([
+      'new-card',
+      'new-shape',
+      'new-image',
+      'new-text',
+      'new-stroke',
+    ])
     expect(result.promptCardIds).toEqual(['new-card'])
     expect(result.payload.promptCards[0]).toMatchObject({
       canvasId: 'next-canvas',
@@ -147,6 +179,7 @@ describe('canvas clipboard', () => {
       result.payload.promptCards[0].sections.workflow.workflowSteps?.[0].id,
     ).toBe('new-step')
     expect(result.payload.shapeNodes[0].position).toEqual({ x: 300, y: 290 })
+    expect(result.payload.imageNodes[0].position).toEqual({ x: 270, y: 320 })
     expect(result.payload.textNodes[0].position).toEqual({ x: 240, y: 300 })
     expect(result.payload.strokes[0].points).toEqual([
       { x: 220, y: 260 },
@@ -162,6 +195,7 @@ describe('canvas clipboard', () => {
   it('uses stroke bounds as origin when only a stroke is copied', () => {
     const clipboard = createCanvasClipboard({
       edges: [],
+      imageNodes: [],
       promptCards: [],
       selectedNodeIds: ['stroke'],
       shapeNodes: [],

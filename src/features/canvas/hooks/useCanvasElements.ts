@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { canvasRepository } from '@/features/canvas/infrastructure/canvasRepository'
 import type {
   CanvasEdge,
+  CanvasImageNode,
   CanvasShapeNode,
   CanvasStroke,
   CanvasTextNode,
@@ -9,6 +10,7 @@ import type {
 
 const emptyShapeNodes: CanvasShapeNode[] = []
 const emptyCanvasEdges: CanvasEdge[] = []
+const emptyImageNodes: CanvasImageNode[] = []
 const emptyStrokes: CanvasStroke[] = []
 const emptyTextNodes: CanvasTextNode[] = []
 
@@ -43,9 +45,18 @@ export function useCanvasElements(canvasId?: string) {
     [canvasId],
     [],
   )
+  const imageNodes = useLiveQuery<CanvasImageNode[], CanvasImageNode[]>(
+    () =>
+      canvasId
+        ? canvasRepository.listImageNodesByCanvas(canvasId)
+        : Promise.resolve([]),
+    [canvasId],
+    [],
+  )
 
   return {
     canvasEdges: canvasEdges ?? emptyCanvasEdges,
+    imageNodes: imageNodes ?? emptyImageNodes,
     shapeNodes: shapeNodes ?? emptyShapeNodes,
     strokes: strokes ?? emptyStrokes,
     textNodes: textNodes ?? emptyTextNodes,
