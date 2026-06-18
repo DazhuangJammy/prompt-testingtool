@@ -45,6 +45,7 @@ const provider: ProviderConfig = {
 
 function renderChatPanel() {
   activeCardChangeMock = vi.fn<(id: string) => void>()
+  const ensureWidthMock = vi.fn<(width: number) => void>()
   host = document.createElement('div')
   document.body.append(host)
   root = createRoot(host)
@@ -60,6 +61,7 @@ function renderChatPanel() {
         activeSessionId={undefined}
         onActiveSessionChange={vi.fn()}
         onActiveCardChange={activeCardChangeMock}
+        onEnsureWidth={ensureWidthMock}
         onResizeStart={vi.fn()}
         onSelectProvider={vi.fn()}
         onToggle={vi.fn()}
@@ -67,6 +69,8 @@ function renderChatPanel() {
       />,
     )
   })
+
+  return { ensureWidthMock }
 }
 
 afterEach(() => {
@@ -82,6 +86,26 @@ afterEach(() => {
 })
 
 describe('ChatPanel', () => {
+  it('asks the parent panel to expand when compare mode opens and panes are added', () => {
+    const { ensureWidthMock } = renderChatPanel()
+
+    act(() => {
+      document
+        .querySelector<HTMLButtonElement>('button[aria-label="对比"]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(ensureWidthMock).toHaveBeenCalledWith(761)
+
+    act(() => {
+      document
+        .querySelector<HTMLButtonElement>('button[aria-label="新增"]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(ensureWidthMock).toHaveBeenLastCalledWith(1142)
+  })
+
   it('allows deleting a compare pane down to one pane and exits compare mode', () => {
     renderChatPanel()
 

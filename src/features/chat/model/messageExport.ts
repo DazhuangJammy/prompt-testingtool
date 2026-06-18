@@ -1,4 +1,4 @@
-import { splitThinkingBlock } from '@/features/chat/model/thinking'
+import { splitThinkingBlock } from '@/shared/model/thinking'
 import { formatAttachmentSize } from './attachments'
 import type { ChatAttachment, ChatMessage, ChatSession } from '@/shared/types'
 

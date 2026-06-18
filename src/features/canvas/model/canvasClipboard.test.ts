@@ -74,7 +74,7 @@ const stroke: CanvasStroke = {
     { x: 40, y: 50 },
     { x: 80, y: 70 },
   ],
-  color: '#78d18b',
+  color: '#ededed',
   strokeWidth: 3,
   createdAt: 'old',
   updatedAt: 'old',

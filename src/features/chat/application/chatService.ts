@@ -1,5 +1,4 @@
 import { requestCompletion, requestCompletionStream } from '@/shared/api/ai'
-import { compilePrompt } from '@/features/prompt-card/model/prompt'
 import type {
   ChatAttachment,
   ChatMessage,
@@ -15,7 +14,7 @@ import {
   createCompareRun,
   createPromptVersion,
 } from '@/features/chat/model/chatCompletion'
-import { splitThinkingBlock } from '@/features/chat/model/thinking'
+import { splitThinkingBlock } from '@/shared/model/thinking'
 import {
   createTopicTitleMessages,
   normalizeGeneratedChatTopicTitle,
@@ -74,6 +73,7 @@ export async function editChatMessage(id: string, content: string) {
 
 export async function sendChatMessage({
   card,
+  defaultAssistantPrompt,
   history,
   onAssistantMessage,
   provider,
@@ -86,6 +86,7 @@ export async function sendChatMessage({
 }: {
   attachments?: ChatAttachment[]
   card: PromptCard
+  defaultAssistantPrompt?: string
   history: ChatMessage[]
   onAssistantMessage?: (message: ChatMessage) => void
   provider: ProviderConfig
@@ -95,7 +96,7 @@ export async function sendChatMessage({
   text: string
   thinkingMode: ThinkingMode
 }) {
-  const version = createPromptVersion(card, 'chat-send')
+  const version = createPromptVersion(card, 'chat-send', defaultAssistantPrompt)
   await chatRepository.savePromptVersion(version)
 
   const userMessage: ChatMessage = {
@@ -164,6 +165,7 @@ export async function sendChatMessage({
 async function requestAssistantReply({
   attachments = [],
   card,
+  defaultAssistantPrompt,
   history,
   provider,
   promptInjectionMode,
@@ -174,6 +176,7 @@ async function requestAssistantReply({
 }: {
   attachments?: ChatAttachment[]
   card: PromptCard
+  defaultAssistantPrompt?: string
   history: ChatMessage[]
   provider: ProviderConfig
   promptInjectionMode: PromptInjectionMode
@@ -182,7 +185,7 @@ async function requestAssistantReply({
   text: string
   thinkingMode: ThinkingMode
 }) {
-  const version = createPromptVersion(card, 'chat-send')
+  const version = createPromptVersion(card, 'chat-send', defaultAssistantPrompt)
   await chatRepository.savePromptVersion(version)
 
   const assistantMessage: ChatMessage = {
@@ -337,6 +340,7 @@ function isAbortError(error: unknown) {
 
 export async function resendChatMessage({
   card,
+  defaultAssistantPrompt,
   history,
   message,
   provider,
@@ -347,6 +351,7 @@ export async function resendChatMessage({
   thinkingMode,
 }: {
   card: PromptCard
+  defaultAssistantPrompt?: string
   history: ChatMessage[]
   message: ChatMessage
   provider: ProviderConfig
@@ -361,6 +366,7 @@ export async function resendChatMessage({
   await requestAssistantReply({
     attachments: message.attachments,
     card,
+    defaultAssistantPrompt,
     history: history.filter((item) => item.createdAt < message.createdAt),
     provider,
     promptInjectionMode,
@@ -377,6 +383,7 @@ export async function runPromptCompare({
   input,
   ownerPromptCardId,
   provider,
+  defaultAssistantPrompt,
   promptInjectionMode,
 }: {
   leftCard: PromptCard
@@ -384,10 +391,19 @@ export async function runPromptCompare({
   input: string
   ownerPromptCardId: string
   provider: ProviderConfig
+  defaultAssistantPrompt?: string
   promptInjectionMode: PromptInjectionMode
 }) {
-  const leftVersion = createPromptVersion(leftCard, 'compare')
-  const rightVersion = createPromptVersion(rightCard, 'compare')
+  const leftVersion = createPromptVersion(
+    leftCard,
+    'compare',
+    defaultAssistantPrompt,
+  )
+  const rightVersion = createPromptVersion(
+    rightCard,
+    'compare',
+    defaultAssistantPrompt,
+  )
   await Promise.all([
     chatRepository.savePromptVersion(leftVersion),
     chatRepository.savePromptVersion(rightVersion),
@@ -400,8 +416,8 @@ export async function runPromptCompare({
     { role: 'user' as const, content: input },
   ]
   const [oldOutput, newOutput] = await Promise.all([
-    requestCompletion(provider, baseMessages(compilePrompt(leftCard))),
-    requestCompletion(provider, baseMessages(compilePrompt(rightCard))),
+    requestCompletion(provider, baseMessages(leftVersion.compiledMarkdown)),
+    requestCompletion(provider, baseMessages(rightVersion.compiledMarkdown)),
   ])
   const run = createCompareRun(
     ownerPromptCardId,

@@ -77,7 +77,7 @@ export function createCanvasEdge(
 export function createCanvasStroke(
   canvasId: string,
   points: CanvasPoint[],
-  color = '#78d18b',
+  color = '#ededed',
   strokeWidth = 3,
 ): CanvasStroke {
   const at = nowIso()

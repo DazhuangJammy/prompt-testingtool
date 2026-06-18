@@ -61,7 +61,7 @@ function CanvasImageNode({ data }: NodeProps<CanvasImageFlowNode>) {
               key={position}
               autoScale
               className="canvas-image-resize-handle nodrag"
-              color="var(--ok)"
+              color="var(--accent)"
               minHeight={72}
               minWidth={96}
               position={position}

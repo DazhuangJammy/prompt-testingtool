@@ -20,15 +20,15 @@
 
 .version-badge:hover,
 .version-badge.has-update {
-  background: color-mix(in srgb, var(--ok) 18%, var(--surface));
-  border-color: color-mix(in srgb, var(--ok) 34%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 28%, transparent);
   color: var(--text);
 }
 
 .version-update-dot {
-  background: var(--ok);
+  background: var(--accent);
   border-radius: 999px;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 18%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
   flex: 0 0 auto;
   height: 7px;
   width: 7px;
@@ -80,9 +80,9 @@
 
 .version-ok {
   align-items: center;
-  background: color-mix(in srgb, var(--ok) 20%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
   border-radius: 999px;
-  color: var(--ok);
+  color: var(--accent);
   display: inline-flex;
   height: 28px;
   justify-content: center;

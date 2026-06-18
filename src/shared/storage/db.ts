@@ -9,6 +9,7 @@ import type {
   ChatMessage,
   ChatSession,
   CompareRun,
+  DefaultModelSettings,
   PromptCard,
   PromptVersion,
   ProviderConfig,
@@ -24,6 +25,7 @@ class PromptCanvasDatabase extends Dexie {
   canvasTextNodes!: Table<CanvasTextNode, string>
   promptVersions!: Table<PromptVersion, string>
   providerConfigs!: Table<ProviderConfig, string>
+  defaultModelSettings!: Table<DefaultModelSettings, string>
   chatSessions!: Table<ChatSession, string>
   chatMessages!: Table<ChatMessage, string>
   compareRuns!: Table<CompareRun, string>
@@ -99,6 +101,21 @@ class PromptCanvasDatabase extends Dexie {
       canvasImageNodes: 'id, canvasId, updatedAt',
       promptVersions: 'id, promptCardId, createdAt',
       providerConfigs: 'id, updatedAt',
+      chatSessions: 'id, canvasId, promptCardId, updatedAt',
+      chatMessages: 'id, sessionId, createdAt, promptVersionId',
+      compareRuns: 'id, promptCardId, createdAt',
+    })
+    this.version(6).stores({
+      canvases: 'id, updatedAt',
+      promptCards: 'id, canvasId, updatedAt',
+      canvasShapeNodes: 'id, canvasId, updatedAt',
+      canvasEdges: 'id, canvasId, sourceId, targetId, updatedAt',
+      canvasStrokes: 'id, canvasId, updatedAt',
+      canvasTextNodes: 'id, canvasId, updatedAt',
+      canvasImageNodes: 'id, canvasId, updatedAt',
+      promptVersions: 'id, promptCardId, createdAt',
+      providerConfigs: 'id, updatedAt',
+      defaultModelSettings: 'id, updatedAt',
       chatSessions: 'id, canvasId, promptCardId, updatedAt',
       chatMessages: 'id, sessionId, createdAt, promptVersionId',
       compareRuns: 'id, promptCardId, createdAt',

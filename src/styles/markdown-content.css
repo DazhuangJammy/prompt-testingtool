@@ -58,6 +58,13 @@
   margin: 0 0 10px;
 }
 
+.prompt-outline .markdown-preview p,
+.prompt-markdown-preview.markdown-preview p,
+.prompt-preface.markdown-preview p,
+.prompt-preview-body.markdown-preview p {
+  white-space: pre-line;
+}
+
 .markdown-preview li + li,
 .message li + li,
 .compare-result li + li {

@@ -5,13 +5,17 @@ import {
   type NodeProps,
   type ResizeParams,
 } from '@xyflow/react'
-import type { FocusEvent } from 'react'
+import type { FocusEvent, MouseEvent } from 'react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import {
   isFocusLeavingContainer,
   isTargetOutsideContainer,
 } from '@/features/canvas/components/editorFocus'
 import type { CanvasShapeFlowNode } from '@/features/canvas/model/flowTypes'
+import {
+  getTextOffsetFromPoint,
+  placeTextControlCaret,
+} from '@/shared/ui/textCaret'
 
 const resizePositions = ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const
 
@@ -21,6 +25,8 @@ function FlowShapeNode({ data }: NodeProps<CanvasShapeFlowNode>) {
   const [hovering, setHovering] = useState(false)
   const [titleDraft, setTitleDraft] = useState(node.title)
   const [bodyDraft, setBodyDraft] = useState(node.body)
+  const pendingFocusRef = useRef<'title' | 'body'>('title')
+  const pendingCursorOffsetRef = useRef<number | undefined>(undefined)
   const editorRef = useRef<HTMLDivElement>(null)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   const titleRef = useRef<HTMLInputElement>(null)
@@ -37,8 +43,14 @@ function FlowShapeNode({ data }: NodeProps<CanvasShapeFlowNode>) {
 
   useEffect(() => {
     if (!editing) return
-    titleRef.current?.focus()
-    titleRef.current?.select()
+    const target =
+      pendingFocusRef.current === 'body' ? bodyRef.current : titleRef.current
+    if (!target) return
+
+    window.requestAnimationFrame(() => {
+      placeTextControlCaret(target, pendingCursorOffsetRef.current)
+      pendingCursorOffsetRef.current = undefined
+    })
   }, [editing])
 
   useEffect(() => {
@@ -60,7 +72,20 @@ function FlowShapeNode({ data }: NodeProps<CanvasShapeFlowNode>) {
     setEditing(false)
   }
 
-  const startEditing = () => {
+  const startEditing = (event: MouseEvent<HTMLElement>) => {
+    const titleTarget = event.target instanceof HTMLElement
+      ? event.target.closest<HTMLElement>('.flow-shape-head')
+      : undefined
+    const bodyTarget = event.target instanceof HTMLElement
+      ? event.target.closest<HTMLElement>('.flow-shape-body')
+      : undefined
+    const focus = bodyTarget ? 'body' : 'title'
+    pendingFocusRef.current = focus
+    pendingCursorOffsetRef.current = getTextOffsetFromPoint(
+      (focus === 'body' ? bodyTarget : titleTarget) ?? event.currentTarget,
+      event.clientX,
+      event.clientY,
+    )
     setTitleDraft(node.title)
     setBodyDraft(node.body)
     setEditing(true)
@@ -99,7 +124,7 @@ function FlowShapeNode({ data }: NodeProps<CanvasShapeFlowNode>) {
             key={position}
             autoScale
             className="flow-shape-resize-handle nodrag"
-            color="var(--ok)"
+            color="var(--accent)"
             minHeight={72}
             minWidth={120}
             position={position}
@@ -160,7 +185,7 @@ function FlowShapeNode({ data }: NodeProps<CanvasShapeFlowNode>) {
           <div className="flow-shape-head">
             <span>{node.title}</span>
           </div>
-          <p>{node.body}</p>
+          <p className="flow-shape-body">{node.body}</p>
         </div>
       )}
     </section>

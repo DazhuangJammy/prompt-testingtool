@@ -1,8 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { defaultModelSettingsRepository } from '@/features/settings/infrastructure/defaultModelSettingsRepository'
+import { providerRepository } from '@/features/settings/infrastructure/providerRepository'
+import {
+  DEFAULT_MODEL_SETTINGS_ID,
+  resolveDefaultModelProvider,
+} from '@/features/settings/model/defaultModelSettings'
+import { deriveSelectableProviders } from '@/features/settings/model/providerCatalog'
 import { ensureSeedData } from '@/features/workspace/application/seedWorkspace'
 import { workspaceRepository } from '@/features/workspace/infrastructure/workspaceRepository'
-import type { Canvas, PromptCard, ProviderConfig } from '@/shared/types'
+import { db } from '@/shared/storage/db'
+import type {
+  Canvas,
+  DefaultModelSettings,
+  PromptCard,
+  ProviderConfig,
+} from '@/shared/types'
 
 export function useWorkspaceData() {
   const [activeCanvasId, setActiveCanvasId] = useState<string>()
@@ -31,9 +44,20 @@ export function useWorkspaceData() {
     [],
     [],
   )
+  const defaultModelSettings = useLiveQuery<
+    DefaultModelSettings | undefined,
+    DefaultModelSettings | undefined
+  >(
+    () => db.defaultModelSettings.get(DEFAULT_MODEL_SETTINGS_ID),
+    [],
+    undefined,
+  )
 
   useEffect(() => {
-    void ensureSeedData()
+    void ensureSeedData().then(async () => {
+      await providerRepository.ensureBuiltInProviders()
+      await defaultModelSettingsRepository.ensure()
+    })
   }, [])
 
   const effectiveSelectedCardId = promptCards?.some(
@@ -41,25 +65,40 @@ export function useWorkspaceData() {
   )
     ? selectedCardId
     : promptCards?.[0]?.id
-  const effectiveProviderId = providers?.some(
+  const selectableProviders = useMemo(
+    () => deriveSelectableProviders(providers ?? []),
+    [providers],
+  )
+  const defaultProvider = useMemo(
+    () => resolveDefaultModelProvider(providers ?? [], defaultModelSettings),
+    [defaultModelSettings, providers],
+  )
+  const effectiveProviderId = selectableProviders.some(
     (provider) => provider.id === activeProviderId,
   )
     ? activeProviderId
-    : providers?.[0]?.id
+    : selectableProviders[0]?.id
+  const effectiveProviderConfigId =
+    selectableProviders.find((provider) => provider.id === effectiveProviderId)
+      ?.sourceProviderId ?? providers?.[0]?.id
 
   return useMemo(
     () => ({
       activeCanvas: canvases?.find((canvas) => canvas.id === effectiveCanvasId),
       activeCard: promptCards?.find((card) => card.id === effectiveSelectedCardId),
-      activeProvider: providers?.find(
+      activeProvider: selectableProviders.find(
         (provider) => provider.id === effectiveProviderId,
-      ),
+      ) ?? defaultProvider,
       canvases: canvases ?? [],
       effectiveCanvasId,
+      effectiveProviderConfigId,
       effectiveProviderId,
       effectiveSelectedCardId,
+      defaultModelSettings,
+      defaultProvider,
       promptCards: promptCards ?? [],
-      providers: providers ?? [],
+      providerConfigs: providers ?? [],
+      providers: selectableProviders,
       setActiveCanvasId,
       setActiveProviderId,
       setSelectedCardId,
@@ -67,10 +106,14 @@ export function useWorkspaceData() {
     [
       canvases,
       effectiveCanvasId,
+      effectiveProviderConfigId,
       effectiveProviderId,
       effectiveSelectedCardId,
+      defaultModelSettings,
+      defaultProvider,
       promptCards,
       providers,
+      selectableProviders,
     ],
   )
 }

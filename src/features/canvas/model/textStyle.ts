@@ -7,7 +7,7 @@ export type CanvasTextStyle = Pick<
 
 export const textColors = [
   { label: '白色文字', value: '#ededed' },
-  { label: '绿色文字', value: '#78d18b' },
+  { label: '灰色文字', value: '#9b9b9b' },
   { label: '蓝色文字', value: '#6aa8ff' },
   { label: '黄色文字', value: '#f7c948' },
   { label: '红色文字', value: '#ff6b6b' },
@@ -18,7 +18,7 @@ export const textBackgroundColors = [
   { label: '无背景', value: 'transparent' },
   { label: '浅黄背景', value: '#f7c94833' },
   { label: '浅蓝背景', value: '#6aa8ff2f' },
-  { label: '浅绿背景', value: '#78d18b2f' },
+  { label: '浅灰背景', value: '#9b9b9b2f' },
   { label: '深色背景', value: '#1f2933d9' },
 ]
 

@@ -14,8 +14,8 @@ export const canvasNodeTypes = {
 } satisfies NodeTypes
 
 export const penColors = [
-  { label: '绿色', value: '#78d18b' },
   { label: '白色', value: '#ededed' },
+  { label: '灰色', value: '#9b9b9b' },
   { label: '蓝色', value: '#6aa8ff' },
   { label: '黄色', value: '#f7c948' },
   { label: '红色', value: '#ff6b6b' },

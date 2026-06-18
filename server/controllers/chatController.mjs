@@ -1,6 +1,7 @@
 import {
   parseUpstreamError,
   requestChatCompletion,
+  requestModelList,
 } from '../services/openaiCompatibleService.mjs'
 
 export const proxyChatCompletion = async (req, res) => {
@@ -112,4 +113,58 @@ export const testProvider = async (req, res) => {
       error: error instanceof Error ? error.message : 'Test failed',
     })
   }
+}
+
+export const listProviderModels = async (req, res) => {
+  const { provider } = req.body ?? {}
+
+  if (!provider?.baseUrl || !provider?.apiKey) {
+    res.status(400).json({ ok: false, error: 'Provider incomplete' })
+    return
+  }
+
+  try {
+    const upstream = await requestModelList({ provider })
+    const text = await upstream.text()
+
+    if (!upstream.ok) {
+      res.status(upstream.status).json({
+        ok: false,
+        error: parseUpstreamError(text) || upstream.statusText,
+        status: upstream.status,
+      })
+      return
+    }
+
+    const payload = JSON.parse(text)
+    const models = normalizeModelList(payload)
+    res.json({ ok: true, models })
+  } catch (error) {
+    res.status(502).json({
+      ok: false,
+      error: error instanceof Error ? error.message : 'Fetch models failed',
+    })
+  }
+}
+
+const normalizeModelList = (payload) => {
+  const source = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+      ? payload.data
+      : Array.isArray(payload?.models)
+        ? payload.models
+        : []
+
+  return source
+    .map((item) => {
+      if (typeof item === 'string') return { id: item, name: item }
+      const id = item?.id ?? item?.name ?? item?.model
+      if (!id) return undefined
+      return {
+        id: String(id),
+        name: item?.name ? String(item.name) : undefined,
+      }
+    })
+    .filter(Boolean)
 }

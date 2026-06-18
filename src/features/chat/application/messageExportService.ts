@@ -16,7 +16,7 @@ import {
 } from '@/features/chat/application/renderedExportImage'
 import { formatAttachmentSize } from '@/features/chat/model/attachments'
 import { splitSvgPreviewBlocks } from '@/features/chat/model/svgPreview'
-import { splitThinkingBlock } from '@/features/chat/model/thinking'
+import { splitThinkingBlock } from '@/shared/model/thinking'
 import type { ChatMessage, ChatSession } from '@/shared/types'
 
 const WORD_IMAGE_MAX_WIDTH = 620

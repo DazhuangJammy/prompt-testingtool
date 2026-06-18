@@ -1,14 +1,9 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import {
-  Check,
-  ClipboardCopy,
-  Eye,
-  GripVertical,
-  Import,
-  Pencil,
-  X,
-} from 'lucide-react'
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  optimizeFullPrompt,
+  optimizeSelectedPromptText,
+} from '@/features/prompt-card/application/promptOptimizationService'
 import {
   insertMarkdownChildOutlineNode,
   moveTopLevelMarkdownHeading,
@@ -22,28 +17,49 @@ import {
   parseMarkdownOutline,
   updatePromptMarkdown,
 } from '@/features/prompt-card/model/prompt'
-import { IconButton } from '@/shared/ui/IconButton'
+import {
+  createTextSelection,
+  replaceTextSelection,
+  type TextSelectionRange,
+} from '@/features/prompt-card/model/textSelection'
+import { normalizeThinkingMode } from '@/shared/model/thinking'
 import {
   MarkdownCardPreview,
+  type MarkdownNodeEditRequest,
   type MarkdownNodeEditFocus,
 } from './components/MarkdownCardPreview'
+import { PromptImportPanel } from './components/PromptImportPanel'
+import { PromptMarkdownEditor } from './components/PromptMarkdownEditor'
+import {
+  PromptOptimizationPopover,
+  type PromptOptimizationMode,
+} from './components/PromptOptimizationPopover'
 import { PromptMarkdownPreviewDialog } from './components/PromptMarkdownPreviewDialog'
+import { PromptNodeHeader } from './components/PromptNodeHeader'
 import type { PromptFlowNode } from './PromptCardNode.types'
 
 function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
   const {
     card: rawCard,
+    promptOptimizationProvider,
+    promptOptimizationSettings,
     selectedCardId,
     onSelect,
     onChange,
   } = data
   const card = normalizePromptCard(rawCard)
   const [previewOpen, setPreviewOpen] = useState(false)
-  const [toastState, setToastState] = useState<'idle' | 'copied' | 'imported'>(
-    'idle',
-  )
+  const [toastState, setToastState] = useState<
+    'idle' | 'copied' | 'imported' | 'optimized'
+  >('idle')
   const [importPanelOpen, setImportPanelOpen] = useState(false)
   const [importDraft, setImportDraft] = useState('')
+  const [optimizationMode, setOptimizationMode] =
+    useState<PromptOptimizationMode>()
+  const [optimizationError, setOptimizationError] = useState('')
+  const [optimizationLoading, setOptimizationLoading] = useState(false)
+  const [selectionOptimization, setSelectionOptimization] =
+    useState<TextSelectionRange>()
   const copyTimerRef = useRef<number | undefined>(undefined)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const markdownTextareaRef = useRef<HTMLTextAreaElement>(null)
@@ -53,6 +69,8 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
   const [editingNodeId, setEditingNodeId] = useState<string | undefined>()
   const [editingNodeFocus, setEditingNodeFocus] =
     useState<MarkdownNodeEditFocus>('body')
+  const [editingNodeCursorOffset, setEditingNodeCursorOffset] =
+    useState<number | undefined>()
   const [collapsedHeadingIds, setCollapsedHeadingIds] = useState<Set<string>>(
     () => new Set(),
   )
@@ -69,6 +87,10 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
     editingNodeId && findNodeById(outline.nodes, editingNodeId)
       ? editingNodeId
       : undefined
+  const promptOptimizationThinkingMode = normalizeThinkingMode(
+    promptOptimizationProvider,
+    promptOptimizationSettings?.thinkingMode ?? 'off',
+  )
 
   const updateCard = (nextCard: typeof card) => {
     onChange({ ...nextCard, updatedAt: new Date().toISOString() })
@@ -108,16 +130,124 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
     setImportPanelOpen(false)
   }
 
-  const handleImportDraftKey = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    event.stopPropagation()
-    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-      event.preventDefault()
-      void importPromptMarkdown()
+  const openFullOptimization = () => {
+    setOptimizationError('')
+    setSelectionOptimization(undefined)
+    setOptimizationMode('full')
+  }
+
+  const closeOptimization = () => {
+    if (optimizationLoading) return
+    setOptimizationMode(undefined)
+    setOptimizationError('')
+  }
+
+  const updateSelectedText = () => {
+    const textarea = markdownTextareaRef.current
+    if (!textarea) return
+    const selection = createTextSelection(
+      textarea.value,
+      textarea.selectionStart,
+      textarea.selectionEnd,
+    )
+    setSelectionOptimization(selection)
+    return selection
+  }
+
+  const openSelectionOptimization = () => {
+    const selection = updateSelectedText()
+    if (!selection?.text.trim()) return
+    setOptimizationError('')
+    setOptimizationMode('selection')
+  }
+
+  const submitOptimization = async (instruction: string) => {
+    const trimmedInstruction = instruction.trim()
+    if (!trimmedInstruction || !promptOptimizationProvider) {
+      setOptimizationError('请先在设置里选择提示词优化模型')
+      return
     }
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      closeImportPanel()
+
+    setOptimizationLoading(true)
+    setOptimizationError('')
+    try {
+      if (optimizationMode === 'selection') {
+        const selection = selectionOptimization
+        if (!selection?.text.trim()) {
+          setOptimizationError('请先选中要优化的文字')
+          return
+        }
+        const baseMarkdown = markdownDraft
+        setOptimizationMode(undefined)
+        setEditingMarkdown(true)
+        const optimizedText = await optimizeSelectedPromptText({
+          instruction: trimmedInstruction,
+          onUpdate: (partialText) => {
+            setMarkdownDraft(replaceTextSelection(baseMarkdown, selection, partialText))
+          },
+          promptMarkdown: baseMarkdown,
+          provider: promptOptimizationProvider,
+          selectedText: selection.text,
+          systemPrompt: promptOptimizationSettings?.prompt,
+          thinkingMode: promptOptimizationThinkingMode,
+        })
+        const nextMarkdown = replaceTextSelection(
+          baseMarkdown,
+          selection,
+          optimizedText,
+        )
+        setMarkdownDraft(nextMarkdown)
+        setSelectionOptimization(undefined)
+      } else {
+        const sourceMarkdown = editingMarkdown ? markdownDraft : compiledMarkdown
+        setSelectionOptimization(undefined)
+        setOptimizationMode(undefined)
+        setMarkdownDraft(sourceMarkdown)
+        setEditingMarkdown(true)
+        const optimizedPrompt = await optimizeFullPrompt({
+          instruction: trimmedInstruction,
+          onUpdate: setMarkdownDraft,
+          promptMarkdown: sourceMarkdown,
+          provider: promptOptimizationProvider,
+          systemPrompt: promptOptimizationSettings?.prompt,
+          thinkingMode: promptOptimizationThinkingMode,
+        })
+        updateCard(updatePromptMarkdown(card, optimizedPrompt))
+        setMarkdownDraft(optimizedPrompt)
+      }
+
+      showToast('optimized')
+    } catch (error) {
+      setOptimizationError(
+        error instanceof Error ? error.message : '优化失败，请稍后重试',
+      )
+      setOptimizationMode(optimizationMode)
+    } finally {
+      setOptimizationLoading(false)
     }
+  }
+
+  const optimizeInlineSelection = async (
+    selectedText: string,
+    instruction: string,
+    contextMarkdown = compiledMarkdown,
+    onUpdate?: (text: string) => void,
+  ) => {
+    const trimmedInstruction = instruction.trim()
+    if (!trimmedInstruction) throw new Error('请填写优化要求')
+    if (!promptOptimizationProvider) {
+      throw new Error('请先在设置里选择提示词优化模型')
+    }
+
+    return optimizeSelectedPromptText({
+      instruction: trimmedInstruction,
+      onUpdate,
+      promptMarkdown: contextMarkdown,
+      provider: promptOptimizationProvider,
+      selectedText,
+      systemPrompt: promptOptimizationSettings?.prompt,
+      thinkingMode: promptOptimizationThinkingMode,
+    })
   }
 
   const saveTitle = () => {
@@ -155,15 +285,17 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
     setEditingMarkdown(false)
     setEditingNodeId(result.nodeId)
     setEditingNodeFocus('title')
+    setEditingNodeCursorOffset(undefined)
   }
 
   const startNodeEditing = (
     node: MarkdownOutlineNode,
-    focus: MarkdownNodeEditFocus,
+    request: MarkdownNodeEditRequest,
   ) => {
     setEditingMarkdown(false)
     setEditingNodeId(node.id)
-    setEditingNodeFocus(focus)
+    setEditingNodeFocus(request.focus)
+    setEditingNodeCursorOffset(request.cursorOffset)
   }
 
   const saveNode = (node: MarkdownOutlineNode, title: string, body: string) => {
@@ -175,6 +307,7 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
     )
     updateCard(updatePromptMarkdown(card, nextMarkdown))
     setEditingNodeId(undefined)
+    setEditingNodeCursorOffset(undefined)
   }
 
   const reorderTopLevelHeadings = (activeId: string, overId: string) => {
@@ -197,18 +330,6 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
       }
       return next
     })
-  }
-
-  const stopTextareaKey = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    event.stopPropagation()
-    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-      event.preventDefault()
-      saveMarkdown()
-    }
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      cancelMarkdownEditing()
-    }
   }
 
   useEffect(() => {
@@ -260,146 +381,84 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
         position={Position.Right}
         type="source"
       />
-      <div className="prompt-node-head">
-        <button
-          type="button"
-          className="prompt-drag-handle prompt-node-drag-area"
-          aria-label="拖拽"
-          title="拖拽"
-        >
-          <GripVertical />
-        </button>
-        {editingTitle ? (
-          <input
-            ref={titleInputRef}
-            className="prompt-title nodrag"
-            value={titleDraft}
-            onBlur={saveTitle}
-            onKeyDown={(event) => {
-              event.stopPropagation()
-              if (event.key === 'Enter') {
-                event.preventDefault()
-                saveTitle()
-              }
-              if (event.key === 'Escape') {
-                event.preventDefault()
-                setTitleDraft(card.title)
-                setEditingTitle(false)
-              }
-            }}
-            onKeyUp={(event) => event.stopPropagation()}
-            onChange={(event) => setTitleDraft(event.target.value)}
-          />
-        ) : (
-          <div
-            className="prompt-title prompt-title-button prompt-node-drag-area"
-            role="button"
-            tabIndex={0}
-            onDoubleClick={() => {
-              setTitleDraft(card.title)
-              setEditingTitle(true)
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault()
-                setTitleDraft(card.title)
-                setEditingTitle(true)
-              }
-            }}
-          >
-            {card.title}
-          </div>
-        )}
-        <div className="prompt-actions nodrag">
-          <IconButton
-            icon={editingMarkdown ? <Check /> : <Pencil />}
-            label={editingMarkdown ? '完成编辑' : '编辑'}
-            active={editingMarkdown}
-            onClick={editingMarkdown ? saveMarkdown : () => startMarkdownEditing()}
-          />
-          <IconButton
-            icon={<Eye />}
-            label="预览"
-            onClick={() => setPreviewOpen(true)}
-          />
-          <IconButton
-            icon={<ClipboardCopy />}
-            label="复制"
-            onClick={copyPromptMarkdown}
-          />
-          <IconButton
-            icon={<Import />}
-            label="导入"
-            onClick={openImportPanel}
-          />
-        </div>
-        {toastState !== 'idle' && (
-          <div className="action-toast">
-            {toastState === 'copied' ? '复制成功' : '导入成功'}
-          </div>
-        )}
-      </div>
+      <PromptNodeHeader
+        editingMarkdown={editingMarkdown}
+        editingTitle={editingTitle}
+        title={card.title}
+        titleDraft={titleDraft}
+        titleInputRef={titleInputRef}
+        toastState={toastState}
+        onCancelTitleEdit={() => {
+          setTitleDraft(card.title)
+          setEditingTitle(false)
+        }}
+        onChangeTitleDraft={setTitleDraft}
+        onCopy={copyPromptMarkdown}
+        onEditMarkdown={editingMarkdown ? saveMarkdown : () => startMarkdownEditing()}
+        onImport={openImportPanel}
+        onOptimize={openFullOptimization}
+        onPreview={() => setPreviewOpen(true)}
+        onSaveTitle={saveTitle}
+        onStartTitleEdit={() => {
+          setTitleDraft(card.title)
+          setEditingTitle(true)
+        }}
+      />
+
+      {optimizationMode && (
+        <PromptOptimizationPopover
+          error={optimizationError}
+          loading={optimizationLoading}
+          mode={optimizationMode}
+          onClose={closeOptimization}
+          onSubmit={submitOptimization}
+        />
+      )}
 
       {importPanelOpen && (
-        <div className="prompt-import-panel nodrag nopan nowheel">
-          <div className="prompt-import-head">
-            <span>导入 Markdown</span>
-            <IconButton icon={<X />} label="取消" onClick={closeImportPanel} />
-          </div>
-          <textarea
-            autoFocus
-            value={importDraft}
-            onChange={(event) => setImportDraft(event.target.value)}
-            onKeyDown={handleImportDraftKey}
-            onKeyUp={(event) => event.stopPropagation()}
-            placeholder="# 角色&#10;&#10;..."
-          />
-          <div className="prompt-import-actions">
-            <button type="button" onClick={closeImportPanel}>
-              取消
-            </button>
-            <button
-              type="button"
-              disabled={!importDraft.trim()}
-              onClick={importPromptMarkdown}
-            >
-              导入
-            </button>
-          </div>
-        </div>
+        <PromptImportPanel
+          draft={importDraft}
+          onCancel={closeImportPanel}
+          onChange={setImportDraft}
+          onImport={importPromptMarkdown}
+        />
       )}
 
       <div className="prompt-markdown-shell nodrag nopan nowheel">
         {editingMarkdown ? (
-          <div className="prompt-markdown-editor">
-            <textarea
-              ref={markdownTextareaRef}
-              value={markdownDraft}
-              onChange={(event) => setMarkdownDraft(event.target.value)}
-              onCompositionEnd={(event) => setMarkdownDraft(event.currentTarget.value)}
-              onKeyDown={stopTextareaKey}
-              onKeyUp={(event) => event.stopPropagation()}
-              spellCheck={false}
-            />
-            <div className="prompt-markdown-editor-actions">
-              <button type="button" onClick={cancelMarkdownEditing}>
-                取消
-              </button>
-              <button type="button" onClick={saveMarkdown}>
-                完成
-              </button>
-            </div>
-          </div>
+          <PromptMarkdownEditor
+            markdownDraft={markdownDraft}
+            markdownTextareaRef={markdownTextareaRef}
+            optimizationOpen={Boolean(optimizationMode) || optimizationLoading}
+            selection={selectionOptimization}
+            selectionOptimizationLoading={!optimizationMode && optimizationLoading}
+            onCancel={cancelMarkdownEditing}
+            onChange={(value) => {
+              setMarkdownDraft(value)
+              setSelectionOptimization(undefined)
+            }}
+            onOpenSelectionOptimization={openSelectionOptimization}
+            onSave={saveMarkdown}
+            onUpdateSelection={updateSelectedText}
+          />
         ) : (
           <MarkdownCardPreview
             markdown={compiledMarkdown}
             collapsedHeadingIds={collapsedHeadingIds}
+            editingNodeCursorOffset={editingNodeCursorOffset}
             editingNodeFocus={editingNodeFocus}
             editingNodeId={activeEditingNodeId}
             outline={outline}
             onAddChildHeading={appendChildHeading}
-            onCancelNodeEdit={() => setEditingNodeId(undefined)}
+            onCancelNodeEdit={() => {
+              setEditingNodeId(undefined)
+              setEditingNodeCursorOffset(undefined)
+            }}
+            onEditMarkdown={(cursorOffset) =>
+              startMarkdownEditing(compiledMarkdown, cursorOffset)
+            }
             onEditNode={startNodeEditing}
+            onOptimizeSelection={optimizeInlineSelection}
             onReorderTopLevel={reorderTopLevelHeadings}
             onSaveNode={saveNode}
             onToggleHeading={toggleHeadingCollapse}

@@ -18,7 +18,7 @@ import {
 import {
   THINKING_OPTIONS,
   getThinkingOption,
-} from '@/features/chat/model/thinking'
+} from '@/shared/model/thinking'
 import { createChatAttachment } from '@/features/chat/infrastructure/fileAttachmentReader'
 import type {
   ChatAttachment,

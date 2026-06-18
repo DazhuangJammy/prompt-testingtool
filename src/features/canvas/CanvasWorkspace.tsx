@@ -56,10 +56,12 @@ import {
   defaultTextStyle,
   type CanvasTextStyle,
 } from '@/features/canvas/model/textStyle'
-import type { PromptCard } from '@/shared/types'
+import type { DefaultModelSettings, PromptCard, ProviderConfig } from '@/shared/types'
 
 interface CanvasWorkspaceProps {
   effectiveCanvasId?: string
+  promptOptimizationProvider?: ProviderConfig
+  promptOptimizationSettings?: DefaultModelSettings
   promptCards: PromptCard[]
   onAddPrompt: (position?: PromptCard['position']) => void
   onDeleteCard: (id: string) => void
@@ -71,6 +73,8 @@ export function CanvasWorkspace({
   onAddPrompt,
   onDeleteCard,
   onSelectCard,
+  promptOptimizationProvider,
+  promptOptimizationSettings,
   promptCards,
 }: CanvasWorkspaceProps) {
   const reactFlow = useReactFlow<CanvasFlowNode, Edge>()
@@ -118,6 +122,8 @@ export function CanvasWorkspace({
         onSavePromptCard: (nextCard) => {
           void canvasRepository.savePromptCard(nextCard)
         },
+        promptOptimizationProvider,
+        promptOptimizationSettings,
         onSelectPrompt: (id) => {
           onSelectCard(id)
         },
@@ -149,6 +155,8 @@ export function CanvasWorkspace({
       nodePersistence.updateShapeNode,
       nodePersistence.updateTextNode,
       onSelectCard,
+      promptOptimizationProvider,
+      promptOptimizationSettings,
       promptCards,
       selectedFlowIds.nodes,
       updateSelection,
@@ -391,7 +399,7 @@ export function CanvasWorkspace({
         minZoom={0.3}
         maxZoom={1.6}
         connectOnClick={false}
-        connectionLineStyle={{ stroke: 'var(--ok)', strokeWidth: 2 }}
+        connectionLineStyle={{ stroke: 'var(--accent)', strokeWidth: 2 }}
         deleteKeyCode={['Delete', 'Backspace']}
         connectionMode={ConnectionMode.Loose}
         edgesFocusable

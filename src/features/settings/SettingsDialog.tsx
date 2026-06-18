@@ -1,142 +1,60 @@
-import { X } from 'lucide-react'
-import { useState } from 'react'
-import { testProvider } from '@/shared/api/ai'
-import { nowIso } from '@/shared/utils/time'
-import type { ProviderConfig } from '@/shared/types'
+import { Box, Server, X } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import type { DefaultModelSettings, ProviderConfig } from '@/shared/types'
 import { IconButton } from '@/shared/ui/IconButton'
+import { AddProviderDialog } from './components/AddProviderDialog'
+import { DefaultModelSettingsPanel } from './components/DefaultModelSettingsPanel'
+import { ProviderDetailPanel } from './components/ProviderDetailPanel'
+import { ProviderListPanel } from './components/ProviderListPanel'
+import { normalizeProviderConfig } from './model/providerCatalog'
 
 interface SettingsDialogProps {
   open: boolean
+  defaultModelSettings?: DefaultModelSettings
   providers: ProviderConfig[]
   activeProviderId?: string
   onClose: () => void
+  onSaveDefaultModelSettings: (settings: DefaultModelSettings) => void
+  onReorderProviders: (providers: ProviderConfig[]) => void
   onSave: (provider: ProviderConfig) => void
   onDelete: (id: string) => void
   onSelect: (id: string) => void
 }
 
-const emptyProvider = (): ProviderConfig => {
-  const at = nowIso()
-  return {
-    id: crypto.randomUUID(),
-    name: '',
-    baseUrl: 'https://api.openai.com',
-    apiKey: '',
-    model: 'gpt-4.1-mini',
-    createdAt: at,
-    updatedAt: at,
-  }
-}
+const SETTING_CATEGORIES = [
+  { id: 'models', label: '模型服务', icon: Server },
+  { id: 'default-model', label: '默认模型', icon: Box },
+] as const
 
-function ProviderForm({
-  initialProvider,
-  onSave,
-  onDelete,
-}: {
-  initialProvider: ProviderConfig
-  onSave: (provider: ProviderConfig) => void
-  onDelete: (id: string) => void
-}) {
-  const [draft, setDraft] = useState<ProviderConfig>(initialProvider)
-  const [testState, setTestState] = useState<{
-    status: 'idle' | 'busy' | 'ok' | 'error'
-    message: string
-  }>({ status: 'idle', message: '' })
-
-  const runTest = async () => {
-    setTestState({ status: 'busy', message: '测试中' })
-    try {
-      const message = await testProvider({
-        ...draft,
-        name: draft.name.trim() || draft.model,
-      })
-      setTestState({ status: 'ok', message })
-    } catch (error) {
-      setTestState({
-        status: 'error',
-        message: error instanceof Error ? error.message : '测试失败',
-      })
-    }
-  }
-
-  return (
-    <form
-      className="provider-form"
-      onSubmit={(event) => {
-        event.preventDefault()
-        onSave({
-          ...draft,
-          name: draft.name.trim() || draft.model,
-          updatedAt: nowIso(),
-        })
-      }}
-    >
-      <label>
-        名称
-        <input
-          value={draft.name}
-          onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-        />
-      </label>
-      <label>
-        Base URL
-        <input
-          value={draft.baseUrl}
-          onChange={(event) => setDraft({ ...draft, baseUrl: event.target.value })}
-        />
-      </label>
-      <label>
-        API Key
-        <input
-          value={draft.apiKey}
-          type="password"
-          onChange={(event) => setDraft({ ...draft, apiKey: event.target.value })}
-        />
-      </label>
-      <label>
-        Model
-        <input
-          value={draft.model}
-          onChange={(event) => setDraft({ ...draft, model: event.target.value })}
-        />
-      </label>
-
-      <div className="form-actions">
-        {testState.status !== 'idle' && (
-          <div className={`test-result is-${testState.status}`}>
-            {testState.message}
-          </div>
-        )}
-        <button
-          type="button"
-          disabled={testState.status === 'busy'}
-          onClick={runTest}
-        >
-          测试
-        </button>
-        <button type="button" onClick={() => onDelete(draft.id)}>
-          删除
-        </button>
-        <button type="submit">保存</button>
-      </div>
-    </form>
-  )
-}
+type SettingCategoryId = (typeof SETTING_CATEGORIES)[number]['id']
 
 export function SettingsDialog({
   open,
+  defaultModelSettings,
   providers,
   activeProviderId,
   onClose,
+  onSaveDefaultModelSettings,
+  onReorderProviders,
   onSave,
   onDelete,
   onSelect,
 }: SettingsDialogProps) {
-  const [newDraftKey, setNewDraftKey] = useState(0)
-  const [editingNew, setEditingNew] = useState(false)
-  const active = providers.find((provider) => provider.id === activeProviderId)
-  const formProvider = editingNew ? emptyProvider() : (active ?? emptyProvider())
-  const formKey = editingNew ? `new-${newDraftKey}` : (active?.id ?? 'new-empty')
+  const normalizedProviders = useMemo(
+    () => providers.map(normalizeProviderConfig),
+    [providers],
+  )
+  const [selectedProviderId, setSelectedProviderId] = useState<string>()
+  const [activeCategory, setActiveCategory] = useState<SettingCategoryId>('models')
+  const [search, setSearch] = useState('')
+  const [addOpen, setAddOpen] = useState(false)
+  const effectiveSelectedProviderId =
+    normalizedProviders.find((provider) => provider.id === selectedProviderId)?.id ??
+    normalizedProviders.find((provider) => provider.id === activeProviderId)?.id ??
+    normalizedProviders[0]?.id
+  const selectedProvider = normalizedProviders.find(
+    (provider) => provider.id === effectiveSelectedProviderId,
+  )
 
   if (!open) return null
 
@@ -148,43 +66,78 @@ export function SettingsDialog({
           <IconButton icon={<X />} label="关闭" onClick={onClose} />
         </div>
 
-        <div className="settings-grid">
-          <div className="provider-list">
-            {providers.map((provider) => (
-              <button
-                type="button"
-                className={provider.id === activeProviderId ? 'is-active' : ''}
-                key={provider.id}
-                onClick={() => {
-                  setEditingNew(false)
-                  onSelect(provider.id)
-                }}
-              >
-                {provider.name || provider.model}
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={() => {
-                setEditingNew(true)
-                setNewDraftKey((key) => key + 1)
-              }}
-            >
-              +
-            </button>
-          </div>
+        <div className="settings-layout">
+          <nav className="settings-category-list" aria-label="设置分类">
+            {SETTING_CATEGORIES.map((category) => {
+              const Icon = category.icon
+              return (
+                <button
+                  type="button"
+                  key={category.id}
+                  className={category.id === activeCategory ? 'is-active' : ''}
+                  onClick={() => setActiveCategory(category.id)}
+                >
+                  <Icon size={19} />
+                  <span>{category.label}</span>
+                </button>
+              )
+            })}
+          </nav>
 
-          <ProviderForm
-            key={formKey}
-            initialProvider={formProvider}
-            onDelete={onDelete}
-            onSave={(provider) => {
-              setEditingNew(false)
-              onSave(provider)
-            }}
-          />
+          {activeCategory === 'models' ? (
+            <>
+              <ProviderListPanel
+                activeProviderId={effectiveSelectedProviderId}
+                providers={normalizedProviders}
+                search={search}
+                onAdd={() => setAddOpen(true)}
+                onReorder={(nextProviders) => {
+                  onReorderProviders(nextProviders)
+                }}
+                onSearchChange={setSearch}
+                onSelect={(id) => {
+                  setSelectedProviderId(id)
+                  onSelect(id)
+                }}
+              />
+
+              <ProviderDetailPanel
+                key={selectedProvider?.id ?? 'empty-provider'}
+                provider={selectedProvider}
+                onDelete={(id) => {
+                  const next = normalizedProviders.find(
+                    (provider) => provider.id !== id,
+                  )
+                  onDelete(id)
+                  setSelectedProviderId(next?.id)
+                }}
+                onSave={(provider) => {
+                  onSave(provider)
+                  setSelectedProviderId(provider.id)
+                }}
+              />
+            </>
+          ) : (
+            <main className="settings-main-panel">
+              <DefaultModelSettingsPanel
+                providers={normalizedProviders}
+                settings={defaultModelSettings}
+                onSave={onSaveDefaultModelSettings}
+              />
+            </main>
+          )}
         </div>
       </section>
+
+      <AddProviderDialog
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onCreate={(provider) => {
+          onSave(provider)
+          setSelectedProviderId(provider.id)
+          setAddOpen(false)
+        }}
+      />
     </div>
   )
 }

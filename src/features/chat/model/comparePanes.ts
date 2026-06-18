@@ -2,7 +2,7 @@ import { getAttachmentCapability } from '@/features/chat/model/attachments'
 import {
   getThinkingCapability,
   normalizeThinkingMode,
-} from '@/features/chat/model/thinking'
+} from '@/shared/model/thinking'
 import type {
   ChatAttachment,
   ChatMessage,
@@ -16,6 +16,8 @@ import { createId } from '@/shared/utils/identity'
 export const MIN_COMPARE_PANES = 2
 export const MIN_RETAINED_COMPARE_PANES = 1
 export const MAX_COMPARE_PANES = 6
+export const COMPARE_PANE_MIN_WIDTH = 380
+export const COMPARE_PANEL_GUTTER = 1
 
 export type ComparePaneId = string
 export type ActiveRequest = 'main' | ComparePaneId
@@ -194,4 +196,9 @@ export function getPaneThinkingMode(
   mode: ThinkingMode,
 ) {
   return normalizeThinkingMode(provider, provider ? mode : 'off')
+}
+
+export function getComparePanelWidth(paneCount: number) {
+  const count = Math.max(MIN_COMPARE_PANES, Math.min(MAX_COMPARE_PANES, paneCount))
+  return count * COMPARE_PANE_MIN_WIDTH + (count - 1) * COMPARE_PANEL_GUTTER
 }

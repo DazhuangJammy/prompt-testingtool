@@ -7,6 +7,7 @@ import {
   createComparePane,
   createInitialComparePanes,
   ensureMinimumComparePanes,
+  getComparePanelWidth,
   getPaneThinkingMode,
   getProviderThinkingMode,
   pickCardForPane,
@@ -70,6 +71,13 @@ describe('compare panes model', () => {
         ),
       ),
     ).toHaveLength(MAX_COMPARE_PANES)
+  })
+
+  it('calculates readable compare panel width from pane count', () => {
+    expect(getComparePanelWidth(1)).toBe(761)
+    expect(getComparePanelWidth(2)).toBe(761)
+    expect(getComparePanelWidth(3)).toBe(1142)
+    expect(getComparePanelWidth(MAX_COMPARE_PANES + 1)).toBe(2285)
   })
 
   it('allows removing from two panes and asks compare mode to exit at one pane', () => {

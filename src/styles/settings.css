@@ -1,6 +1,6 @@
 .dialog-backdrop {
   backdrop-filter: blur(10px);
-  background: rgba(0, 0, 0, 0.42);
+  background: rgba(0, 0, 0, 0.48);
   display: grid;
   inset: 0;
   padding: 24px;
@@ -12,113 +12,384 @@
 .settings-dialog {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 11px;
   box-shadow: var(--shadow);
+  height: min(760px, calc(100vh - 48px));
   overflow: hidden;
-  width: min(680px, 100%);
+  width: min(1180px, calc(100vw - 48px));
 }
 
 .dialog-head {
   border-bottom: 1px solid var(--line);
-  height: 48px;
-  padding: 0 10px 0 14px;
+  height: 52px;
+  padding: 0 12px 0 18px;
 }
 
-.settings-grid {
+.settings-layout {
   display: grid;
-  grid-template-columns: 190px 1fr;
-  min-height: 360px;
+  grid-template-columns: 250px 330px minmax(420px, 1fr);
+  height: calc(100% - 52px);
+  min-height: 0;
 }
 
-.provider-list {
+.settings-category-list,
+.settings-provider-list,
+.provider-detail-panel,
+.provider-detail-empty {
+  min-height: 0;
+}
+
+.settings-category-list {
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 10px;
+  gap: 6px;
+  padding: 18px 16px;
 }
 
-.provider-list button,
-.form-actions button {
+.settings-category-list button,
+.settings-provider-list button,
+.provider-detail-panel button,
+.add-provider-dialog button {
+  align-items: center;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--muted);
   cursor: pointer;
-  height: 32px;
-  overflow: hidden;
-  padding: 0 10px;
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: inline-flex;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 11px;
 }
 
-.provider-list button:hover,
-.provider-list button.is-active,
-.form-actions button:hover {
+.settings-category-list button {
+  justify-content: flex-start;
+  min-height: 42px;
+  width: 100%;
+}
+
+.settings-category-list button.is-active,
+.settings-category-list button:hover:not(:disabled),
+.settings-provider-list button:hover,
+.settings-provider-list button.is-active,
+.provider-detail-panel button:hover:not(:disabled),
+.add-provider-dialog button:hover:not(:disabled) {
   background: var(--panel-2);
   border-color: var(--line);
   color: var(--text);
 }
 
-.provider-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 14px;
+.settings-provider-list button.is-active {
+  background: color-mix(in srgb, var(--line-strong) 54%, var(--panel));
+  border-color: var(--line-strong);
 }
 
-.provider-form label {
-  color: var(--muted);
-  display: flex;
-  flex-direction: column;
-  font-size: 12px;
-  gap: 6px;
-}
-
-.provider-form input {
-  background: var(--surface);
-  color: var(--text);
-  height: 34px;
-  padding: 0 9px;
-}
-
-.form-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-end;
-  margin-top: auto;
-}
-
-.form-actions button {
-  text-align: center;
-}
-
-.form-actions button:disabled {
+.settings-category-list button:disabled,
+.provider-detail-panel button:disabled,
+.add-provider-dialog button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
 }
 
-.test-result {
+.settings-category-spacer {
+  border-top: 1px solid var(--line);
+  margin: 12px 0 6px;
+}
+
+.settings-provider-list {
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 16px;
+}
+
+.settings-search {
+  align-items: center;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: 10px;
   color: var(--muted);
-  font-size: 12px;
-  line-height: 1.35;
-  min-height: 30px;
-  overflow-wrap: anywhere;
-  padding: 8px 10px;
+  display: flex;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+}
+
+.settings-search input,
+.settings-field input,
+.settings-field select,
+.model-add-row input {
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  min-width: 0;
+  outline: none;
   width: 100%;
 }
 
-.test-result.is-ok {
-  border-color: color-mix(in srgb, var(--ok) 34%, var(--line));
-  color: var(--ok);
+.settings-search input::placeholder,
+.settings-field input::placeholder,
+.model-add-row input::placeholder {
+  color: color-mix(in srgb, var(--muted) 72%, transparent);
 }
 
-.test-result.is-error {
-  border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
-  color: var(--danger);
+.provider-items {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.provider-items button {
+  cursor: grab;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  min-height: 48px;
+  padding: 6px 8px;
+  text-align: left;
+  width: 100%;
+}
+
+.provider-items button:active {
+  cursor: grabbing;
+}
+
+.provider-initial,
+.provider-avatar {
+  align-items: center;
+  background: color-mix(in srgb, var(--line-strong) 20%, var(--surface));
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--text);
+  display: inline-flex;
+  font-weight: 760;
+  justify-content: center;
+}
+
+.provider-initial {
+  font-size: 13px;
+  height: 30px;
+  width: 30px;
+}
+
+.provider-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.provider-row-main strong,
+.provider-model-row strong {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 680;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provider-row-main span,
+.provider-model-row span,
+.provider-detail-head span,
+.settings-field small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.add-provider-button {
+  background: transparent;
+  border-color: var(--line);
+  border-radius: 10px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 14px;
+  gap: 8px;
+  justify-content: center;
+  min-height: 40px;
+  width: 100%;
+}
+
+.settings-provider-list .add-provider-button {
+  align-self: stretch;
+  padding: 0 18px;
+  width: 100%;
+}
+
+.provider-detail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow: auto;
+  padding: 22px 24px;
+}
+
+.provider-detail-empty {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  justify-content: center;
+}
+
+.provider-detail-head {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 18px;
+}
+
+.provider-detail-head h2,
+.add-provider-head h2 {
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.2;
+  margin: 0 0 5px;
+}
+
+.settings-field-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-field {
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  font-weight: 650;
+  gap: 9px;
+}
+
+.settings-field > input,
+.settings-field > select,
+.settings-input-action {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  min-height: 44px;
+  padding: 0 12px;
+}
+
+.settings-field > select {
+  appearance: none;
+  background-color: var(--surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%239b9b9b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-position: right 14px center;
+  background-repeat: no-repeat;
+  background-size: 18px 18px;
+  padding-right: 44px;
+}
+
+.settings-input-action {
+  align-items: center;
+  display: flex;
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.settings-input-action input {
+  padding: 0 12px;
+}
+
+.settings-input-action .icon-button {
+  border: 0;
+  border-radius: 0;
+  flex: 0 0 auto;
+  height: 44px;
+  min-width: 52px;
+  width: 52px;
+}
+
+.settings-input-action .icon-button:hover {
+  background: var(--panel-2);
+  border-color: transparent;
+}
+
+.settings-input-action button,
+.provider-detail-actions button,
+.add-provider-actions button {
+  border-color: var(--line);
+  justify-content: center;
+}
+
+.settings-key-toggle svg {
+  height: 18px;
+  width: 18px;
+}
+
+.settings-test-button {
+  background: transparent;
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
+  color: var(--muted);
+  flex: 0 0 auto;
+  font-size: 14px;
+  font-weight: 520;
+  height: 44px;
+  letter-spacing: 0;
+  min-width: 70px;
+  padding: 0 16px;
+  white-space: nowrap;
+}
+
+.settings-input-action .settings-test-button {
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
+}
+
+.settings-input-action .settings-test-button:hover:not(:disabled) {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.settings-provider-list > .add-provider-button {
+  align-self: stretch;
+  background: transparent;
+  border-color: var(--line);
+  border-radius: 10px;
+  box-shadow: none;
+  font-size: 14px;
+  min-height: 40px;
+  width: 100%;
+}
+
+.provider-detail-actions button,
+.add-provider-actions button {
+  background: transparent;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 520;
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.provider-detail-actions .primary-button,
+.add-provider-actions button[type='submit'] {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
+}
+
+.provider-detail-actions .primary-button:hover:not(:disabled),
+.add-provider-actions button[type='submit']:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text) 88%, var(--muted));
+  color: var(--bg);
+}
+
+.provider-detail-actions button:hover:not(:disabled),
+.add-provider-actions button:hover:not(:disabled) {
+  background: var(--panel-2);
+  color: var(--text);
 }

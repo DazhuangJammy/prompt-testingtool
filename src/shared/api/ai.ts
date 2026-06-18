@@ -1,6 +1,7 @@
 import type {
   CompletionMessage,
   ProviderConfig,
+  ProviderModelConfig,
   ThinkingMode,
 } from '@/shared/types'
 
@@ -258,4 +259,45 @@ export const testProvider = async (provider: ProviderConfig) => {
   }
 
   return payload.message || '测试成功'
+}
+
+export const listProviderModels = async (
+  provider: ProviderConfig,
+): Promise<ProviderModelConfig[]> => {
+  const response = await fetch('/api/provider-models', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      provider: {
+        baseUrl: provider.baseUrl,
+        apiKey: provider.apiKey,
+      },
+    }),
+  })
+
+  const payload = (await response.json().catch(() => null)) as {
+    ok?: boolean
+    models?: Array<{ id?: string; name?: string }>
+    error?: string
+    status?: number
+  } | null
+
+  if (!response.ok || !payload?.ok) {
+    throw new Error(
+      [payload?.status, payload?.error || response.statusText]
+        .filter(Boolean)
+        .join(' '),
+    )
+  }
+
+  return (payload.models ?? []).reduce<ProviderModelConfig[]>((result, model) => {
+    const id = model.id?.trim()
+    if (!id) return result
+    result.push({
+      id,
+      name: model.name?.trim() || undefined,
+      enabled: true,
+    })
+    return result
+  }, [])
 }

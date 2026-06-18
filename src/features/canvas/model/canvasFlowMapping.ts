@@ -16,7 +16,9 @@ import type {
   CanvasShapeNode,
   CanvasStroke,
   CanvasTextNode,
+  DefaultModelSettings,
   PromptCard,
+  ProviderConfig,
 } from '@/shared/types'
 
 export type CanvasFlowNode =
@@ -28,6 +30,8 @@ export type CanvasFlowNode =
 
 interface CreateCanvasNodesOptions {
   promptCards: PromptCard[]
+  promptOptimizationProvider?: ProviderConfig
+  promptOptimizationSettings?: DefaultModelSettings
   selectedNodeIds: string[]
   imageNodes: CanvasImageNode[]
   shapeNodes: CanvasShapeNode[]
@@ -69,6 +73,8 @@ export function createCanvasFlowNodes({
   onUpdateShape,
   onUpdateText,
   promptCards,
+  promptOptimizationProvider,
+  promptOptimizationSettings,
   selectedNodeIds,
   imageNodes,
   shapeNodes,
@@ -85,6 +91,8 @@ export function createCanvasFlowNodes({
         position: card.position,
         data: {
           card,
+          promptOptimizationProvider,
+          promptOptimizationSettings,
           selectedCardId: selectedNodeIds.includes(card.id) ? card.id : undefined,
           onSelect: onSelectPrompt,
           onChange: onSavePromptCard,

@@ -1,4 +1,5 @@
 import { compilePrompt } from '@/features/prompt-card/model/prompt'
+import { appendDefaultAssistantPrompt } from '@/features/settings/model/defaultModelSettings'
 import type {
   ChatMessage,
   ChatAttachment,
@@ -10,16 +11,20 @@ import type {
 } from '@/shared/types'
 import { nowIso } from '@/shared/utils/time'
 import { buildAttachmentContentParts } from './attachments'
-import { splitThinkingBlock } from './thinking'
+import { splitThinkingBlock } from '@/shared/model/thinking'
 
 export const createPromptVersion = (
   card: PromptCard,
   reason: PromptVersion['reason'],
+  defaultAssistantPrompt?: string,
 ) => {
   const version: PromptVersion = {
     id: crypto.randomUUID(),
     promptCardId: card.id,
-    compiledMarkdown: compilePrompt(card),
+    compiledMarkdown: appendDefaultAssistantPrompt(
+      compilePrompt(card),
+      defaultAssistantPrompt,
+    ),
     createdAt: nowIso(),
     reason,
   }

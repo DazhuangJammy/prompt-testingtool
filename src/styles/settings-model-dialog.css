@@ -1,0 +1,235 @@
+.model-dialog {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+}
+
+.model-add-dialog {
+  gap: 14px;
+  padding: 20px;
+  width: min(560px, calc(100vw - 44px));
+}
+
+.test-model-dialog {
+  gap: 14px;
+  padding: 20px;
+  width: min(520px, calc(100vw - 44px));
+}
+
+.model-dialog-head {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  min-height: 44px;
+  padding-bottom: 12px;
+}
+
+.model-dialog-head h2 {
+  font-size: 18px;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.model-dialog-head .icon-button {
+  border-radius: 8px;
+  color: var(--muted);
+  height: 40px;
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0;
+  width: 40px;
+}
+
+.model-dialog-head .icon-button svg {
+  height: 20px;
+  width: 20px;
+}
+
+.model-dialog-field {
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  font-weight: 650;
+  gap: 8px;
+}
+
+.model-dialog-field > span {
+  font-size: 13px;
+}
+
+.model-dialog-field.is-required > span::before {
+  color: var(--danger);
+  content: '* ';
+}
+
+.model-dialog-field input {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 14px;
+  height: 44px;
+  min-width: 0;
+  outline: none;
+  padding: 0 12px;
+}
+
+.model-dialog-field input::placeholder {
+  color: color-mix(in srgb, var(--muted) 70%, transparent);
+}
+
+.model-dialog-error {
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--danger) 38%, var(--line));
+  border-radius: 8px;
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 8px 10px;
+}
+
+.model-dialog-actions {
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding-top: 16px;
+}
+
+.model-dialog-actions button {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 520;
+  min-height: 36px;
+  padding: 0 14px;
+}
+
+.model-dialog-actions button:hover:not(:disabled) {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.model-dialog-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.model-dialog-actions .confirm-button,
+.model-dialog-actions button[type='submit'] {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
+}
+
+.test-model-select {
+  display: grid;
+  position: relative;
+}
+
+.test-model-select select {
+  inset: 0;
+  opacity: 0;
+  position: absolute;
+}
+
+.test-model-preview {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 32px minmax(0, auto) minmax(0, 1fr) 20px;
+  min-height: 44px;
+  padding: 0 12px;
+}
+
+.test-model-preview .provider-initial {
+  background: color-mix(in srgb, var(--line-strong) 20%, var(--surface));
+  border: 1px solid var(--line);
+  color: var(--text);
+  height: 30px;
+  width: 30px;
+}
+
+.test-model-preview strong {
+  font-size: 14px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.test-model-preview small {
+  color: var(--muted);
+  font-size: 13px;
+  min-width: 0;
+}
+
+.nested-dialog-backdrop {
+  align-items: center;
+  background: color-mix(in srgb, #000 42%, transparent);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: fixed;
+  z-index: 22;
+}
+
+.add-provider-dialog {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px;
+  width: min(520px, calc(100vw - 44px));
+}
+
+.add-provider-head {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  min-height: 44px;
+  padding-bottom: 12px;
+}
+
+.add-provider-head .icon-button {
+  border-radius: 8px;
+  height: 40px;
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0;
+  width: 40px;
+}
+
+.add-provider-head .icon-button svg {
+  height: 20px;
+  width: 20px;
+}
+
+.provider-avatar {
+  align-self: center;
+  font-size: 34px;
+  height: 86px;
+  width: 86px;
+}
+
+.add-provider-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}

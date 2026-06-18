@@ -9,7 +9,6 @@ import {
   ensureChatSession,
   renameChatTopic,
   resendChatMessage,
-  runPromptCompare,
   sendChatMessage,
 } from './chatService'
 import type { ChatMessage, PromptCard, ProviderConfig } from '@/shared/types'
@@ -174,6 +173,39 @@ describe('chat service', () => {
       expect.any(Array),
       expect.any(Object),
       'on',
+      undefined,
+    )
+  })
+
+  it('sends default assistant prompt before the card prompt', async () => {
+    vi.mocked(requestCompletionStream).mockImplementation(
+      async (_provider, _messages, handlers) => {
+        handlers.onText('assistant')
+        return 'assistant'
+      },
+    )
+
+    await sendChatMessage({
+      card,
+      defaultAssistantPrompt: '你是默认助手',
+      history: [],
+      provider,
+      promptInjectionMode: 'system',
+      sessionId: 'session',
+      text: 'hello',
+      thinkingMode: 'off',
+    })
+
+    expect(requestCompletionStream).toHaveBeenCalledWith(
+      provider,
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'system',
+          content: expect.stringMatching(/^你是默认助手\n\n/),
+        }),
+      ]),
+      expect.any(Object),
+      'off',
       undefined,
     )
   })
@@ -440,52 +472,4 @@ describe('chat service', () => {
     )
   })
 
-  it('runs prompt compare and saves compare run', async () => {
-    vi.mocked(requestCompletion)
-      .mockResolvedValueOnce('old')
-      .mockResolvedValueOnce('new')
-    const rightCard: PromptCard = {
-      ...card,
-      id: 'right-card',
-      sections: {
-        ...card.sections,
-        role: { markdown: '另一个角色' },
-      },
-    }
-
-    await runPromptCompare({
-      leftCard: card,
-      rightCard,
-      input: 'same',
-      ownerPromptCardId: 'card',
-      provider,
-      promptInjectionMode: 'system',
-    })
-
-    expect(chatRepository.savePromptVersion).toHaveBeenCalledTimes(2)
-    expect(requestCompletion).toHaveBeenCalledWith(
-      provider,
-      expect.arrayContaining([
-        expect.objectContaining({
-          role: 'system',
-          content: expect.stringContaining('角色'),
-        }),
-        { role: 'user', content: 'same' },
-      ]),
-    )
-    expect(requestCompletion).toHaveBeenCalledWith(
-      provider,
-      expect.arrayContaining([
-        expect.objectContaining({
-          role: 'system',
-          content: expect.stringContaining('另一个角色'),
-        }),
-        { role: 'user', content: 'same' },
-      ]),
-    )
-    expect(chatRepository.saveCompareRun).toHaveBeenCalled()
-    expect(chatRepository.saveCompareRun).toHaveBeenCalledWith(
-      expect.objectContaining({ promptCardId: 'card' }),
-    )
-  })
 })

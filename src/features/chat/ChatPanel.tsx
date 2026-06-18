@@ -12,6 +12,7 @@ import { IconButton } from '@/shared/ui/IconButton'
 import { ChatComposer } from './components/ChatComposer'
 import { MessageList } from './components/MessageList'
 import { PanelMeta } from './components/PanelMeta'
+import { getComparePanelWidth } from './model/comparePanes'
 import { type ComparePaneView, useChatPanelState } from './useChatPanelState'
 
 interface ChatPanelProps {
@@ -26,6 +27,7 @@ interface ChatPanelProps {
   onSelectProvider: (id: string) => void
   onActiveSessionChange: (id?: string) => void
   onActiveCardChange?: (id: string) => void
+  onEnsureWidth: (width: number) => void
   width: number
 }
 
@@ -41,6 +43,7 @@ export function ChatPanel({
   onSelectProvider,
   onActiveSessionChange,
   onActiveCardChange,
+  onEnsureWidth,
   width,
 }: ChatPanelProps) {
   const [compareOpen, setCompareOpen] = useState(false)
@@ -57,6 +60,14 @@ export function ChatPanel({
   )
   const disabled = !provider || !card
   const compareDisabled = promptCards.length < 2
+  const openCompare = () => {
+    if (!compareOpen) onEnsureWidth(getComparePanelWidth(state.comparePanes.length))
+    setCompareOpen((value) => !value)
+  }
+  const addComparePane = () => {
+    onEnsureWidth(getComparePanelWidth(state.comparePanes.length + 1))
+    state.addComparePane()
+  }
 
   return (
     <aside
@@ -81,7 +92,7 @@ export function ChatPanel({
               icon={<Plus />}
               label="新增"
               disabled={!state.canAddComparePane}
-              onClick={state.addComparePane}
+              onClick={addComparePane}
             />
           )}
           <IconButton
@@ -135,7 +146,7 @@ export function ChatPanel({
               compareDisabled={compareDisabled}
               compareOpen={compareOpen}
               providers={providers}
-              onToggleCompare={() => setCompareOpen((value) => !value)}
+              onToggleCompare={openCompare}
               onSelectProvider={onSelectProvider}
             />
             <MessageList

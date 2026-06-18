@@ -107,12 +107,46 @@ export interface PromptVersion {
   reason: 'chat-send' | 'compare' | 'manual'
 }
 
+export type ProviderType =
+  | 'openai'
+  | 'deepseek'
+  | 'volcengine'
+  | 'moonshot'
+  | 'minimax'
+  | 'dashscope'
+  | 'zai'
+  | 'siliconflow'
+  | 'custom'
+
+export interface ProviderModelConfig {
+  id: string
+  group?: string
+  name?: string
+  enabled: boolean
+}
+
 export interface ProviderConfig {
   id: string
+  sourceProviderId?: string
   name: string
+  type?: ProviderType
   baseUrl: string
   apiKey: string
   model: string
+  models?: ProviderModelConfig[]
+  enabled?: boolean
+  order?: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface DefaultModelSettings {
+  id: string
+  providerId?: string
+  modelId?: string
+  assistantName: string
+  prompt: string
+  thinkingMode?: ThinkingMode
   createdAt: string
   updatedAt: string
 }
@@ -178,7 +212,7 @@ export interface CompareRun {
 }
 
 export interface ExportPayload {
-  version: 1 | 2 | 3 | 4 | 5
+  version: 1 | 2 | 3 | 4 | 5 | 6
   exportedAt: string
   canvases: Canvas[]
   promptCards: PromptCard[]
@@ -189,6 +223,7 @@ export interface ExportPayload {
   canvasImageNodes?: CanvasImageNode[]
   promptVersions: PromptVersion[]
   providerConfigs: ProviderConfig[]
+  defaultModelSettings?: DefaultModelSettings
   chatSessions: ChatSession[]
   chatMessages: ChatMessage[]
   compareRuns: CompareRun[]

@@ -95,6 +95,11 @@ vi.mock('@/shared/storage/db', () => ({
       reverse: vi.fn(() => ({ sortBy: vi.fn(() => [{ id: 'provider' }]) })),
       toArray: vi.fn(() => []),
     },
+    defaultModelSettings: {
+      clear: vi.fn(),
+      get: vi.fn(() => undefined),
+      put: vi.fn(),
+    },
     transaction: vi.fn(async (_mode, _tables, callback) => callback()),
   },
 }))
@@ -177,13 +182,14 @@ describe('workspace repository', () => {
       promptCards: [],
       promptVersions: [],
       providerConfigs: [],
+      defaultModelSettings: undefined,
       chatSessions: [],
       chatMessages: [],
       compareRuns: [],
     }
 
     await expect(workspaceRepository.exportWorkspace()).resolves.toMatchObject({
-      version: 5,
+      version: 6,
       canvasShapeNodes: [],
       canvasImageNodes: [],
       canvasEdges: [],
@@ -199,11 +205,42 @@ describe('workspace repository', () => {
     expect(db.canvasEdges.bulkPut).toHaveBeenCalledWith([])
     expect(db.canvasStrokes.bulkPut).toHaveBeenCalledWith([])
     expect(db.canvasTextNodes.bulkPut).toHaveBeenCalledWith([])
+    expect(db.defaultModelSettings.clear).toHaveBeenCalled()
+    expect(db.defaultModelSettings.put).not.toHaveBeenCalled()
+  })
+
+  it('imports default model settings when present', async () => {
+    const payload: ExportPayload = {
+      version: 6,
+      exportedAt: 'now',
+      canvases: [],
+      promptCards: [],
+      promptVersions: [],
+      providerConfigs: [],
+      defaultModelSettings: {
+        id: 'default-model',
+        providerId: 'provider',
+        modelId: 'model',
+        assistantName: '默认助手',
+        prompt: 'prompt',
+        createdAt: 'now',
+        updatedAt: 'now',
+      },
+      chatSessions: [],
+      chatMessages: [],
+      compareRuns: [],
+    }
+
+    await workspaceRepository.importWorkspace(payload)
+
+    expect(db.defaultModelSettings.put).toHaveBeenCalledWith(
+      payload.defaultModelSettings,
+    )
   })
 
   it('rejects unsupported imports and lists canvases', async () => {
     await expect(
-      workspaceRepository.importWorkspace({ version: 6 } as never),
+      workspaceRepository.importWorkspace({ version: 7 } as never),
     ).rejects.toThrow('Unsupported file')
     await expect(workspaceRepository.listCanvasesByUpdatedAt()).resolves.toEqual([
       { id: 'canvas' },

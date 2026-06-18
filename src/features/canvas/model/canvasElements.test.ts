@@ -52,7 +52,7 @@ describe('canvas elements model', () => {
   it('creates strokes with defaults', () => {
     expect(createCanvasStroke('canvas', [{ x: 1, y: 2 }])).toMatchObject({
       canvasId: 'canvas',
-      color: '#78d18b',
+      color: '#ededed',
       points: [{ x: 1, y: 2 }],
       strokeWidth: 3,
     })

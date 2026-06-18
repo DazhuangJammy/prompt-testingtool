@@ -6,6 +6,17 @@ export const buildChatEndpoint = (baseUrl) => {
   return new URL(`${clean}/v1/chat/completions`)
 }
 
+export const buildModelsEndpoint = (baseUrl) => {
+  const clean = String(baseUrl ?? '').replace(/\/$/, '')
+  if (!clean) throw new Error('Base URL missing')
+  if (clean.endsWith('/models')) return new URL(clean)
+  if (clean.endsWith('/chat/completions')) {
+    return new URL(clean.replace(/\/chat\/completions$/, '/models'))
+  }
+  if (clean.endsWith('/v1')) return new URL(`${clean}/models`)
+  return new URL(`${clean}/v1/models`)
+}
+
 export const parseUpstreamError = (text) => {
   try {
     const payload = JSON.parse(text)
@@ -47,6 +58,19 @@ export const requestChatCompletion = async ({
     },
     signal,
     body: JSON.stringify(body),
+  })
+}
+
+export const requestModelList = async ({ provider, signal }) => {
+  const endpoint = buildModelsEndpoint(provider.baseUrl)
+
+  return fetch(endpoint, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${provider.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    signal,
   })
 }
 

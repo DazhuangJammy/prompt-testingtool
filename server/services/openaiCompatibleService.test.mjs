@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildChatEndpoint,
   buildChatRequestBody,
+  buildModelsEndpoint,
   buildThinkingOptions,
 } from './openaiCompatibleService.mjs'
 
@@ -18,6 +19,18 @@ describe('openai compatible service', () => {
     expect(
       buildChatEndpoint('https://api.moonshot.cn/v1/chat/completions').href,
     ).toBe('https://api.moonshot.cn/v1/chat/completions')
+  })
+
+  it('builds model list endpoints from provider base urls', () => {
+    expect(buildModelsEndpoint('https://api.moonshot.cn').href).toBe(
+      'https://api.moonshot.cn/v1/models',
+    )
+    expect(buildModelsEndpoint('https://api.moonshot.cn/v1').href).toBe(
+      'https://api.moonshot.cn/v1/models',
+    )
+    expect(
+      buildModelsEndpoint('https://api.moonshot.cn/v1/chat/completions').href,
+    ).toBe('https://api.moonshot.cn/v1/models')
   })
 
   it('omits sampling parameters for Moonshot Kimi K2.6 requests', () => {

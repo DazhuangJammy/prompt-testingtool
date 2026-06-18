@@ -1,4 +1,5 @@
 import { createPromptCard } from '@/features/prompt-card/model/prompt'
+import { DEFAULT_MODEL_SETTINGS_ID } from '@/features/settings/model/defaultModelSettings'
 import { db } from '@/shared/storage/db'
 import type { Canvas, ExportPayload, PromptCard } from '@/shared/types'
 import { nowIso } from '@/shared/utils/time'
@@ -113,7 +114,7 @@ export const workspaceRepository = {
 
   async exportWorkspace(): Promise<ExportPayload> {
     return {
-      version: 5,
+      version: 6,
       exportedAt: nowIso(),
       canvases: await db.canvases.toArray(),
       promptCards: await db.promptCards.toArray(),
@@ -124,6 +125,9 @@ export const workspaceRepository = {
       canvasTextNodes: await db.canvasTextNodes.toArray(),
       promptVersions: await db.promptVersions.toArray(),
       providerConfigs: await db.providerConfigs.toArray(),
+      defaultModelSettings: await db.defaultModelSettings.get(
+        DEFAULT_MODEL_SETTINGS_ID,
+      ),
       chatSessions: await db.chatSessions.toArray(),
       chatMessages: await db.chatMessages.toArray(),
       compareRuns: await db.compareRuns.toArray(),
@@ -136,7 +140,8 @@ export const workspaceRepository = {
       payload.version !== 2 &&
       payload.version !== 3 &&
       payload.version !== 4 &&
-      payload.version !== 5
+      payload.version !== 5 &&
+      payload.version !== 6
     ) {
       throw new Error('Unsupported file')
     }
@@ -152,6 +157,7 @@ export const workspaceRepository = {
         db.canvasTextNodes,
         db.promptVersions,
         db.providerConfigs,
+        db.defaultModelSettings,
         db.chatSessions,
         db.chatMessages,
         db.compareRuns,
@@ -167,6 +173,7 @@ export const workspaceRepository = {
           db.canvasTextNodes.clear(),
           db.promptVersions.clear(),
           db.providerConfigs.clear(),
+          db.defaultModelSettings.clear(),
           db.chatSessions.clear(),
           db.chatMessages.clear(),
           db.compareRuns.clear(),
@@ -182,6 +189,9 @@ export const workspaceRepository = {
           db.canvasTextNodes.bulkPut(payload.canvasTextNodes ?? []),
           db.promptVersions.bulkPut(payload.promptVersions ?? []),
           db.providerConfigs.bulkPut(payload.providerConfigs ?? []),
+          payload.defaultModelSettings
+            ? db.defaultModelSettings.put(payload.defaultModelSettings)
+            : Promise.resolve(),
           db.chatSessions.bulkPut(payload.chatSessions ?? []),
           db.chatMessages.bulkPut(payload.chatMessages ?? []),
           db.compareRuns.bulkPut(payload.compareRuns ?? []),

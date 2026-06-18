@@ -1,7 +1,7 @@
 import { formatAttachmentSize } from '@/features/chat/model/attachments'
 import { getSvgIntrinsicSize } from '@/features/chat/model/renderedImageSize'
 import { splitSvgPreviewBlocks } from '@/features/chat/model/svgPreview'
-import { splitThinkingBlock } from '@/features/chat/model/thinking'
+import { splitThinkingBlock } from '@/shared/model/thinking'
 import {
   BLOCK_GAP,
   BUBBLE_MAX_WIDTH,

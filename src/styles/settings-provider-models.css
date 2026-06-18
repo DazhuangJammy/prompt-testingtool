@@ -1,0 +1,113 @@
+.model-list-head {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.model-add-button {
+  border-color: var(--line);
+  height: 30px;
+  width: 30px;
+}
+
+.model-list-head > div:first-child {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.model-list-head strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.model-list-head span {
+  background: var(--surface);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 3px 8px;
+}
+
+.provider-model-list {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.provider-model-row {
+  align-items: center;
+  background: transparent;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  min-height: 56px;
+  padding: 8px 10px;
+}
+
+.provider-model-row:last-child {
+  border-bottom: 0;
+}
+
+.provider-model-row label {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+}
+
+.provider-model-row label input {
+  opacity: 0;
+  position: absolute;
+}
+
+.provider-model-row label svg {
+  color: var(--line-strong);
+}
+
+.provider-model-row label input:checked + svg {
+  color: var(--accent);
+}
+
+.provider-model-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.provider-model-actions {
+  align-items: center;
+  display: inline-flex;
+  flex-direction: row;
+  gap: 4px;
+}
+
+.provider-model-actions .icon-button {
+  border-radius: 8px;
+  height: 40px;
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0;
+  width: 40px;
+}
+
+.provider-model-actions .icon-button svg {
+  height: 20px;
+  width: 20px;
+}
+
+.provider-detail-actions {
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.provider-detail-actions .danger-button:hover {
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--line));
+  color: var(--danger);
+}

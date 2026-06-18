@@ -16,7 +16,7 @@ import {
   formatMessageTime,
   formatThinkingSeconds,
   splitThinkingBlock,
-} from '@/features/chat/model/thinking'
+} from '@/shared/model/thinking'
 import { formatAttachmentSize } from '@/features/chat/model/attachments'
 import {
   splitSvgPreviewBlocks,

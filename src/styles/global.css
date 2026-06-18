@@ -13,7 +13,7 @@
   --canvas-dot: #303030;
   --focus: #ededed;
   --danger: #ff6b6b;
-  --ok: #78d18b;
+  --accent: #f2f2f2;
   --shadow: 0 14px 42px rgba(0, 0, 0, 0.35);
   --font:
     ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -45,7 +45,7 @@
   --canvas-dot: #ccccca;
   --focus: #1f1f1d;
   --danger: #c43c3c;
-  --ok: #257b39;
+  --accent: #1f1f1d;
   --shadow: 0 16px 44px rgba(20, 20, 18, 0.14);
 }
 

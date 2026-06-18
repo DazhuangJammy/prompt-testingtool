@@ -41,14 +41,30 @@
     width: min(360px, 100vw - 116px);
   }
 
-  .settings-grid {
+  .settings-layout {
     grid-template-columns: 1fr;
+    overflow: auto;
   }
 
-  .provider-list {
+  .settings-dialog {
+    height: calc(100vh - 32px);
+    width: calc(100vw - 32px);
+  }
+
+  .settings-category-list,
+  .settings-provider-list {
     border-bottom: 1px solid var(--line);
     border-right: 0;
-    max-height: 112px;
+    max-height: 180px;
     overflow: auto;
+  }
+
+  .settings-category-list {
+    flex-direction: row;
+  }
+
+  .settings-category-list button {
+    flex: 0 0 auto;
+    width: auto;
   }
 }

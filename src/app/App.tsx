@@ -22,7 +22,12 @@ import { WorkspaceTopbar } from '@/features/canvas/WorkspaceTopbar'
 import { SettingsDialog } from '@/features/settings/SettingsDialog'
 import { Sidebar } from '@/features/sidebar/Sidebar'
 import type { ChatSessionExportAction } from '@/features/sidebar/sidebar.types'
+import { defaultModelSettingsRepository } from '@/features/settings/infrastructure/defaultModelSettingsRepository'
 import { providerRepository } from '@/features/settings/infrastructure/providerRepository'
+import {
+  buildSelectableProviderId,
+  normalizeProviderConfig,
+} from '@/features/settings/model/providerCatalog'
 import type { ChatSession } from '@/shared/types'
 import { useResizablePanels } from './useResizablePanels'
 import { useResponsivePanels } from './useResponsivePanels'
@@ -169,10 +174,12 @@ function App() {
             title={workspace.activeCanvas?.title ?? '工作台'}
           />
 
-          <CanvasWorkspace
-            effectiveCanvasId={workspace.effectiveCanvasId}
-            promptCards={workspace.promptCards}
-            onAddPrompt={actions.addPromptCard}
+        <CanvasWorkspace
+          effectiveCanvasId={workspace.effectiveCanvasId}
+          promptOptimizationProvider={workspace.defaultProvider}
+          promptOptimizationSettings={workspace.defaultModelSettings}
+          promptCards={workspace.promptCards}
+          onAddPrompt={actions.addPromptCard}
             onDeleteCard={actions.deletePromptCard}
             onSelectCard={workspace.setSelectedCardId}
           />
@@ -190,24 +197,37 @@ function App() {
           onSelectProvider={workspace.setActiveProviderId}
           onActiveSessionChange={setActiveChatSessionId}
           onActiveCardChange={workspace.setSelectedCardId}
+          onEnsureWidth={resizablePanels.ensureChatWidth}
           width={resizablePanels.chatWidth}
         />
 
         <SettingsDialog
           open={settingsOpen}
-          providers={workspace.providers}
-          activeProviderId={workspace.effectiveProviderId}
+          defaultModelSettings={workspace.defaultModelSettings}
+          providers={workspace.providerConfigs}
+          activeProviderId={workspace.effectiveProviderConfigId}
           onClose={() => setSettingsOpen(false)}
-          onSelect={workspace.setActiveProviderId}
+          onSelect={() => undefined}
+          onSaveDefaultModelSettings={async (settings) => {
+            await defaultModelSettingsRepository.save(settings)
+          }}
+          onReorderProviders={async (providers) => {
+            await Promise.all(providers.map((provider) => providerRepository.save(provider)))
+          }}
           onDelete={async (id) => {
             await providerRepository.delete(id)
-            if (workspace.effectiveProviderId === id) {
+            if (workspace.activeProvider?.sourceProviderId === id) {
               workspace.setActiveProviderId(undefined)
             }
           }}
           onSave={async (provider) => {
-            await providerRepository.save(provider)
-            workspace.setActiveProviderId(provider.id)
+            const normalized = normalizeProviderConfig(provider)
+            await providerRepository.save(normalized)
+            if (normalized.enabled && normalized.model) {
+              workspace.setActiveProviderId(
+                buildSelectableProviderId(normalized.id, normalized.model),
+              )
+            }
           }}
         />
       </div>

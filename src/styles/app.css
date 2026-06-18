@@ -10,4 +10,8 @@
 @import './chat.css';
 @import './chat-composer.css';
 @import './settings.css';
+@import './settings-states.css';
+@import './settings-provider-models.css';
+@import './settings-model-dialog.css';
+@import './settings-default-model.css';
 @import './responsive.css';

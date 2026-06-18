@@ -1,0 +1,122 @@
+.provider-state {
+  align-self: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 5px 11px;
+}
+
+.provider-state.is-on {
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--accent);
+}
+
+.settings-switch {
+  display: inline-flex;
+}
+
+.settings-switch input {
+  appearance: none;
+  height: 0;
+  margin: 0;
+  position: absolute;
+  width: 0;
+}
+
+.settings-switch span {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  height: 34px;
+  position: relative;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease;
+  width: 62px;
+}
+
+.settings-switch span::before {
+  background: var(--muted);
+  border-radius: 50%;
+  content: '';
+  height: 26px;
+  left: 4px;
+  position: absolute;
+  top: 3px;
+  transition:
+    background 0.16s ease,
+    transform 0.16s ease;
+  width: 26px;
+}
+
+.settings-switch.is-on span,
+.settings-switch input:checked + span {
+  background: color-mix(in srgb, var(--line-strong) 54%, var(--panel));
+  border-color: var(--line-strong);
+}
+
+.settings-switch.is-on span::before,
+.settings-switch input:checked + span::before {
+  background: var(--accent);
+  transform: translateX(26px);
+}
+
+.settings-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-status {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  padding: 7px 10px;
+}
+
+.settings-status.is-ok {
+  border-color: var(--line-strong);
+  color: var(--accent);
+}
+
+.settings-status.is-error {
+  border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
+  color: var(--danger);
+}
+
+:root[data-theme='light'] .settings-provider-list button.is-active {
+  background: color-mix(in srgb, var(--line-strong) 22%, var(--surface));
+  border-color: var(--line-strong);
+}
+
+:root[data-theme='light'] .provider-state.is-on {
+  border-color: var(--line-strong);
+  color: var(--accent);
+}
+
+:root[data-theme='light'] .settings-switch.is-on span,
+:root[data-theme='light'] .settings-switch input:checked + span {
+  background: color-mix(in srgb, var(--line-strong) 22%, var(--surface));
+  border-color: var(--line-strong);
+}
+
+:root[data-theme='light'] .settings-switch.is-on span::before,
+:root[data-theme='light'] .settings-switch input:checked + span::before {
+  background: var(--surface);
+}
+
+:root[data-theme='light'] .settings-status.is-ok {
+  border-color: var(--line-strong);
+  color: var(--accent);
+}

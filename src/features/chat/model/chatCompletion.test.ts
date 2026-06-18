@@ -119,6 +119,30 @@ describe('chat completion model', () => {
     expect(version.compiledMarkdown).toContain('# 角色')
   })
 
+  it('prepends the default assistant prompt to prompt versions', () => {
+    const card: PromptCard = {
+      id: 'card',
+      canvasId: 'canvas',
+      title: 'T',
+      position: { x: 0, y: 0 },
+      sections: {
+        role: { markdown: '角色' },
+        rules: { markdown: '' },
+        examples: { markdown: '' },
+        workflow: { markdown: '', workflowSteps: [] },
+        outputFormat: { markdown: '' },
+        starter: { markdown: '' },
+      },
+      createdAt: 'now',
+      updatedAt: 'now',
+    }
+
+    const version = createPromptVersion(card, 'manual', '默认助手提示词')
+
+    expect(version.compiledMarkdown.startsWith('默认助手提示词\n\n')).toBe(true)
+    expect(version.compiledMarkdown).toContain('# 角色')
+  })
+
   it('creates compare runs', () => {
     const oldVersion = { id: 'old' } as PromptVersion
     const newVersion = { id: 'new' } as PromptVersion

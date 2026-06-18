@@ -3,12 +3,9 @@ import { useEffect, useState } from 'react'
 import {
   clearChatSession,
   editChatMessage,
-  ensureChatSession,
-  resendChatMessage,
-  sendChatMessage,
 } from '@/features/chat/application/chatService'
 import { chatRepository } from '@/features/chat/infrastructure/chatRepository'
-import { useActiveChatRequests } from '@/features/chat/hooks/useActiveChatRequests'
+import { useChatMessageActions } from '@/features/chat/hooks/useChatMessageActions'
 import { useChatTopics } from '@/features/chat/hooks/useChatTopics'
 import {
   getAttachmentCapability,
@@ -17,7 +14,7 @@ import {
 import {
   getThinkingCapability,
   normalizeThinkingMode,
-} from '@/features/chat/model/thinking'
+} from '@/shared/model/thinking'
 import {
   MAX_COMPARE_PANES,
   canRemoveComparePane,
@@ -29,7 +26,6 @@ import {
   removeComparePaneById,
   resolvePaneCard,
   syncComparePanes,
-  type ActiveRequest,
   type ComparePaneId,
   type ComparePaneState,
   type ComparePaneView,
@@ -61,7 +57,7 @@ export function useChatPanelState(
     createInitialComparePanes(),
   )
   const [error, setError] = useState('')
-  const chatRequests = useActiveChatRequests()
+  const chatActions = useChatMessageActions(setError)
   const [thinkingModesByProvider, setThinkingModesByProvider] = useState<
     Record<string, ThinkingMode>
   >({})
@@ -160,7 +156,7 @@ export function useChatPanelState(
     }
     setInput('')
     setAttachments([])
-    await sendMessageForPane({
+    await chatActions.sendMessageForPane({
       attachments: nextAttachments,
       card,
       history: messages,
@@ -189,7 +185,7 @@ export function useChatPanelState(
     }
 
     updateComparePane(paneId, { attachments: [], input: '' })
-    await sendMessageForPane({
+    await chatActions.sendMessageForPane({
       attachments: nextAttachments,
       card: pane.card,
       history: pane.messages,
@@ -205,7 +201,7 @@ export function useChatPanelState(
 
   const resendMainMessage = async (message: ChatMessage, content: string) => {
     if (!card || !provider) return
-    await resendMessageForPane({
+    await chatActions.resendMessageForPane({
       card,
       history: messages,
       message,
@@ -227,7 +223,7 @@ export function useChatPanelState(
     const pane = paneViews.find((item) => item.id === paneId)
     if (!pane?.card || !pane.provider) return
 
-    await resendMessageForPane({
+    await chatActions.resendMessageForPane({
       card: pane.card,
       history: pane.messages,
       message,
@@ -239,108 +235,6 @@ export function useChatPanelState(
       thinkingMode: pane.thinkingMode,
       requestKey: paneId,
     })
-  }
-
-  const sendMessageForPane = async ({
-    card,
-    attachments = [],
-    history,
-    provider,
-    sessionId,
-    setSessionId,
-    text,
-    thinkingMode,
-    promptInjectionMode,
-    requestKey,
-  }: {
-    attachments?: ChatAttachment[]
-    card: PromptCard
-    history: ChatMessage[]
-    provider: ProviderConfig
-    promptInjectionMode: PromptInjectionMode
-    sessionId?: string
-    setSessionId: (id: string) => void
-    text: string
-    thinkingMode: ThinkingMode
-    requestKey: ActiveRequest
-  }) => {
-    const controller = chatRequests.startRequest(requestKey)
-    setError('')
-
-    try {
-      const activeSessionId = await ensureChatSession(
-        card.canvasId,
-        sessionId,
-        card.id,
-      )
-      if (!sessionId) setSessionId(activeSessionId)
-      await sendChatMessage({
-        card,
-        attachments,
-        history,
-        provider,
-        promptInjectionMode,
-        sessionId: activeSessionId,
-        signal: controller.signal,
-        text,
-        thinkingMode,
-      })
-    } catch (event) {
-      setError(event instanceof Error ? event.message : 'Request failed')
-    } finally {
-      chatRequests.finishRequest(requestKey, controller)
-    }
-  }
-
-  const resendMessageForPane = async ({
-    card,
-    history,
-    message,
-    provider,
-    sessionId,
-    setSessionId,
-    text,
-    thinkingMode,
-    promptInjectionMode,
-    requestKey,
-  }: {
-    card: PromptCard
-    history: ChatMessage[]
-    message: ChatMessage
-    provider: ProviderConfig
-    promptInjectionMode: PromptInjectionMode
-    sessionId?: string
-    setSessionId: (id: string) => void
-    text: string
-    thinkingMode: ThinkingMode
-    requestKey: ActiveRequest
-  }) => {
-    const controller = chatRequests.startRequest(requestKey)
-    setError('')
-
-    try {
-      const activeSessionId = await ensureChatSession(
-        card.canvasId,
-        sessionId,
-        card.id,
-      )
-      if (!sessionId) setSessionId(activeSessionId)
-      await resendChatMessage({
-        card,
-        history,
-        message,
-        provider,
-        promptInjectionMode,
-        sessionId: activeSessionId,
-        signal: controller.signal,
-        text,
-        thinkingMode,
-      })
-    } catch (event) {
-      setError(event instanceof Error ? event.message : 'Request failed')
-    } finally {
-      chatRequests.finishRequest(requestKey, controller)
-    }
   }
 
   const clearMainMessages = async () => {
@@ -418,7 +312,7 @@ export function useChatPanelState(
     const result = removeComparePaneById(comparePanes, paneId)
     if (!result.removed) return
 
-    chatRequests.stopGeneration(paneId)
+    chatActions.stopGeneration(paneId)
     setComparePanes(result.panes)
 
     if (result.shouldExitCompare) {
@@ -443,11 +337,11 @@ export function useChatPanelState(
   }
 
   return {
-    activeRequest: chatRequests.activeRequest,
+    activeRequest: chatActions.activeRequest,
     addComparePane,
     attachmentCapability,
     attachments,
-    busy: chatRequests.busy,
+    busy: chatActions.busy,
     canAddComparePane: comparePanes.length < MAX_COMPARE_PANES,
     canRemoveComparePane: canRemoveComparePane(comparePanes),
     clearCompareMessages,
@@ -459,7 +353,7 @@ export function useChatPanelState(
     error,
     mainSessionId: effectiveSessionId,
     input,
-    isRequestActive: chatRequests.isRequestActive,
+    isRequestActive: chatActions.isRequestActive,
     mainMessages: messages,
     mainSessions: sessions ?? [],
     promptInjectionMode,
@@ -482,7 +376,7 @@ export function useChatPanelState(
     setAttachments,
     setPromptInjectionMode,
     setThinkingModeForProvider,
-    stopGeneration: chatRequests.stopGeneration,
+    stopGeneration: chatActions.stopGeneration,
     supportsDeepThinking: thinkingCapability.supportsDeepMode,
     supportsThinking: thinkingCapability.supportsThinking,
     thinkingMode: effectiveThinkingMode,

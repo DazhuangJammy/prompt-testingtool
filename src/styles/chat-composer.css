@@ -97,10 +97,10 @@
 
 .attachment-pill {
   align-items: center;
-  background: color-mix(in srgb, var(--ok) 14%, var(--surface));
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
   border: 1px solid var(--line);
   border-radius: 999px;
-  color: var(--ok);
+  color: var(--accent);
   display: inline-flex;
   font-size: 12px;
   gap: 6px;

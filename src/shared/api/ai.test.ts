@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   extractAssistantText,
+  listProviderModels,
   requestCompletion,
   requestCompletionStream,
   testProvider,
@@ -272,5 +273,50 @@ describe('ai api helpers', () => {
     )
 
     await expect(testProvider(provider)).rejects.toThrow('401 bad key')
+  })
+
+  it('lists provider models through local proxy', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          models: [
+            { id: 'model-a', name: 'Model A' },
+            { id: 'model-b' },
+            { name: 'missing id' },
+          ],
+        }),
+        { status: 200 },
+      ),
+    )
+
+    await expect(listProviderModels(provider)).resolves.toEqual([
+      { id: 'model-a', name: 'Model A', enabled: true },
+      { id: 'model-b', name: undefined, enabled: true },
+    ])
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/provider-models',
+      expect.objectContaining({
+        body: expect.stringContaining('"baseUrl":"https://api.example.com"'),
+      }),
+    )
+  })
+
+  it('surfaces provider model list errors', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ ok: false, status: 401, error: 'bad key' }), {
+        status: 401,
+      }),
+    )
+
+    await expect(listProviderModels(provider)).rejects.toThrow('401 bad key')
+  })
+
+  it('surfaces provider model list errors when response body is not json', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('not json', { status: 500, statusText: 'Server Error' }),
+    )
+
+    await expect(listProviderModels(provider)).rejects.toThrow('Server Error')
   })
 })
