@@ -1,5 +1,5 @@
 import { Check, LoaderCircle, Sparkles, X } from 'lucide-react'
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { updateMarkdownOutlineNode } from '@/features/prompt-card/model/markdownEditing'
 import type { MarkdownOutlineNode } from '@/features/prompt-card/model/prompt'
 import {
@@ -7,6 +7,7 @@ import {
   replaceTextSelection,
   type TextSelectionRange,
 } from '@/features/prompt-card/model/textSelection'
+import { subscribeCanvasCommitActiveEdit } from '@/shared/model/canvasEditEvents'
 import { IconButton } from '@/shared/ui/IconButton'
 import {
   placeTextControlCaret,
@@ -51,11 +52,15 @@ export function MarkdownNodeEditor({
   const [optimizationError, setOptimizationError] = useState('')
   const [optimizationOpen, setOptimizationOpen] = useState(false)
 
+  const save = useCallback(() => {
+    onSave(titleDraft, bodyDraft)
+  }, [bodyDraft, onSave, titleDraft])
+
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     event.stopPropagation()
     if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
       event.preventDefault()
-      onSave(titleDraft, bodyDraft)
+      save()
     }
     if (event.key === 'Escape') {
       event.preventDefault()
@@ -85,6 +90,8 @@ export function MarkdownNodeEditor({
       resizeTextAreaToContent(textarea, LOCAL_BODY_TEXTAREA_SIZE)
     })
   }, [bodyDraft])
+
+  useEffect(() => subscribeCanvasCommitActiveEdit(save), [save])
 
   const updateBodySelection = () => {
     const textarea = bodyRef.current
@@ -195,7 +202,7 @@ export function MarkdownNodeEditor({
         <IconButton
           icon={<Check />}
           label="完成局部编辑"
-          onClick={() => onSave(titleDraft, bodyDraft)}
+          onClick={save}
         />
       </div>
     </div>

@@ -144,20 +144,17 @@ export async function persistCanvasStrokePosition(
   if (canvasId) await canvasRepository.touchCanvas(canvasId)
 }
 
-export async function deleteShapeNodeCascade(id: string, canvasId?: string) {
-  await canvasRepository.deleteEdgesForNode(id)
+export async function deleteShapeNodeRecord(id: string, canvasId?: string) {
   await canvasRepository.deleteShapeNode(id)
   if (canvasId) await canvasRepository.touchCanvas(canvasId)
 }
 
-export async function deleteTextNodeCascade(id: string, canvasId?: string) {
-  await canvasRepository.deleteEdgesForNode(id)
+export async function deleteTextNodeRecord(id: string, canvasId?: string) {
   await canvasRepository.deleteTextNode(id)
   if (canvasId) await canvasRepository.touchCanvas(canvasId)
 }
 
-export async function deleteImageNodeCascade(id: string, canvasId?: string) {
-  await canvasRepository.deleteEdgesForNode(id)
+export async function deleteImageNodeRecord(id: string, canvasId?: string) {
   await canvasRepository.deleteImageNode(id)
   if (canvasId) await canvasRepository.touchCanvas(canvasId)
 }
@@ -188,6 +185,7 @@ export async function pasteCanvasClipboard(
   canvasId: string | undefined,
   clipboard: CanvasClipboardSnapshot | undefined,
   anchor: CanvasPoint,
+  topicSessionId?: string,
 ) {
   if (!canvasId || !clipboard) return undefined
 
@@ -195,6 +193,7 @@ export async function pasteCanvasClipboard(
     anchor,
     canvasId,
     clipboard,
+    topicSessionId,
   })
   await canvasRepository.savePastedElements(result.payload)
 

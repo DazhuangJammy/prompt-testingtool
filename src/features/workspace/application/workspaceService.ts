@@ -1,10 +1,20 @@
 import { workspaceRepository } from '@/features/workspace/infrastructure/workspaceRepository'
+import {
+  repairAllLegacyTopicScopes,
+  repairLegacyTopicScope,
+} from '@/features/workspace/infrastructure/legacyTopicScopeRepair'
+import {
+  createDuplicateChatSessionSortOrder,
+  createDuplicateChatSessionTitle,
+} from '@/features/chat/model/chatSessionOrdering'
 import type {
   Canvas,
   ChatTopicExportPayload,
+  ChatSession,
   ExportPayload,
   PromptCard,
 } from '@/shared/types'
+import { nowIso } from '@/shared/utils/time'
 
 export async function createNextCanvas(canvases: Canvas[]) {
   return workspaceRepository.createCanvas(`画布 ${canvases.length + 1}`)
@@ -14,9 +24,18 @@ export async function addPromptCardToCanvas(
   canvasId: string | undefined,
   promptCards: PromptCard[],
   position?: PromptCard['position'],
+  topicSessionId?: string,
 ) {
   if (!canvasId) return undefined
-  return workspaceRepository.createPromptCard(canvasId, promptCards.length, position)
+  const scopedPromptCards = topicSessionId
+    ? promptCards.filter((card) => card.topicSessionId === topicSessionId)
+    : promptCards
+  return workspaceRepository.createPromptCard(
+    canvasId,
+    scopedPromptCards.length,
+    position,
+    topicSessionId,
+  )
 }
 
 export async function deleteCanvasAndPickNext(id: string, canvases: Canvas[]) {
@@ -48,6 +67,51 @@ export async function createChatTopicExport(sessionId: string) {
       .slice(0, 10)}.json`,
     text: JSON.stringify(payload, null, 2),
   }
+}
+
+export async function duplicateChatTopic(
+  session: ChatSession,
+  siblingSessions: ChatSession[],
+) {
+  const payload = await workspaceRepository.exportChatTopic(session.id)
+  const at = nowIso()
+  const nextSession: ChatSession = {
+    ...payload.chatSession,
+    title: createDuplicateChatSessionTitle(
+      payload.chatSession.title,
+      siblingSessions.map((item) => item.title),
+    ),
+    sortOrder: createDuplicateChatSessionSortOrder(session, siblingSessions),
+    createdAt: at,
+    updatedAt: at,
+  }
+  const result = await workspaceRepository.importChatTopic(
+    { ...payload, chatSession: nextSession },
+    session.canvasId ?? payload.chatSession.canvasId,
+  )
+  return {
+    ...nextSession,
+    id: result.sessionId,
+    canvasId: result.canvasId,
+    promptCardId: result.promptCardId,
+  }
+}
+
+export async function assignPromptCardToChatTopic(
+  promptCardId: string | undefined,
+  sessionId: string,
+) {
+  if (!promptCardId) return
+  await workspaceRepository.assignPromptCardToTopic(promptCardId, sessionId)
+}
+
+export async function repairLegacyChatTopicScope(sessionId?: string) {
+  if (!sessionId) return
+  await repairLegacyTopicScope(sessionId)
+}
+
+export async function repairLegacyWorkspaceTopicScopes() {
+  await repairAllLegacyTopicScopes()
 }
 
 export async function importChatTopicFile(file: File, targetCanvasId?: string) {

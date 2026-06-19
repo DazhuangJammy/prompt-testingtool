@@ -30,17 +30,16 @@ import { DraftStrokeLayer } from '@/features/canvas/components/DraftStrokeLayer'
 import { useCanvasAlignment } from '@/features/canvas/hooks/useCanvasAlignment'
 import { useCanvasClipboard } from '@/features/canvas/hooks/useCanvasClipboard'
 import { useCanvasDeletion } from '@/features/canvas/hooks/useCanvasDeletion'
-import { useCanvasElements } from '@/features/canvas/hooks/useCanvasElements'
 import { useCanvasFlowState } from '@/features/canvas/hooks/useCanvasFlowState'
 import { useCanvasFrameStyle } from '@/features/canvas/hooks/useCanvasFrameStyle'
 import { useCanvasNodePersistence } from '@/features/canvas/hooks/useCanvasNodePersistence'
 import { useCanvasPaneClick } from '@/features/canvas/hooks/useCanvasPaneClick'
+import { useScopedCanvasRecords } from '@/features/canvas/hooks/useScopedCanvasRecords'
 import { useCanvasToolKeyboardShortcuts } from '@/features/canvas/hooks/useCanvasToolKeyboardShortcuts'
+import { useCanvasViewportPersistence } from '@/features/canvas/hooks/useCanvasViewportPersistence'
 import { useDraftStroke } from '@/features/canvas/hooks/useDraftStroke'
 import { canvasRepository } from '@/features/canvas/infrastructure/canvasRepository'
-import {
-  createCanvasEdge,
-} from '@/features/canvas/model/canvasElements'
+import { createCanvasEdge } from '@/features/canvas/model/canvasElements'
 import { canvasNodeTypes, penColors } from '@/features/canvas/model/canvasWorkspaceRegistry'
 import {
   createCanvasFlowEdges,
@@ -64,16 +63,20 @@ import type { CanvasToolShortcuts } from '@/shared/model/canvasToolShortcuts'
 
 interface CanvasWorkspaceProps {
   effectiveCanvasId?: string
+  activeSessionId?: string
+  activeSessionPromptCardId?: string
   promptOptimizationProvider?: ProviderConfig
   promptOptimizationSettings?: DefaultModelSettings
   toolShortcuts: CanvasToolShortcuts
   promptCards: PromptCard[]
-  onAddPrompt: (position?: PromptCard['position']) => void
+  onAddPrompt: (position?: PromptCard['position'], topicSessionId?: string) => void
   onDeleteCard: (id: string) => void
   onSelectCard: (id: string) => void
 }
 
 export function CanvasWorkspace({
+  activeSessionId,
+  activeSessionPromptCardId,
   effectiveCanvasId,
   onAddPrompt,
   onDeleteCard,
@@ -84,18 +87,28 @@ export function CanvasWorkspace({
   promptCards,
 }: CanvasWorkspaceProps) {
   const reactFlow = useReactFlow<CanvasFlowNode, Edge>()
+  const canvasViewport = useCanvasViewportPersistence({
+    canvasId: effectiveCanvasId,
+    reactFlow,
+    sessionId: activeSessionId,
+  })
   const [activeTool, setActiveTool] = useState<CanvasTool>('pan')
   const [selectedFlowIds, setSelectedFlowIds] =
     useState<FlowSelectionIds>(emptyFlowSelection)
   const [penColor, setPenColor] = useState(penColors[0].value)
   const [textStyle, setTextStyle] = useState<CanvasTextStyle>(defaultTextStyle)
-  const {
-    canvasEdges: canvasFlowEdges,
-    imageNodes: canvasImageNodes,
-    shapeNodes: canvasShapeNodes,
-    strokes: canvasStrokes,
-    textNodes: canvasTextNodes,
-  } = useCanvasElements(effectiveCanvasId)
+  const scopedRecords = useScopedCanvasRecords({
+    canvasId: effectiveCanvasId,
+    promptCardId: activeSessionPromptCardId,
+    promptCards,
+    sessionId: activeSessionId,
+  })
+  const canvasFlowEdges = scopedRecords.canvasEdges
+  const canvasImageNodes = scopedRecords.canvasImageNodes
+  const canvasShapeNodes = scopedRecords.canvasShapeNodes
+  const canvasStrokes = scopedRecords.canvasStrokes
+  const canvasTextNodes = scopedRecords.canvasTextNodes
+  const scopedPromptCards = scopedRecords.promptCards
   const updateSelection = useCallback((nextSelection: FlowSelectionIds) => {
     setSelectedFlowIds((currentSelection) =>
       areFlowSelectionsEqual(currentSelection, nextSelection)
@@ -110,7 +123,7 @@ export function CanvasWorkspace({
   const nodePersistence = useCanvasNodePersistence({
     canvasId: effectiveCanvasId,
     imageNodes: canvasImageNodes,
-    promptCards,
+    promptCards: scopedPromptCards,
     shapeNodes: canvasShapeNodes,
     strokes: canvasStrokes,
     textNodes: canvasTextNodes,
@@ -119,7 +132,7 @@ export function CanvasWorkspace({
   const businessNodes = useMemo(
     () =>
       createCanvasFlowNodes({
-        promptCards,
+        promptCards: scopedPromptCards,
         selectedNodeIds: selectedFlowIds.nodes,
         imageNodes: canvasImageNodes,
         shapeNodes: canvasShapeNodes,
@@ -163,7 +176,7 @@ export function CanvasWorkspace({
       onSelectCard,
       promptOptimizationProvider,
       promptOptimizationSettings,
-      promptCards,
+      scopedPromptCards,
       selectedFlowIds.nodes,
       updateSelection,
     ],
@@ -195,6 +208,7 @@ export function CanvasWorkspace({
   const { draftPoints, handlePointerDown } = useDraftStroke({
     activeTool,
     canvasId: effectiveCanvasId,
+    topicSessionId: activeSessionId,
     onStart: clearSelection,
     penColor,
     reactFlow,
@@ -228,10 +242,11 @@ export function CanvasWorkspace({
           connection.target,
           connection.sourceHandle,
           connection.targetHandle,
+          activeSessionId,
         ),
       )
     },
-    [effectiveCanvasId],
+    [activeSessionId, effectiveCanvasId],
   )
 
   const handleEdgesChange = useCallback<OnEdgesChange<Edge>>(
@@ -308,6 +323,7 @@ export function CanvasWorkspace({
   const handlePaneClick = useCanvasPaneClick({
     activeTool,
     canvasId: effectiveCanvasId,
+    topicSessionId: activeSessionId,
     onActivateShortcuts: activateShortcutScope,
     onAddPrompt,
     onClearSelection: clearSelection,
@@ -327,13 +343,9 @@ export function CanvasWorkspace({
         fontSize: selectedTextNode.fontSize,
       }
     : textStyle
-  const {
-    activeFrameStyle,
-    canStyleFrame,
-    updateFrameStyle,
-  } = useCanvasFrameStyle({
+  const { activeFrameStyle, canStyleFrame, updateFrameStyle } = useCanvasFrameStyle({
     canvasId: effectiveCanvasId,
-    promptCards,
+    promptCards: scopedPromptCards,
     selectedNodeIds: selectedFlowIds.nodes,
     shapeNodes: canvasShapeNodes,
     textNodes: canvasTextNodes,
@@ -375,13 +387,14 @@ export function CanvasWorkspace({
     canvasId: effectiveCanvasId,
     onPasteSelection: (ids) => updateSelection({ edges: [], nodes: ids }),
     onSelectPrompt: onSelectCard,
-    promptCards,
+    promptCards: scopedPromptCards,
     reactFlow,
     selectedFlowIds,
     shapeNodes: canvasShapeNodes,
     strokes: canvasStrokes,
     imageNodes: canvasImageNodes,
     textNodes: canvasTextNodes,
+    topicSessionId: activeSessionId,
   })
   return (
     <div
@@ -416,9 +429,11 @@ export function CanvasWorkspace({
         onReconnect={handleReconnect}
         onReconnectEnd={handleReconnectEnd}
         onSelectionChange={handleSelectionChange}
-        fitView
+        defaultViewport={canvasViewport.defaultViewport}
+        fitView={!canvasViewport.hasStoredViewport}
         minZoom={0.3}
         maxZoom={1.6}
+        onMoveEnd={canvasViewport.handleMoveEnd}
         connectOnClick={false}
         connectionLineStyle={{ stroke: 'var(--accent)', strokeWidth: 2 }}
         deleteKeyCode={['Delete', 'Backspace']}

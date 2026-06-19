@@ -1,6 +1,8 @@
 import { createPromptCard } from '@/features/prompt-card/model/prompt'
 import { DEFAULT_MODEL_SETTINGS_ID } from '@/features/settings/model/defaultModelSettings'
+import { selectActiveCompareChildSessions } from '@/features/chat/model/comparePanes'
 import { db } from '@/shared/storage/db'
+import { filterCanvasRecordsForTopic } from '@/shared/model/canvasTopicScope'
 import type {
   Canvas,
   ChatTopicExportPayload,
@@ -8,6 +10,14 @@ import type {
   PromptCard,
 } from '@/shared/types'
 import { nowIso } from '@/shared/utils/time'
+import {
+  cloneChatMessageAttachments,
+  createTopicImportIdMap,
+  isSupportedWorkspacePayloadVersion,
+  mapOptionalId,
+  mapRequiredId,
+  uniqueById,
+} from './topicIdMap'
 
 export const workspaceRepository = {
   async createCanvas(title?: string) {
@@ -34,8 +44,9 @@ export const workspaceRepository = {
     canvasId: string,
     index: number,
     position?: PromptCard['position'],
+    topicSessionId?: string,
   ) {
-    const card = createPromptCard(canvasId, index, position)
+    const card = createPromptCard(canvasId, index, position, topicSessionId)
     await db.promptCards.add(card)
     await this.touchCanvas(canvasId)
     return card
@@ -47,14 +58,9 @@ export const workspaceRepository = {
     return card
   },
 
-  async deletePromptCardCascade(id: string) {
-    await Promise.all([
-      db.promptCards.delete(id),
-      db.canvasEdges.where('sourceId').equals(id).delete(),
-      db.canvasEdges.where('targetId').equals(id).delete(),
-      db.promptVersions.where('promptCardId').equals(id).delete(),
-      db.compareRuns.where('promptCardId').equals(id).delete(),
-    ])
+  async deletePromptCardNode(id: string, canvasId?: string) {
+    await db.promptCards.delete(id)
+    if (canvasId) await this.touchCanvas(canvasId)
   },
 
   async deleteCanvasCascade(id: string) {
@@ -119,7 +125,7 @@ export const workspaceRepository = {
 
   async exportWorkspace(): Promise<ExportPayload> {
     return {
-      version: 6,
+      version: 7,
       exportedAt: nowIso(),
       canvases: await db.canvases.toArray(),
       promptCards: await db.promptCards.toArray(),
@@ -140,14 +146,7 @@ export const workspaceRepository = {
   },
 
   async importWorkspace(payload: ExportPayload) {
-    if (
-      payload.version !== 1 &&
-      payload.version !== 2 &&
-      payload.version !== 3 &&
-      payload.version !== 4 &&
-      payload.version !== 5 &&
-      payload.version !== 6
-    ) {
+    if (!isSupportedWorkspacePayloadVersion(payload.version)) {
       throw new Error('Unsupported file')
     }
     await db.transaction(
@@ -209,16 +208,62 @@ export const workspaceRepository = {
     const session = await db.chatSessions.get(sessionId)
     if (!session) throw new Error('未找到要导出的话题')
     const canvasId = session.canvasId
-    const [sourceCanvas, promptCards, messages] = await Promise.all([
+    const allChildChatSessions = await db.chatSessions
+      .where('parentSessionId')
+      .equals(sessionId)
+      .toArray()
+    const childChatSessions = selectActiveCompareChildSessions(allChildChatSessions)
+    const childSessionIds = childChatSessions.map((childSession) => childSession.id)
+    const [
+      sourceCanvas,
+      canvasPromptCards,
+      messages,
+      childMessages,
+      canvasShapeNodes,
+      canvasImageNodes,
+      canvasEdges,
+      canvasStrokes,
+      canvasTextNodes,
+    ] = await Promise.all([
       canvasId ? db.canvases.get(canvasId) : Promise.resolve(undefined),
       canvasId
         ? db.promptCards.where('canvasId').equals(canvasId).toArray()
         : Promise.resolve([]),
       db.chatMessages.where('sessionId').equals(sessionId).sortBy('createdAt'),
+      childSessionIds.length
+        ? db.chatMessages.where('sessionId').anyOf(childSessionIds).toArray()
+        : Promise.resolve([]),
+      canvasId
+        ? db.canvasShapeNodes.where('canvasId').equals(canvasId).toArray()
+        : Promise.resolve([]),
+      canvasId
+        ? db.canvasImageNodes.where('canvasId').equals(canvasId).toArray()
+        : Promise.resolve([]),
+      canvasId
+        ? db.canvasEdges.where('canvasId').equals(canvasId).toArray()
+        : Promise.resolve([]),
+      canvasId
+        ? db.canvasStrokes.where('canvasId').equals(canvasId).toArray()
+        : Promise.resolve([]),
+      canvasId
+        ? db.canvasTextNodes.where('canvasId').equals(canvasId).toArray()
+        : Promise.resolve([]),
     ])
+    const scopedRecords = filterCanvasRecordsForTopic({
+      canvasEdges,
+      canvasImageNodes,
+      canvasShapeNodes,
+      canvasStrokes,
+      canvasTextNodes,
+      promptCardId: session.promptCardId,
+      promptCards: canvasPromptCards,
+      sessionId,
+    })
+    const promptCards = scopedRecords.promptCards
     const promptCardIds = promptCards.map((card) => card.id)
+    const chatMessages = [...messages, ...childMessages]
     const messagePromptVersionIds = Array.from(
-      new Set(messages.map((message) => message.promptVersionId).filter(Boolean)),
+      new Set(chatMessages.map((message) => message.promptVersionId).filter(Boolean)),
     ) as string[]
     const [cardPromptVersions, messagePromptVersions] = await Promise.all([
       promptCardIds.length
@@ -242,23 +287,14 @@ export const workspaceRepository = {
       exportedAt: nowIso(),
       sourceCanvas,
       chatSession: session,
-      chatMessages: messages,
+      childChatSessions,
+      chatMessages,
       promptCards,
-      canvasShapeNodes: canvasId
-        ? await db.canvasShapeNodes.where('canvasId').equals(canvasId).toArray()
-        : [],
-      canvasImageNodes: canvasId
-        ? await db.canvasImageNodes.where('canvasId').equals(canvasId).toArray()
-        : [],
-      canvasEdges: canvasId
-        ? await db.canvasEdges.where('canvasId').equals(canvasId).toArray()
-        : [],
-      canvasStrokes: canvasId
-        ? await db.canvasStrokes.where('canvasId').equals(canvasId).toArray()
-        : [],
-      canvasTextNodes: canvasId
-        ? await db.canvasTextNodes.where('canvasId').equals(canvasId).toArray()
-        : [],
+      canvasShapeNodes: scopedRecords.canvasShapeNodes,
+      canvasImageNodes: scopedRecords.canvasImageNodes,
+      canvasEdges: scopedRecords.canvasEdges,
+      canvasStrokes: scopedRecords.canvasStrokes,
+      canvasTextNodes: scopedRecords.canvasTextNodes,
       promptVersions,
       compareRuns,
     }
@@ -293,6 +329,18 @@ export const workspaceRepository = {
       createdAt: at,
       updatedAt: at,
     }
+    const nextSessionId = nextSession.id
+    const childChatSessions = (payload.childChatSessions ?? []).map((session, index) => ({
+      ...session,
+      id: idMap.sessions.get(session.id) ?? crypto.randomUUID(),
+      canvasId,
+      comparePaneIndex: session.comparePaneIndex ?? index,
+      hidden: true,
+      parentSessionId: nextSessionId,
+      promptCardId: mapOptionalId(session.promptCardId, idMap.promptCards),
+      createdAt: at,
+      updatedAt: at,
+    }))
 
     await db.transaction(
       'rw',
@@ -317,6 +365,7 @@ export const workspaceRepository = {
               ...card,
               id: idMap.promptCards.get(card.id) ?? crypto.randomUUID(),
               canvasId,
+              topicSessionId: nextSessionId,
               createdAt: at,
               updatedAt: at,
             })),
@@ -326,6 +375,7 @@ export const workspaceRepository = {
               ...node,
               id: idMap.nodes.get(node.id) ?? crypto.randomUUID(),
               canvasId,
+              topicSessionId: nextSessionId,
               createdAt: at,
               updatedAt: at,
             })),
@@ -335,6 +385,7 @@ export const workspaceRepository = {
               ...node,
               id: idMap.nodes.get(node.id) ?? crypto.randomUUID(),
               canvasId,
+              topicSessionId: nextSessionId,
               createdAt: at,
               updatedAt: at,
             })),
@@ -344,6 +395,7 @@ export const workspaceRepository = {
               ...stroke,
               id: idMap.nodes.get(stroke.id) ?? crypto.randomUUID(),
               canvasId,
+              topicSessionId: nextSessionId,
               createdAt: at,
               updatedAt: at,
             })),
@@ -353,6 +405,7 @@ export const workspaceRepository = {
               ...node,
               id: idMap.nodes.get(node.id) ?? crypto.randomUUID(),
               canvasId,
+              topicSessionId: nextSessionId,
               createdAt: at,
               updatedAt: at,
             })),
@@ -362,6 +415,7 @@ export const workspaceRepository = {
               ...edge,
               id: idMap.edges.get(edge.id) ?? crypto.randomUUID(),
               canvasId,
+              topicSessionId: nextSessionId,
               sourceId: mapRequiredId(edge.sourceId, idMap.nodes),
               targetId: mapRequiredId(edge.targetId, idMap.nodes),
               createdAt: at,
@@ -387,12 +441,13 @@ export const workspaceRepository = {
             })),
           ),
         ])
-        await db.chatSessions.add(nextSession)
+        await db.chatSessions.bulkPut([nextSession, ...childChatSessions])
         await db.chatMessages.bulkPut(
           payload.chatMessages.map((message) => ({
             ...message,
             id: idMap.messages.get(message.id) ?? crypto.randomUUID(),
-            sessionId: nextSession.id,
+            sessionId: mapRequiredId(message.sessionId, idMap.sessions),
+            attachments: cloneChatMessageAttachments(message.attachments),
             promptVersionId: mapOptionalId(
               message.promptVersionId,
               idMap.promptVersions,
@@ -405,7 +460,11 @@ export const workspaceRepository = {
       },
     )
 
-    return { canvasId, sessionId: nextSession.id }
+    return {
+      canvasId,
+      sessionId: nextSession.id,
+      promptCardId: nextSession.promptCardId,
+    }
   },
 
   async listCanvasesByUpdatedAt() {
@@ -416,58 +475,21 @@ export const workspaceRepository = {
     return db.promptCards.where('canvasId').equals(canvasId).sortBy('updatedAt')
   },
 
+  async assignPromptCardToTopic(promptCardId: string, topicSessionId: string) {
+    const at = nowIso()
+    await Promise.all([
+      db.promptCards.update(promptCardId, {
+        topicSessionId,
+        updatedAt: at,
+      }),
+      db.chatSessions.update(topicSessionId, {
+        promptCardId,
+        updatedAt: at,
+      }),
+    ])
+  },
+
   async listProvidersByUpdatedAt() {
     return db.providerConfigs.reverse().sortBy('updatedAt')
   },
-}
-
-function createTopicImportIdMap(payload: ChatTopicExportPayload) {
-  const promptCards = new Map(
-    payload.promptCards.map((card) => [card.id, crypto.randomUUID()]),
-  )
-  const nodes = new Map<string, string>([
-    ...payload.promptCards.map((card) => [card.id, promptCards.get(card.id)!] as const),
-    ...(payload.canvasShapeNodes ?? []).map(
-      (node) => [node.id, crypto.randomUUID()] as const,
-    ),
-    ...(payload.canvasImageNodes ?? []).map(
-      (node) => [node.id, crypto.randomUUID()] as const,
-    ),
-    ...(payload.canvasStrokes ?? []).map(
-      (stroke) => [stroke.id, crypto.randomUUID()] as const,
-    ),
-    ...(payload.canvasTextNodes ?? []).map(
-      (node) => [node.id, crypto.randomUUID()] as const,
-    ),
-  ])
-
-  return {
-    promptCards,
-    nodes,
-    edges: new Map(
-      (payload.canvasEdges ?? []).map((edge) => [edge.id, crypto.randomUUID()]),
-    ),
-    promptVersions: new Map(
-      payload.promptVersions.map((version) => [version.id, crypto.randomUUID()]),
-    ),
-    sessions: new Map([[payload.chatSession.id, crypto.randomUUID()]]),
-    messages: new Map(
-      payload.chatMessages.map((message) => [message.id, crypto.randomUUID()]),
-    ),
-    compareRuns: new Map(
-      payload.compareRuns.map((run) => [run.id, crypto.randomUUID()]),
-    ),
-  }
-}
-
-function mapOptionalId(id: string | undefined, map: Map<string, string>) {
-  return id ? map.get(id) : undefined
-}
-
-function mapRequiredId(id: string, map: Map<string, string>) {
-  return map.get(id) ?? id
-}
-
-function uniqueById<T extends { id: string }>(items: T[]) {
-  return [...new Map(items.map((item) => [item.id, item])).values()]
 }

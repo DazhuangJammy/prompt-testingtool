@@ -159,6 +159,7 @@ describe('canvas clipboard', () => {
       },
       createNextId: () => ids.shift() ?? 'missing',
       now: () => 'now',
+      topicSessionId: 'topic',
     })
 
     expect(result.nodeIds).toEqual([
@@ -173,12 +174,15 @@ describe('canvas clipboard', () => {
       canvasId: 'next-canvas',
       id: 'new-card',
       position: { x: 200, y: 240 },
+      topicSessionId: 'topic',
       title: 'Prompt 副本',
     })
     expect(
       result.payload.promptCards[0].sections.workflow.workflowSteps?.[0].id,
     ).toBe('new-step')
     expect(result.payload.shapeNodes[0].position).toEqual({ x: 300, y: 290 })
+    expect(result.payload.shapeNodes[0].topicSessionId).toBe('topic')
+    expect(result.payload.edges[0].topicSessionId).toBe('topic')
     expect(result.payload.imageNodes[0].position).toEqual({ x: 270, y: 320 })
     expect(result.payload.textNodes[0].position).toEqual({ x: 240, y: 300 })
     expect(result.payload.strokes[0].points).toEqual([

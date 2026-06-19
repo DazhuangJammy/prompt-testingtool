@@ -6,6 +6,7 @@ import {
 import type {
   ChatAttachment,
   ChatMessage,
+  ChatSession,
   PromptCard,
   PromptInjectionMode,
   ProviderConfig,
@@ -27,6 +28,7 @@ export interface ComparePaneState {
   attachments: ChatAttachment[]
   cardId?: string
   input: string
+  parentSessionId?: string
   promptInjectionMode: PromptInjectionMode
   providerId?: string
   sessionId?: string
@@ -37,8 +39,10 @@ export interface ComparePaneView {
   id: ComparePaneId
   attachments: ChatAttachment[]
   card?: PromptCard
+  index: number
   input: string
   messages: ChatMessage[]
+  parentSessionId?: string
   promptInjectionMode: PromptInjectionMode
   provider?: ProviderConfig
   sessionId?: string
@@ -68,28 +72,67 @@ export function syncComparePanes(
   activeCard: PromptCard | undefined,
   promptCards: PromptCard[],
   compareOpen: boolean,
+  parentSessionId?: string,
+  childSessions: ChatSession[] = [],
 ) {
   const panes = ensureMinimumComparePanes(current)
+  const childSessionByIndex = new Map(
+    selectActiveCompareChildSessions(childSessions)
+      .map((session) => [session.comparePaneIndex, session]),
+  )
   const activeCardId = activeCard?.id ?? promptCards[0]?.id
   const nextPanes = panes.map((pane, index) => {
+    const childSession = compareOpen ? childSessionByIndex.get(index) : undefined
     const cardExists = promptCards.some((item) => item.id === pane.cardId)
+    const sameParentSession = pane.parentSessionId === parentSessionId
     const nextCardId =
-      compareOpen && cardExists
+      compareOpen && sameParentSession && cardExists
         ? pane.cardId
-        : index === 0
-          ? activeCardId
-          : pickCardForPane(index, panes, promptCards, activeCardId)
+        : childSession?.promptCardId ??
+          (compareOpen && cardExists
+            ? pane.cardId
+            : index === 0
+              ? activeCardId
+              : pickCardForPane(index, panes, promptCards, activeCardId))
 
-    return nextCardId === pane.cardId
+    const nextSessionId = childSession?.id
+
+    return nextCardId === pane.cardId &&
+      sameParentSession &&
+      nextSessionId === pane.sessionId
       ? pane
       : {
           ...pane,
           cardId: nextCardId,
-          sessionId: undefined,
+          parentSessionId,
+          sessionId: nextSessionId,
         }
   })
 
   return areComparePanesEqual(current, nextPanes) ? current : nextPanes
+}
+
+export function selectActiveCompareChildSessions(childSessions: ChatSession[]) {
+  const sessionByIndex = new Map<number, ChatSession>()
+
+  childSessions.forEach((session) => {
+    if (typeof session.comparePaneIndex !== 'number') return
+
+    const currentSession = sessionByIndex.get(session.comparePaneIndex)
+    if (!currentSession || compareChildSessionFreshness(session, currentSession) > 0) {
+      sessionByIndex.set(session.comparePaneIndex, session)
+    }
+  })
+
+  return Array.from(sessionByIndex.values()).sort(
+    (left, right) => left.comparePaneIndex! - right.comparePaneIndex!,
+  )
+}
+
+function compareChildSessionFreshness(left: ChatSession, right: ChatSession) {
+  const updatedCompare = left.updatedAt.localeCompare(right.updatedAt)
+  if (updatedCompare !== 0) return updatedCompare
+  return left.createdAt.localeCompare(right.createdAt)
 }
 
 export function ensureMinimumComparePanes(panes: ComparePaneState[]) {
@@ -171,6 +214,7 @@ export function areComparePanesEqual(
         pane.attachments === nextPane.attachments &&
         pane.cardId === nextPane.cardId &&
         pane.input === nextPane.input &&
+        pane.parentSessionId === nextPane.parentSessionId &&
         pane.promptInjectionMode === nextPane.promptInjectionMode &&
         pane.providerId === nextPane.providerId &&
         pane.sessionId === nextPane.sessionId &&

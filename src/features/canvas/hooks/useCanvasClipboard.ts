@@ -25,6 +25,7 @@ import type {
 interface UseCanvasClipboardOptions {
   canvasEdges: CanvasEdge[]
   canvasId?: string
+  topicSessionId?: string
   promptCards: PromptCard[]
   reactFlow: ReactFlowInstance<CanvasFlowNode, Edge>
   selectedFlowIds: {
@@ -51,6 +52,7 @@ export function useCanvasClipboard({
   strokes,
   imageNodes,
   textNodes,
+  topicSessionId,
 }: UseCanvasClipboardOptions) {
   const clipboardRef = useRef<CanvasClipboardSnapshot | undefined>(undefined)
   const cursorPositionRef = useRef<CanvasPoint>({ x: 120, y: 120 })
@@ -93,13 +95,14 @@ export function useCanvasClipboard({
       canvasId,
       clipboardRef.current,
       cursorPositionRef.current,
+      topicSessionId,
     )
     if (!result) return
 
     onPasteSelection(result.nodeIds)
     const selectedPromptId = result.promptCardIds[0]
     if (selectedPromptId) onSelectPrompt(selectedPromptId)
-  }, [canvasId, onPasteSelection, onSelectPrompt])
+  }, [canvasId, onPasteSelection, onSelectPrompt, topicSessionId])
 
   const pasteImages = useCallback(
     async (files: File[]) => {
@@ -108,10 +111,15 @@ export function useCanvasClipboard({
 
       for (const [index, file] of files.entries()) {
         const image = await readClipboardImage(file)
-        const node = createCanvasImageNode(canvasId, {
-          x: cursorPositionRef.current.x + index * 24,
-          y: cursorPositionRef.current.y + index * 24,
-        }, image)
+        const node = createCanvasImageNode(
+          canvasId,
+          {
+            x: cursorPositionRef.current.x + index * 24,
+            y: cursorPositionRef.current.y + index * 24,
+          },
+          image,
+          topicSessionId,
+        )
         await canvasRepository.saveImageNode(node)
         createdNodeIds.push(node.id)
       }
@@ -119,7 +127,7 @@ export function useCanvasClipboard({
       onPasteSelection(createdNodeIds)
       return true
     },
-    [canvasId, onPasteSelection],
+    [canvasId, onPasteSelection, topicSessionId],
   )
 
   useEffect(() => {

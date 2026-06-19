@@ -61,5 +61,8 @@ export function useChatTopics(
 }
 
 function pickSessionId(sessions: ChatSession[] | undefined, id?: string) {
-  return sessions?.some((session) => session.id === id) ? id : sessions?.[0]?.id
+  const visibleSessions = sessions?.filter((session) => !session.hidden)
+  return visibleSessions?.some((session) => session.id === id)
+    ? id
+    : visibleSessions?.[0]?.id
 }

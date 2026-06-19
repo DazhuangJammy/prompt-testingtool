@@ -1,5 +1,13 @@
-import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { type NodeProps } from '@xyflow/react'
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react'
 import {
   optimizeFullPrompt,
   optimizeSelectedPromptText,
@@ -24,6 +32,7 @@ import {
   replaceTextSelection,
   type TextSelectionRange,
 } from '@/features/prompt-card/model/textSelection'
+import { subscribeCanvasCommitActiveEdit } from '@/shared/model/canvasEditEvents'
 import { normalizeThinkingMode } from '@/shared/model/thinking'
 import {
   MarkdownCardPreview,
@@ -36,6 +45,7 @@ import {
   PromptOptimizationPopover,
   type PromptOptimizationMode,
 } from './components/PromptOptimizationPopover'
+import { PromptCardConnectionHandles } from './components/PromptCardConnectionHandles'
 import { PromptMarkdownPreviewDialog } from './components/PromptMarkdownPreviewDialog'
 import { PromptNodeHeader } from './components/PromptNodeHeader'
 import type { PromptFlowNode } from './PromptCardNode.types'
@@ -94,18 +104,24 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
     promptOptimizationSettings?.thinkingMode ?? 'off',
   )
 
-  const updateCard = (nextCard: typeof card) => {
-    onChange({ ...nextCard, updatedAt: new Date().toISOString() })
-  }
+  const updateCard = useCallback(
+    (nextCard: typeof card) => {
+      onChange({ ...nextCard, updatedAt: new Date().toISOString() })
+    },
+    [onChange],
+  )
 
-  const updateCardWithMarkdown = (nextMarkdown: string) => {
-    const previousOutline = parseMarkdownOutline(compiledMarkdown)
-    const nextOutline = parseMarkdownOutline(nextMarkdown)
-    setCollapsedHeadingIds((current) =>
-      remapCollapsedMarkdownHeadingIds(previousOutline, nextOutline, current),
-    )
-    updateCard(updatePromptMarkdown(card, nextMarkdown))
-  }
+  const updateCardWithMarkdown = useCallback(
+    (nextMarkdown: string) => {
+      const previousOutline = parseMarkdownOutline(compiledMarkdown)
+      const nextOutline = parseMarkdownOutline(nextMarkdown)
+      setCollapsedHeadingIds((current) =>
+        remapCollapsedMarkdownHeadingIds(previousOutline, nextOutline, current),
+      )
+      updateCard(updatePromptMarkdown(card, nextMarkdown))
+    },
+    [card, compiledMarkdown, setCollapsedHeadingIds, updateCard],
+  )
 
   const showToast = (state: Exclude<typeof toastState, 'idle'>) => {
     setToastState(state)
@@ -277,12 +293,15 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
     setEditingMarkdown(true)
   }
 
-  const saveMarkdown = () => {
-    const nextMarkdown = markdownDraft.trim()
-    updateCardWithMarkdown(nextMarkdown)
-    setMarkdownDraft(nextMarkdown)
-    setEditingMarkdown(false)
-  }
+  const saveMarkdown = useCallback(
+    () => {
+      const nextMarkdown = markdownDraft.trim()
+      updateCardWithMarkdown(nextMarkdown)
+      setMarkdownDraft(nextMarkdown)
+      setEditingMarkdown(false)
+    },
+    [markdownDraft, setEditingMarkdown, setMarkdownDraft, updateCardWithMarkdown],
+  )
 
   const cancelMarkdownEditing = () => {
     setMarkdownDraft(compiledMarkdown)
@@ -364,6 +383,11 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
     })
   }, [editingMarkdown, markdownDraft])
 
+  useEffect(() => {
+    if (!editingMarkdown) return
+    return subscribeCanvasCommitActiveEdit(saveMarkdown)
+  }, [editingMarkdown, saveMarkdown])
+
   return (
     <section
       className={`prompt-node ${isSelected ? 'is-selected' : ''} ${
@@ -371,27 +395,11 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
       } ${frameStyle.highlighted ? 'is-highlighted' : ''}`}
       style={nodeStyle}
       onClick={() => onSelect(card.id)}
+      onPointerDownCapture={() => onSelect(card.id)}
       onPointerEnter={() => setHovering(true)}
       onPointerLeave={() => setHovering(false)}
     >
-      <Handle
-        id="top"
-        className="canvas-connection-handle nodrag nopan"
-        position={Position.Top}
-        type="source"
-      />
-      <Handle
-        id="left"
-        className="canvas-connection-handle nodrag nopan"
-        position={Position.Left}
-        type="source"
-      />
-      <Handle
-        id="right"
-        className="canvas-connection-handle nodrag nopan"
-        position={Position.Right}
-        type="source"
-      />
+      <PromptCardConnectionHandles />
       <PromptNodeHeader
         editingMarkdown={editingMarkdown}
         editingTitle={editingTitle}
@@ -476,12 +484,6 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
           />
         )}
       </div>
-      <Handle
-        id="bottom"
-        className="canvas-connection-handle nodrag nopan"
-        position={Position.Bottom}
-        type="source"
-      />
       {previewOpen && (
         <PromptMarkdownPreviewDialog
           markdown={compiledMarkdown}

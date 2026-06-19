@@ -10,6 +10,7 @@ vi.mock('@/shared/storage/db', () => ({
       delete: vi.fn(),
       get: vi.fn(),
       reverse: vi.fn(() => ({ sortBy: vi.fn(() => []) })),
+      toArray: vi.fn(() => []),
       update: vi.fn(),
       where: vi.fn(),
     },
@@ -35,7 +36,7 @@ describe('chat repository', () => {
     await chatRepository.createSession({ id: 's' } as never)
     await chatRepository.saveCompareRun({ id: 'c' } as never)
     await chatRepository.savePromptVersion({ id: 'v' } as never)
-    await chatRepository.updateSessionAfterReply('s', 'card')
+    await chatRepository.updateSessionAfterReply('s')
 
     expect(db.chatMessages.add).toHaveBeenCalled()
     expect(db.chatSessions.add).toHaveBeenCalled()
@@ -43,7 +44,7 @@ describe('chat repository', () => {
     expect(db.promptVersions.add).toHaveBeenCalled()
     expect(db.chatSessions.update).toHaveBeenCalledWith(
       's',
-      expect.objectContaining({ promptCardId: 'card', updatedAt: expect.any(String) }),
+      expect.objectContaining({ updatedAt: expect.any(String) }),
     )
   })
 
@@ -53,6 +54,7 @@ describe('chat repository', () => {
     await chatRepository.clearMessages('session')
     await chatRepository.updateMessageContent('message', 'updated')
     await chatRepository.updateSessionTitle('session', '  话题  ')
+    await chatRepository.updateSessionPromptCard('session', 'card-2')
     await chatRepository.updateAssistantMessage('assistant', {
       content: 'stream',
       thinkingDurationMs: 1200,
@@ -70,6 +72,10 @@ describe('chat repository', () => {
       'session',
       expect.objectContaining({ title: '话题' }),
     )
+    expect(db.chatSessions.update).toHaveBeenCalledWith(
+      'session',
+      expect.objectContaining({ promptCardId: 'card-2' }),
+    )
     expect(db.chatMessages.update).toHaveBeenCalledWith('assistant', {
       content: 'stream',
       thinkingDurationMs: 1200,
@@ -80,10 +86,13 @@ describe('chat repository', () => {
 
   it('deletes a session with its messages', async () => {
     vi.mocked(db.chatMessages.where).mockReturnValue(query as never)
+    vi.mocked(db.chatSessions.where).mockReturnValue(query as never)
 
     await chatRepository.deleteSessionCascade('session')
 
     expect(db.chatMessages.where).toHaveBeenCalledWith('sessionId')
+    expect(db.chatSessions.where).toHaveBeenCalledWith('parentSessionId')
+    expect(query.anyOf).toHaveBeenCalledWith(['session'])
     expect(query.delete).toHaveBeenCalled()
     expect(db.chatSessions.delete).toHaveBeenCalledWith('session')
   })

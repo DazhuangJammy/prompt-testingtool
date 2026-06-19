@@ -16,8 +16,10 @@ import type { ActiveRequest } from '../model/comparePanes'
 
 interface MessageActionBase {
   card: PromptCard
+  comparePaneIndex?: number
   defaultAssistantPrompt?: string
   history: ChatMessage[]
+  parentSessionId?: string
   provider: ProviderConfig
   promptInjectionMode: PromptInjectionMode
   sessionId?: string
@@ -40,9 +42,11 @@ export function useChatMessageActions(setError: (error: string) => void) {
 
   const sendMessageForPane = async ({
     card,
+    comparePaneIndex,
     attachments = [],
     defaultAssistantPrompt,
     history,
+    parentSessionId,
     provider,
     promptInjectionMode,
     sessionId,
@@ -59,6 +63,11 @@ export function useChatMessageActions(setError: (error: string) => void) {
         card.canvasId,
         sessionId,
         card.id,
+        {
+          hidden: Boolean(parentSessionId),
+          comparePaneIndex,
+          parentSessionId,
+        },
       )
       if (!sessionId) setSessionId(activeSessionId)
       await sendChatMessage({
@@ -82,8 +91,10 @@ export function useChatMessageActions(setError: (error: string) => void) {
 
   const resendMessageForPane = async ({
     card,
+    comparePaneIndex,
     defaultAssistantPrompt,
     history,
+    parentSessionId,
     message,
     provider,
     promptInjectionMode,
@@ -101,6 +112,11 @@ export function useChatMessageActions(setError: (error: string) => void) {
         card.canvasId,
         sessionId,
         card.id,
+        {
+          hidden: Boolean(parentSessionId),
+          comparePaneIndex,
+          parentSessionId,
+        },
       )
       if (!sessionId) setSessionId(activeSessionId)
       await resendChatMessage({

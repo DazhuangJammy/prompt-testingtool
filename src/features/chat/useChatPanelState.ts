@@ -1,8 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState } from 'react'
 import {
+  assignChatSessionPromptCard,
   clearChatSession,
   editChatMessage,
+  ensureChatSession,
 } from '@/features/chat/application/chatService'
 import { chatRepository } from '@/features/chat/infrastructure/chatRepository'
 import { useChatMessageActions } from '@/features/chat/hooks/useChatMessageActions'
@@ -33,6 +35,7 @@ import {
 import type {
   ChatAttachment,
   ChatMessage,
+  ChatSession,
   PromptCard,
   PromptInjectionMode,
   ProviderConfig,
@@ -77,6 +80,7 @@ export function useChatPanelState(
     card?.id,
   )
   const messages = useMessages(effectiveSessionId)
+  const childSessions = useChildSessions(effectiveSessionId)
 
   const paneSessionKey = comparePanes
     .map((pane) => `${pane.id}:${pane.sessionId ?? ''}`)
@@ -117,8 +121,10 @@ export function useChatPanelState(
       id: pane.id,
       attachments: pane.attachments,
       card: paneCard,
+      index,
       input: pane.input,
       messages: paneMessagesById[pane.id] ?? [],
+      parentSessionId: pane.parentSessionId,
       promptInjectionMode: pane.promptInjectionMode,
       provider: paneProvider,
       sessionId: pane.sessionId,
@@ -135,12 +141,19 @@ export function useChatPanelState(
     if (!card && !promptCards.length) return
     const syncId = window.setTimeout(() => {
       setComparePanes((current) =>
-        syncComparePanes(current, card, promptCards, compareOpen),
+        syncComparePanes(
+          current,
+          card,
+          promptCards,
+          compareOpen,
+          effectiveSessionId,
+          childSessions,
+        ),
       )
     }, 0)
 
     return () => window.clearTimeout(syncId)
-  }, [card, compareOpen, promptCards])
+  }, [card, childSessions, compareOpen, effectiveSessionId, promptCards])
 
   const sendMainMessage = async () => {
     const text = input.trim()
@@ -184,14 +197,22 @@ export function useChatPanelState(
       return
     }
 
-    updateComparePane(paneId, { attachments: [], input: '' })
+    const parentSessionId = await ensureMainSessionForCompare()
+    if (!parentSessionId) return
+    const paneBelongsToCurrentTopic = pane.parentSessionId === parentSessionId
+    const sessionId = paneBelongsToCurrentTopic ? pane.sessionId : undefined
+    const history = paneBelongsToCurrentTopic ? pane.messages : []
+
+    updateComparePane(paneId, { attachments: [], input: '', parentSessionId })
     await chatActions.sendMessageForPane({
       attachments: nextAttachments,
       card: pane.card,
-      history: pane.messages,
+      comparePaneIndex: pane.index,
+      history,
+      parentSessionId,
       provider: pane.provider,
       promptInjectionMode: pane.promptInjectionMode,
-      sessionId: pane.sessionId,
+      sessionId,
       setSessionId: (next) => updateComparePane(paneId, { sessionId: next }),
       text,
       thinkingMode: pane.thinkingMode,
@@ -222,14 +243,23 @@ export function useChatPanelState(
   ) => {
     const pane = paneViews.find((item) => item.id === paneId)
     if (!pane?.card || !pane.provider) return
+    const parentSessionId = await ensureMainSessionForCompare()
+    if (!parentSessionId) return
+    const paneBelongsToCurrentTopic = pane.parentSessionId === parentSessionId
+    const sessionId = paneBelongsToCurrentTopic ? pane.sessionId : undefined
+    const history = paneBelongsToCurrentTopic ? pane.messages : []
+
+    updateComparePane(paneId, { parentSessionId })
 
     await chatActions.resendMessageForPane({
       card: pane.card,
-      history: pane.messages,
+      comparePaneIndex: pane.index,
+      history,
       message,
+      parentSessionId,
       provider: pane.provider,
       promptInjectionMode: pane.promptInjectionMode,
-      sessionId: pane.sessionId,
+      sessionId,
       setSessionId: (next) => updateComparePane(paneId, { sessionId: next }),
       text: content,
       thinkingMode: pane.thinkingMode,
@@ -243,7 +273,8 @@ export function useChatPanelState(
 
   const clearCompareMessages = async (paneId: ComparePaneId) => {
     const pane = comparePanes.find((item) => item.id === paneId)
-    await clearChatSession(pane?.sessionId)
+    if (!pane || pane.parentSessionId !== effectiveSessionId) return
+    await clearChatSession(pane.sessionId)
   }
 
   const editMessage = async (message: ChatMessage, content: string) => {
@@ -267,10 +298,11 @@ export function useChatPanelState(
   }
 
   const setComparePaneCard = (paneId: ComparePaneId, cardId: string) => {
-    updateComparePane(paneId, {
-      cardId,
-      sessionId: undefined,
-    })
+    const pane = comparePanes.find((item) => item.id === paneId)
+    updateComparePane(paneId, { cardId })
+    if (pane?.sessionId && pane.parentSessionId === effectiveSessionId) {
+      void assignChatSessionPromptCard(pane.sessionId, cardId)
+    }
   }
 
   const setComparePaneProvider = (paneId: ComparePaneId, providerId: string) => {
@@ -292,6 +324,15 @@ export function useChatPanelState(
     mode: PromptInjectionMode,
   ) => {
     updateComparePane(paneId, { promptInjectionMode: mode })
+  }
+
+  const ensureMainSessionForCompare = async () => {
+    if (effectiveSessionId) return effectiveSessionId
+    if (!card?.canvasId) return undefined
+
+    const nextSessionId = await ensureChatSession(card.canvasId, undefined, card.id)
+    setMainSessionId(nextSessionId)
+    return nextSessionId
   }
 
   const addComparePane = () => {
@@ -321,7 +362,6 @@ export function useChatPanelState(
       const remainingCardId =
         remaining?.cardId ?? paneViews.find((pane) => pane.id === remaining?.id)?.card?.id
       if (remainingCardId) onActiveCardChange?.(remainingCardId)
-      if (remaining?.sessionId) setMainSessionId(remaining.sessionId)
     }
   }
 
@@ -389,6 +429,16 @@ function useMessages(sessionId?: string) {
       ? chatRepository.listMessagesBySession(sessionId)
       : Promise.resolve([] as ChatMessage[]),
     [sessionId],
+    [],
+  )
+}
+
+function useChildSessions(parentSessionId?: string) {
+  return useLiveQuery<ChatSession[], ChatSession[]>(
+    () => parentSessionId
+      ? chatRepository.listChildSessions(parentSessionId)
+      : Promise.resolve([] as ChatSession[]),
+    [parentSessionId],
     [],
   )
 }

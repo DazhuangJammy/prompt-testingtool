@@ -17,6 +17,7 @@ export interface CanvasNodeFrameStyle {
 export interface PromptCard {
   id: string
   canvasId: string
+  topicSessionId?: string
   title: string
   position: { x: number; y: number }
   frameStyle?: CanvasNodeFrameStyle
@@ -36,6 +37,7 @@ export interface CanvasPoint {
 export interface CanvasShapeNode {
   id: string
   canvasId: string
+  topicSessionId?: string
   kind: CanvasShapeKind
   title: string
   body: string
@@ -50,6 +52,7 @@ export interface CanvasShapeNode {
 export interface CanvasEdge {
   id: string
   canvasId: string
+  topicSessionId?: string
   sourceId: string
   targetId: string
   sourceHandle?: string
@@ -61,6 +64,7 @@ export interface CanvasEdge {
 export interface CanvasStroke {
   id: string
   canvasId: string
+  topicSessionId?: string
   points: CanvasPoint[]
   color: string
   strokeWidth: number
@@ -71,6 +75,7 @@ export interface CanvasStroke {
 export interface CanvasTextNode {
   id: string
   canvasId: string
+  topicSessionId?: string
   text: string
   position: CanvasPoint
   width: number
@@ -85,6 +90,7 @@ export interface CanvasTextNode {
 export interface CanvasImageNode {
   id: string
   canvasId: string
+  topicSessionId?: string
   name: string
   mimeType: string
   dataUrl: string
@@ -163,7 +169,11 @@ export interface ChatSession {
   id: string
   canvasId?: string
   promptCardId?: string
+  parentSessionId?: string
+  comparePaneIndex?: number
   title: string
+  hidden?: boolean
+  sortOrder?: number
   createdAt: string
   updatedAt: string
 }
@@ -220,7 +230,7 @@ export interface CompareRun {
 }
 
 export interface ExportPayload {
-  version: 1 | 2 | 3 | 4 | 5 | 6
+  version: 1 | 2 | 3 | 4 | 5 | 6 | 7
   exportedAt: string
   canvases: Canvas[]
   promptCards: PromptCard[]
@@ -243,6 +253,7 @@ export interface ChatTopicExportPayload {
   exportedAt: string
   sourceCanvas?: Canvas
   chatSession: ChatSession
+  childChatSessions?: ChatSession[]
   chatMessages: ChatMessage[]
   promptCards: PromptCard[]
   canvasShapeNodes?: CanvasShapeNode[]

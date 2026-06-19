@@ -1,6 +1,5 @@
 import { Plus, X, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import type { CSSProperties, PointerEvent } from 'react'
-import { useState } from 'react'
 import type {
   ChatAttachment,
   PromptCard,
@@ -20,6 +19,7 @@ interface ChatPanelProps {
   provider?: ProviderConfig
   promptCards: PromptCard[]
   providers: ProviderConfig[]
+  compareOpen: boolean
   collapsed: boolean
   onResizeStart: (event: PointerEvent) => void
   activeSessionId?: string
@@ -27,6 +27,7 @@ interface ChatPanelProps {
   onSelectProvider: (id: string) => void
   onActiveSessionChange: (id?: string) => void
   onActiveCardChange?: (id: string) => void
+  onCompareOpenChange: (open: boolean) => void
   onEnsureWidth: (width: number) => void
   width: number
 }
@@ -36,6 +37,7 @@ export function ChatPanel({
   provider,
   promptCards,
   providers,
+  compareOpen,
   collapsed,
   onResizeStart,
   activeSessionId,
@@ -43,10 +45,10 @@ export function ChatPanel({
   onSelectProvider,
   onActiveSessionChange,
   onActiveCardChange,
+  onCompareOpenChange,
   onEnsureWidth,
   width,
 }: ChatPanelProps) {
-  const [compareOpen, setCompareOpen] = useState(false)
   const state = useChatPanelState(
     card,
     provider,
@@ -55,14 +57,14 @@ export function ChatPanel({
     compareOpen,
     activeSessionId,
     onActiveSessionChange,
-    setCompareOpen,
+    onCompareOpenChange,
     onActiveCardChange,
   )
   const disabled = !provider || !card
   const compareDisabled = promptCards.length < 2
   const openCompare = () => {
     if (!compareOpen) onEnsureWidth(getComparePanelWidth(state.comparePanes.length))
-    setCompareOpen((value) => !value)
+    onCompareOpenChange(!compareOpen)
   }
   const addComparePane = () => {
     onEnsureWidth(getComparePanelWidth(state.comparePanes.length + 1))

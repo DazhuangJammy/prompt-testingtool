@@ -66,7 +66,20 @@ export function AppVersionBadge() {
     setMessage('正在更新，完成后服务会自动重启')
     try {
       const result = await runAppUpdate()
-      setMessage(result.message || '更新完成，服务正在重启')
+      if (!result.updated) {
+        const next = await checkAppUpdate()
+        setStatus(next)
+        setMessage(result.message || '已经是最新版本')
+        return
+      }
+
+      setMessage(result.message || '更新完成，正在等待服务重启')
+      const next = await waitForUpdatedApp(result.after)
+      setStatus(next)
+      setMessage('更新完成，正在刷新页面')
+      window.setTimeout(() => {
+        window.location.reload()
+      }, 300)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '更新失败')
     } finally {
@@ -142,4 +155,21 @@ export function AppVersionBadge() {
 
 function shortCommit(value?: string) {
   return value ? value.slice(0, 7) : ''
+}
+
+async function waitForUpdatedApp(targetCommit?: string) {
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    await delay(750)
+    try {
+      const status = await checkAppUpdate()
+      if (!targetCommit || status.currentCommit === targetCommit) return status
+    } catch {
+      // The local server is expected to be briefly unavailable while restarting.
+    }
+  }
+  throw new Error('更新已完成，请手动刷新页面')
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms))
 }

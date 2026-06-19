@@ -4,6 +4,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { parseMarkdownOutline } from '@/features/prompt-card/model/prompt'
 import { MarkdownCardPreview } from './MarkdownCardPreview'
 
+;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean })
+  .IS_REACT_ACT_ENVIRONMENT = true
+
 let root: Root | undefined
 let host: HTMLDivElement | undefined
 
@@ -16,6 +19,12 @@ afterEach(() => {
   host = undefined
   document.body.innerHTML = ''
   vi.clearAllMocks()
+})
+
+afterEach(async () => {
+  await act(async () => {
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+  })
 })
 
 describe('MarkdownCardPreview', () => {
@@ -151,7 +160,7 @@ describe('MarkdownCardPreview', () => {
       expect(optimizeButton).toBeTruthy()
     })
     await act(async () => {
-      optimizeButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      optimizeButton!.click()
     })
 
     const promptTextarea = document.querySelector<HTMLTextAreaElement>(
@@ -168,7 +177,7 @@ describe('MarkdownCardPreview', () => {
     expect(submitButton).toBeTruthy()
     await waitForAssertion(() => expect(submitButton!.disabled).toBe(false))
     await act(async () => {
-      submitButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      submitButton!.click()
     })
 
     await waitForAssertion(() =>
@@ -226,7 +235,7 @@ describe('MarkdownCardPreview', () => {
     await act(async () => {
       document
         .querySelector<HTMLButtonElement>('button.prompt-selection-optimize')!
-        .dispatchEvent(new MouseEvent('click', { bubbles: true }))
+        .click()
     })
     const promptTextarea = document.querySelector<HTMLTextAreaElement>(
       '.prompt-optimization-popover textarea',
@@ -247,8 +256,10 @@ describe('MarkdownCardPreview', () => {
         .querySelector<HTMLButtonElement>(
           '.prompt-optimization-actions button:last-child',
         )!
-        .dispatchEvent(new MouseEvent('click', { bubbles: true }))
+        .click()
     })
+
+    await waitForAssertion(() => expect(optimizeMock).toHaveBeenCalled())
 
     await waitForAssertion(() => {
       const loadingButton = document.querySelector<HTMLButtonElement>(

@@ -13,6 +13,7 @@ import {
   pickCardForPane,
   removeComparePaneById,
   resolvePaneCard,
+  selectActiveCompareChildSessions,
   syncComparePanes,
 } from './comparePanes'
 
@@ -112,18 +113,188 @@ describe('compare panes model', () => {
       createComparePane({ cardId: 'card-2' }),
     ]
 
-    const synced = syncComparePanes(panes, cards[0], cards, false)
+    const synced = syncComparePanes(panes, cards[0], cards, false, 'session-1')
 
-    expect(synced[0]).toMatchObject({ cardId: 'card-1', sessionId: undefined })
-    expect(synced[1]).toMatchObject({ cardId: 'card-1', sessionId: undefined })
+    expect(synced[0]).toMatchObject({
+      cardId: 'card-1',
+      parentSessionId: 'session-1',
+      sessionId: undefined,
+    })
+    expect(synced[1]).toMatchObject({
+      cardId: 'card-1',
+      parentSessionId: 'session-1',
+      sessionId: undefined,
+    })
   })
 
   it('preserves existing card selections while compare mode is open', () => {
-    const panes = [createComparePane({ cardId: 'card-2' })]
+    const panes = [createComparePane({ cardId: 'card-2', parentSessionId: 's' })]
 
-    expect(syncComparePanes(panes, cards[0], cards, true)[0]).toMatchObject({
+    expect(syncComparePanes(panes, cards[0], cards, true, 's')[0]).toMatchObject({
       cardId: 'card-2',
+      parentSessionId: 's',
     })
+  })
+
+  it('clears pane sessions when the parent chat topic changes', () => {
+    const panes = [
+      createComparePane({
+        cardId: 'card-2',
+        parentSessionId: 'source',
+        sessionId: 'pane-session',
+      }),
+    ]
+
+    expect(syncComparePanes(panes, cards[0], cards, true, 'copy')[0]).toMatchObject({
+      cardId: 'card-2',
+      parentSessionId: 'copy',
+      sessionId: undefined,
+    })
+  })
+
+  it('ignores hidden child sessions while compare mode is closed', () => {
+    const panes = [
+      createComparePane({
+        cardId: 'card-2',
+        parentSessionId: 'copy',
+        sessionId: 'copy-pane-0',
+      }),
+    ]
+
+    const synced = syncComparePanes(panes, cards[0], cards, false, 'copy', [
+      {
+        id: 'copy-pane-0',
+        canvasId: 'canvas',
+        comparePaneIndex: 0,
+        hidden: true,
+        parentSessionId: 'copy',
+        promptCardId: 'card-2',
+        title: 'hidden',
+        createdAt: 'now',
+        updatedAt: 'now',
+      },
+    ])
+
+    expect(synced[0]).toMatchObject({
+      cardId: 'card-1',
+      parentSessionId: 'copy',
+      sessionId: undefined,
+    })
+  })
+
+  it('restores child compare sessions by pane index for the active topic', () => {
+    const panes = [
+      createComparePane({ cardId: 'card-1', parentSessionId: 'source' }),
+      createComparePane({ cardId: 'card-2', parentSessionId: 'source' }),
+    ]
+
+    const synced = syncComparePanes(panes, cards[0], cards, true, 'copy', [
+      {
+        id: 'copy-pane-0',
+        canvasId: 'canvas',
+        comparePaneIndex: 0,
+        hidden: true,
+        parentSessionId: 'copy',
+        promptCardId: 'card-2',
+        title: 'hidden',
+        createdAt: 'now',
+        updatedAt: 'now',
+      },
+      {
+        id: 'copy-pane-1',
+        canvasId: 'canvas',
+        comparePaneIndex: 1,
+        hidden: true,
+        parentSessionId: 'copy',
+        promptCardId: 'card-1',
+        title: 'hidden',
+        createdAt: 'now',
+        updatedAt: 'now',
+      },
+    ])
+
+    expect(synced).toMatchObject([
+      {
+        cardId: 'card-2',
+        parentSessionId: 'copy',
+        sessionId: 'copy-pane-0',
+      },
+      {
+        cardId: 'card-1',
+        parentSessionId: 'copy',
+        sessionId: 'copy-pane-1',
+      },
+    ])
+  })
+
+  it('keeps the selected injection card when a pane already belongs to the active topic', () => {
+    const panes = [
+      createComparePane({
+        cardId: 'card-2',
+        parentSessionId: 'copy',
+        sessionId: 'copy-pane-0',
+      }),
+    ]
+
+    const synced = syncComparePanes(panes, cards[0], cards, true, 'copy', [
+      {
+        id: 'copy-pane-0',
+        canvasId: 'canvas',
+        comparePaneIndex: 0,
+        hidden: true,
+        parentSessionId: 'copy',
+        promptCardId: 'card-1',
+        title: 'hidden',
+        createdAt: 'now',
+        updatedAt: 'now',
+      },
+    ])
+
+    expect(synced[0]).toMatchObject({
+      cardId: 'card-2',
+      parentSessionId: 'copy',
+      sessionId: 'copy-pane-0',
+    })
+  })
+
+  it('selects the newest hidden child session for each compare pane index', () => {
+    const sessions = selectActiveCompareChildSessions([
+      {
+        id: 'old-pane-0',
+        canvasId: 'canvas',
+        comparePaneIndex: 0,
+        hidden: true,
+        parentSessionId: 'copy',
+        promptCardId: 'card-1',
+        title: 'old',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+      {
+        id: 'new-pane-0',
+        canvasId: 'canvas',
+        comparePaneIndex: 0,
+        hidden: true,
+        parentSessionId: 'copy',
+        promptCardId: 'card-2',
+        title: 'new',
+        createdAt: '2026-01-02T00:00:00.000Z',
+        updatedAt: '2026-01-02T00:00:00.000Z',
+      },
+      {
+        id: 'pane-1',
+        canvasId: 'canvas',
+        comparePaneIndex: 1,
+        hidden: true,
+        parentSessionId: 'copy',
+        promptCardId: 'card-1',
+        title: 'one',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+    ])
+
+    expect(sessions.map((session) => session.id)).toEqual(['new-pane-0', 'pane-1'])
   })
 
   it('picks and resolves pane cards', () => {
@@ -141,6 +312,9 @@ describe('compare panes model', () => {
 
     expect(areComparePanesEqual([pane], [pane])).toBe(true)
     expect(areComparePanesEqual([pane], [{ ...pane, input: 'next' }])).toBe(false)
+    expect(
+      areComparePanesEqual([pane], [{ ...pane, parentSessionId: 'next' }]),
+    ).toBe(false)
   })
 
   it('normalizes thinking modes by provider capability', () => {

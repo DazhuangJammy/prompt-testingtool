@@ -6,10 +6,11 @@ import {
   createNextCanvas,
   createWorkspaceExport,
   deleteCanvasAndPickNext,
+  duplicateChatTopic,
   importChatTopicFile,
   importWorkspaceFile,
 } from './workspaceService'
-import type { Canvas, ExportPayload } from '@/shared/types'
+import type { Canvas, ChatSession, ExportPayload } from '@/shared/types'
 
 vi.mock('@/features/workspace/infrastructure/workspaceRepository', () => ({
   workspaceRepository: {
@@ -65,16 +66,70 @@ describe('workspace service', () => {
       'a',
       0,
       undefined,
+      undefined,
     )
   })
 
   it('creates prompt card at a requested canvas position', async () => {
     await addPromptCardToCanvas('a', [], { x: 24, y: 36 })
 
-    expect(workspaceRepository.createPromptCard).toHaveBeenCalledWith('a', 0, {
-      x: 24,
-      y: 36,
-    })
+    expect(workspaceRepository.createPromptCard).toHaveBeenCalledWith(
+      'a',
+      0,
+      {
+        x: 24,
+        y: 36,
+      },
+      undefined,
+    )
+  })
+
+  it('creates prompt card for a topic scope', async () => {
+    await addPromptCardToCanvas('a', [], undefined, 'session')
+
+    expect(workspaceRepository.createPromptCard).toHaveBeenCalledWith(
+      'a',
+      0,
+      undefined,
+      'session',
+    )
+  })
+
+  it('numbers prompt cards by the current topic scope', async () => {
+    await addPromptCardToCanvas(
+      'a',
+      [
+        {
+          id: 'current-topic-card',
+          canvasId: 'a',
+          topicSessionId: 'session',
+          title: '当前话题',
+          position: { x: 0, y: 0 },
+          sections: {},
+          createdAt: '1',
+          updatedAt: '1',
+        },
+        {
+          id: 'other-topic-card',
+          canvasId: 'a',
+          topicSessionId: 'other-session',
+          title: '其他话题',
+          position: { x: 0, y: 0 },
+          sections: {},
+          createdAt: '1',
+          updatedAt: '1',
+        },
+      ],
+      undefined,
+      'session',
+    )
+
+    expect(workspaceRepository.createPromptCard).toHaveBeenCalledWith(
+      'a',
+      1,
+      undefined,
+      'session',
+    )
   })
 
   it('deletes canvas and returns the next active id', async () => {
@@ -139,10 +194,71 @@ describe('workspace service', () => {
     expect(JSON.parse(result.text).kind).toBe('prompt-canvas-chat-topic')
   })
 
+  it('duplicates a chat topic with a copy title and adjacent sort order', async () => {
+    const source: ChatSession = {
+      id: 'source',
+      canvasId: 'canvas',
+      title: '测试',
+      sortOrder: 10,
+      createdAt: 'old',
+      updatedAt: 'old',
+    }
+    vi.mocked(workspaceRepository.exportChatTopic).mockResolvedValue({
+      kind: 'prompt-canvas-chat-topic',
+      version: 1,
+      exportedAt: 'now',
+      chatSession: source,
+      chatMessages: [
+        {
+          id: 'message',
+          sessionId: 'source',
+          role: 'assistant',
+          content: '回复',
+          createdAt: 'old',
+        },
+      ],
+      promptCards: [],
+      promptVersions: [],
+      compareRuns: [],
+    })
+    vi.mocked(workspaceRepository.importChatTopic).mockResolvedValue({
+      canvasId: 'canvas',
+      sessionId: '00000000-0000-4000-8000-000000000002',
+      promptCardId: 'copied-card',
+    })
+
+    const result = await duplicateChatTopic(source, [
+      source,
+      {
+        id: 'next',
+        canvasId: 'canvas',
+        title: '测试 副本',
+        sortOrder: 20,
+        createdAt: 'old',
+        updatedAt: 'old',
+      },
+    ])
+
+    expect(result.id).toBe('00000000-0000-4000-8000-000000000002')
+    expect(result.title).toBe('测试 副本 2')
+    expect(result.sortOrder).toBe(15)
+    expect(result.promptCardId).toBe('copied-card')
+    expect(workspaceRepository.importChatTopic).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chatSession: expect.objectContaining({
+          title: '测试 副本 2',
+          sortOrder: 15,
+        }),
+      }),
+      'canvas',
+    )
+  })
+
   it('imports chat topic file into target canvas', async () => {
     vi.mocked(workspaceRepository.importChatTopic).mockResolvedValue({
       canvasId: 'canvas',
       sessionId: '00000000-0000-4000-8000-000000000001',
+      promptCardId: undefined,
     })
     const file = new File(
       [

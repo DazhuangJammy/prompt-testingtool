@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { requestCompletion, requestCompletionStream } from '@/shared/api/ai'
 import { chatRepository } from '@/features/chat/infrastructure/chatRepository'
 import {
+  assignChatSessionPromptCard,
   clearChatSession,
   createChatTopic,
   deleteChatTopicAndPickNext,
@@ -28,6 +29,7 @@ vi.mock('@/features/chat/infrastructure/chatRepository', () => ({
     getSession: vi.fn(),
     saveCompareRun: vi.fn(),
     savePromptVersion: vi.fn(),
+    updateSessionPromptCard: vi.fn(),
     updateAssistantMessage: vi.fn(),
     updateMessageContent: vi.fn(),
     updateSessionAfterReply: vi.fn(),
@@ -62,6 +64,16 @@ const provider: ProviderConfig = {
   updatedAt: 'now',
 }
 
+function mockAssistantStream(text: string, thinking?: string) {
+  vi.mocked(requestCompletionStream).mockImplementation(
+    async (_provider, _messages, handlers) => {
+      if (thinking) handlers.onThinking?.(thinking)
+      handlers.onText(text)
+      return text
+    },
+  )
+}
+
 describe('chat service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -86,9 +98,29 @@ describe('chat service', () => {
     )
   })
 
+  it('creates hidden compare sessions with pane index metadata', async () => {
+    const sessionId = await ensureChatSession('canvas', undefined, 'card', {
+      comparePaneIndex: 2,
+      hidden: true,
+      parentSessionId: 'parent',
+    })
+
+    expect(sessionId).toBeTruthy()
+    expect(chatRepository.createSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        canvasId: 'canvas',
+        comparePaneIndex: 2,
+        hidden: true,
+        parentSessionId: 'parent',
+        promptCardId: 'card',
+      }),
+    )
+  })
+
   it('creates and renames chat topics through session records', async () => {
     const topic = await createChatTopic('canvas', '  方案讨论  ', 'card')
     await renameChatTopic(topic.id, '新标题')
+    await assignChatSessionPromptCard(topic.id, 'card-2')
 
     expect(topic.canvasId).toBe('canvas')
     expect(topic.promptCardId).toBe('card')
@@ -97,6 +129,10 @@ describe('chat service', () => {
     expect(chatRepository.updateSessionTitle).toHaveBeenCalledWith(
       topic.id,
       '新标题',
+    )
+    expect(chatRepository.updateSessionPromptCard).toHaveBeenCalledWith(
+      topic.id,
+      'card-2',
     )
   })
 
@@ -129,13 +165,7 @@ describe('chat service', () => {
   })
 
   it('sends chat messages and updates session', async () => {
-    vi.mocked(requestCompletionStream).mockImplementation(
-      async (_provider, _messages, handlers) => {
-        handlers.onThinking?.('thinking')
-        handlers.onText('assistant')
-        return 'assistant'
-      },
-    )
+    mockAssistantStream('assistant', 'thinking')
     vi.mocked(chatRepository.getSession).mockResolvedValue({
       id: 'session',
       canvasId: 'canvas',
@@ -164,10 +194,7 @@ describe('chat service', () => {
         content: expect.stringContaining('assistant'),
       }),
     )
-    expect(chatRepository.updateSessionAfterReply).toHaveBeenCalledWith(
-      'session',
-      'card',
-    )
+    expect(chatRepository.updateSessionAfterReply).toHaveBeenCalledWith('session')
     expect(requestCompletionStream).toHaveBeenCalledWith(
       provider,
       expect.any(Array),
@@ -178,12 +205,7 @@ describe('chat service', () => {
   })
 
   it('sends default assistant prompt before the card prompt', async () => {
-    vi.mocked(requestCompletionStream).mockImplementation(
-      async (_provider, _messages, handlers) => {
-        handlers.onText('assistant')
-        return 'assistant'
-      },
-    )
+    mockAssistantStream('assistant')
 
     await sendChatMessage({
       card,
@@ -211,12 +233,7 @@ describe('chat service', () => {
   })
 
   it('names default chat topics with the active provider after a reply', async () => {
-    vi.mocked(requestCompletionStream).mockImplementation(
-      async (_provider, _messages, handlers) => {
-        handlers.onText('assistant')
-        return 'assistant'
-      },
-    )
+    mockAssistantStream('assistant')
     vi.mocked(chatRepository.getSession).mockResolvedValue({
       id: 'session',
       canvasId: 'canvas',
@@ -254,13 +271,35 @@ describe('chat service', () => {
     )
   })
 
+  it('does not auto-name hidden compare sessions', async () => {
+    mockAssistantStream('assistant')
+    vi.mocked(chatRepository.getSession).mockResolvedValue({
+      id: 'child-session',
+      canvasId: 'canvas',
+      hidden: true,
+      parentSessionId: 'session',
+      promptCardId: 'card',
+      title: '测试',
+      createdAt: 'now',
+      updatedAt: 'now',
+    })
+
+    await sendChatMessage({
+      card,
+      history: [],
+      provider,
+      promptInjectionMode: 'system',
+      sessionId: 'child-session',
+      text: '帮我整理一下明天的课程安排',
+      thinkingMode: 'off',
+    })
+
+    expect(requestCompletion).not.toHaveBeenCalled()
+    expect(chatRepository.updateSessionTitle).not.toHaveBeenCalled()
+  })
+
   it('falls back to user text when topic naming request fails', async () => {
-    vi.mocked(requestCompletionStream).mockImplementation(
-      async (_provider, _messages, handlers) => {
-        handlers.onText('assistant')
-        return 'assistant'
-      },
-    )
+    mockAssistantStream('assistant')
     vi.mocked(chatRepository.getSession).mockResolvedValue({
       id: 'session',
       canvasId: 'canvas',
@@ -288,12 +327,7 @@ describe('chat service', () => {
   })
 
   it('streams assistant replies without thinking metadata', async () => {
-    vi.mocked(requestCompletionStream).mockImplementation(
-      async (_provider, _messages, handlers) => {
-        handlers.onText('plain')
-        return 'plain'
-      },
-    )
+    mockAssistantStream('plain')
 
     await sendChatMessage({
       card,
@@ -315,12 +349,7 @@ describe('chat service', () => {
   })
 
   it('strips think blocks when thinking mode is off', async () => {
-    vi.mocked(requestCompletionStream).mockImplementation(
-      async (_provider, _messages, handlers) => {
-        handlers.onText('<think>hidden</think>answer')
-        return '<think>hidden</think>answer'
-      },
-    )
+    mockAssistantStream('<think>hidden</think>answer')
 
     await sendChatMessage({
       card,
@@ -403,12 +432,7 @@ describe('chat service', () => {
   })
 
   it('resends from an edited user message and removes later history', async () => {
-    vi.mocked(requestCompletionStream).mockImplementation(
-      async (_provider, _messages, handlers) => {
-        handlers.onText('again')
-        return 'again'
-      },
-    )
+    mockAssistantStream('again')
     const history: ChatMessage[] = [
       {
         id: 'before',

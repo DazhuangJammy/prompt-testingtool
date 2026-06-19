@@ -11,10 +11,12 @@ export function useDraftStroke({
   canvasId,
   penColor,
   reactFlow,
+  topicSessionId,
   onStart,
 }: {
   activeTool: string
   canvasId?: string
+  topicSessionId?: string
   penColor: string
   reactFlow: ReactFlowInstance<CanvasFlowNode>
   onStart: () => void
@@ -40,7 +42,13 @@ export function useDraftStroke({
       setDraftPoints([])
       if (canvasId && points.length > 1) {
         void canvasRepository.saveStroke(
-          createCanvasStroke(canvasId, simplifyPoints(points), penColor),
+          createCanvasStroke(
+            canvasId,
+            simplifyPoints(points),
+            penColor,
+            3,
+            topicSessionId,
+          ),
         )
       }
     }
@@ -52,7 +60,7 @@ export function useDraftStroke({
       window.removeEventListener('pointermove', handleMove)
       window.removeEventListener('pointerup', handleUp)
     }
-  }, [canvasId, isDrawingStroke, penColor, reactFlow])
+  }, [canvasId, isDrawingStroke, penColor, reactFlow, topicSessionId])
 
   const handlePointerDown = useCallback(
     (event: ReactPointerEvent) => {

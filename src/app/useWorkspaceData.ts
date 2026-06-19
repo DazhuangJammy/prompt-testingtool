@@ -8,6 +8,7 @@ import {
 } from '@/features/settings/model/defaultModelSettings'
 import { deriveSelectableProviders } from '@/features/settings/model/providerCatalog'
 import { ensureSeedData } from '@/features/workspace/application/seedWorkspace'
+import { repairLegacyWorkspaceTopicScopes } from '@/features/workspace/application/workspaceService'
 import { workspaceRepository } from '@/features/workspace/infrastructure/workspaceRepository'
 import { db } from '@/shared/storage/db'
 import type {
@@ -18,8 +19,12 @@ import type {
 } from '@/shared/types'
 
 export function useWorkspaceData() {
-  const [activeCanvasId, setActiveCanvasId] = useState<string>()
-  const [selectedCardId, setSelectedCardId] = useState<string>()
+  const [activeCanvasId, setActiveCanvasId] = useState<string | undefined>(() =>
+    readStoredId('prompt-active-canvas-id'),
+  )
+  const [selectedCardId, setSelectedCardId] = useState<string | undefined>(() =>
+    readStoredId('prompt-selected-card-id'),
+  )
   const [activeProviderId, setActiveProviderId] = useState<string>()
 
   const canvases = useLiveQuery<Canvas[], Canvas[]>(
@@ -54,11 +59,22 @@ export function useWorkspaceData() {
   )
 
   useEffect(() => {
-    void ensureSeedData().then(async () => {
-      await providerRepository.ensureBuiltInProviders()
-      await defaultModelSettingsRepository.ensure()
-    })
+    void ensureSeedData()
+      .then(async () => {
+        await providerRepository.ensureBuiltInProviders()
+        await defaultModelSettingsRepository.ensure()
+        await repairLegacyWorkspaceTopicScopes()
+      })
+      .catch(() => undefined)
   }, [])
+
+  useEffect(() => {
+    writeStoredId('prompt-active-canvas-id', activeCanvasId)
+  }, [activeCanvasId])
+
+  useEffect(() => {
+    writeStoredId('prompt-selected-card-id', selectedCardId)
+  }, [selectedCardId])
 
   const effectiveSelectedCardId = promptCards?.some(
     (card) => card.id === selectedCardId,
@@ -116,4 +132,21 @@ export function useWorkspaceData() {
       selectableProviders,
     ],
   )
+}
+
+function readStoredId(key: string) {
+  try {
+    return localStorage.getItem(key) ?? undefined
+  } catch {
+    return undefined
+  }
+}
+
+function writeStoredId(key: string, value: string | undefined) {
+  try {
+    if (value) localStorage.setItem(key, value)
+    else localStorage.removeItem(key)
+  } catch {
+    // Storage can be unavailable in restricted browser modes.
+  }
 }

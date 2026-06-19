@@ -3,11 +3,12 @@ import type { Edge, OnDelete } from '@xyflow/react'
 import {
   deleteCanvasEdge,
   deleteCanvasStroke,
-  deleteImageNodeCascade,
-  deleteShapeNodeCascade,
-  deleteTextNodeCascade,
+  deleteImageNodeRecord,
+  deleteShapeNodeRecord,
+  deleteTextNodeRecord,
 } from '@/features/canvas/application/canvasService'
 import type { CanvasFlowNode } from '@/features/canvas/model/canvasFlowMapping'
+import { shouldDeleteEdgeRecordOnFlowDelete } from '@/features/canvas/model/canvasDeletion'
 
 interface UseCanvasDeletionOptions {
   canvasId?: string
@@ -38,14 +39,14 @@ export function useCanvasDeletion({
         return
       }
       if (node.type === 'freeText') {
-        void deleteTextNodeCascade(node.id, canvasId)
+        void deleteTextNodeRecord(node.id, canvasId)
         return
       }
       if (node.type === 'canvasImage') {
-        void deleteImageNodeCascade(node.id, canvasId)
+        void deleteImageNodeRecord(node.id, canvasId)
         return
       }
-      void deleteShapeNodeCascade(node.id, canvasId)
+      void deleteShapeNodeRecord(node.id, canvasId)
     },
     [canvasId, onDeleteCard],
   )
@@ -61,11 +62,19 @@ export function useCanvasDeletion({
 
   const handleDelete = useCallback<OnDelete<CanvasFlowNode, Edge>>(
     ({ edges, nodes }) => {
-      edges.forEach((edge) => void deleteCanvasEdge(edge.id, canvasId))
+      edges
+        .filter((edge) =>
+          shouldDeleteEdgeRecordOnFlowDelete({
+            deletedNodeCount: nodes.length,
+            edgeId: edge.id,
+            selectedEdgeIds: selectedFlowIds.edges,
+          }),
+        )
+        .forEach((edge) => void deleteCanvasEdge(edge.id, canvasId))
       nodes.forEach(deleteNode)
       onSelectionClear()
     },
-    [canvasId, deleteNode, onSelectionClear],
+    [canvasId, deleteNode, onSelectionClear, selectedFlowIds.edges],
   )
 
   return { deleteSelected, handleDelete }

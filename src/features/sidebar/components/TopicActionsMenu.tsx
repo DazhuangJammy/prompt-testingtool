@@ -1,6 +1,7 @@
 import {
   ChevronRight,
   Copy,
+  CopyPlus,
   FileDown,
   FileText,
   Image,
@@ -15,12 +16,14 @@ import type { ChatSessionExportAction } from '../sidebar.types'
 
 interface TopicActionsMenuProps {
   session: ChatSession
+  onDuplicate: (session: ChatSession) => void
   onExport: (session: ChatSession, action: ChatSessionExportAction) => void
   onRename: (session: ChatSession) => void
 }
 
 export function TopicActionsMenu({
   session,
+  onDuplicate,
   onExport,
   onRename,
 }: TopicActionsMenuProps) {
@@ -146,6 +149,17 @@ export function TopicActionsMenu({
             >
               <Pencil />
               <span>编辑命名</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onDuplicate(session)
+                setOpen(false)
+                setExportOpen(false)
+              }}
+            >
+              <CopyPlus />
+              <span>复制副本</span>
             </button>
             <div
               className={`topic-export-submenu ${exportOpen ? 'is-open' : ''}`}

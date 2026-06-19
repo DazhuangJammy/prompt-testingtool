@@ -44,6 +44,7 @@ interface CreateCanvasPasteOptions {
   clipboard: CanvasClipboardSnapshot
   createNextId?: () => string
   now?: () => string
+  topicSessionId?: string
 }
 
 export function createCanvasClipboard({
@@ -95,6 +96,7 @@ export function createCanvasPastePayload({
   clipboard,
   createNextId = createId,
   now = nowIso,
+  topicSessionId,
 }: CreateCanvasPasteOptions): CanvasPasteResult {
   const at = now()
   const delta = {
@@ -110,6 +112,7 @@ export function createCanvasPastePayload({
     return {
       ...structuredClone(card),
       canvasId,
+      topicSessionId,
       createdAt: at,
       id,
       position: movePoint(card.position, delta),
@@ -125,6 +128,7 @@ export function createCanvasPastePayload({
     return {
       ...structuredClone(node),
       canvasId,
+      topicSessionId,
       createdAt: at,
       id,
       position: movePoint(node.position, delta),
@@ -138,6 +142,7 @@ export function createCanvasPastePayload({
     return {
       ...structuredClone(node),
       canvasId,
+      topicSessionId,
       createdAt: at,
       id,
       position: movePoint(node.position, delta),
@@ -151,6 +156,7 @@ export function createCanvasPastePayload({
     return {
       ...structuredClone(node),
       canvasId,
+      topicSessionId,
       createdAt: at,
       id,
       position: movePoint(node.position, delta),
@@ -164,6 +170,7 @@ export function createCanvasPastePayload({
     return {
       ...structuredClone(stroke),
       canvasId,
+      topicSessionId,
       createdAt: at,
       id,
       points: movePoints(stroke.points, delta),
@@ -178,6 +185,7 @@ export function createCanvasPastePayload({
     return {
       ...structuredClone(edge),
       canvasId,
+      topicSessionId,
       createdAt: at,
       id: createNextId(),
       sourceId,

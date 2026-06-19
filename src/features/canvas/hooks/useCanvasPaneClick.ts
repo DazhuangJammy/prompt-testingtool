@@ -7,14 +7,16 @@ import {
 import { isShapeTool } from '@/features/canvas/model/canvasTools'
 import type { CanvasTool } from '@/features/canvas/model/flowTypes'
 import type { CanvasTextStyle } from '@/features/canvas/model/textStyle'
+import { dispatchCanvasCommitActiveEdit } from '@/shared/model/canvasEditEvents'
 import type { CanvasPoint, PromptCard } from '@/shared/types'
 
 interface UseCanvasPaneClickOptions {
   activeTool: CanvasTool
   canvasId?: string
+  topicSessionId?: string
   textStyle: CanvasTextStyle
   onActivateShortcuts: () => void
-  onAddPrompt: (position?: PromptCard['position']) => void
+  onAddPrompt: (position?: PromptCard['position'], topicSessionId?: string) => void
   onClearSelection: () => void
   onSelectTool: (tool: CanvasTool) => void
   screenToFlowPosition: (position: CanvasPoint) => CanvasPoint
@@ -29,10 +31,12 @@ export function useCanvasPaneClick({
   onSelectTool,
   screenToFlowPosition,
   textStyle,
+  topicSessionId,
 }: UseCanvasPaneClickOptions) {
   return useCallback(
     (event: MouseEvent) => {
       if (!canvasId) return
+      dispatchCanvasCommitActiveEdit()
       onActivateShortcuts()
       const position = screenToFlowPosition({
         x: event.clientX,
@@ -40,14 +44,14 @@ export function useCanvasPaneClick({
       })
 
       if (activeTool === 'prompt') {
-        onAddPrompt(position)
+        onAddPrompt(position, topicSessionId)
         onSelectTool('select')
         return
       }
 
       if (isShapeTool(activeTool)) {
         void canvasRepository.saveShapeNode(
-          createCanvasShapeNode(canvasId, activeTool, position),
+          createCanvasShapeNode(canvasId, activeTool, position, topicSessionId),
         )
         onSelectTool('select')
         return
@@ -55,7 +59,7 @@ export function useCanvasPaneClick({
 
       if (activeTool === 'text') {
         void canvasRepository.saveTextNode(
-          createCanvasTextNode(canvasId, position, textStyle),
+          createCanvasTextNode(canvasId, position, textStyle, topicSessionId),
         )
         onSelectTool('select')
         return
@@ -72,6 +76,7 @@ export function useCanvasPaneClick({
       onSelectTool,
       screenToFlowPosition,
       textStyle,
+      topicSessionId,
     ],
   )
 }

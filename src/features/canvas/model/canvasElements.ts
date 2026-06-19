@@ -35,6 +35,7 @@ export function createCanvasShapeNode(
   canvasId: string,
   kind: Exclude<CanvasShapeKind, 'text'>,
   position: CanvasPoint,
+  topicSessionId?: string,
 ): CanvasShapeNode {
   const at = nowIso()
   const defaults = shapeDefaults[kind]
@@ -42,6 +43,7 @@ export function createCanvasShapeNode(
   return {
     id: createId(),
     canvasId,
+    topicSessionId,
     kind,
     title: defaults.title,
     body: defaults.body,
@@ -59,12 +61,14 @@ export function createCanvasEdge(
   targetId: string,
   sourceHandle?: string | null,
   targetHandle?: string | null,
+  topicSessionId?: string,
 ): CanvasEdge {
   const at = nowIso()
 
   return {
     id: createId(),
     canvasId,
+    topicSessionId,
     sourceId,
     targetId,
     sourceHandle: sourceHandle ?? undefined,
@@ -79,12 +83,14 @@ export function createCanvasStroke(
   points: CanvasPoint[],
   color = '#ededed',
   strokeWidth = 3,
+  topicSessionId?: string,
 ): CanvasStroke {
   const at = nowIso()
 
   return {
     id: createId(),
     canvasId,
+    topicSessionId,
     points,
     color,
     strokeWidth,
@@ -101,12 +107,14 @@ export function createCanvasTextNode(
     color: '#ededed',
     fontSize: 18,
   },
+  topicSessionId?: string,
 ): CanvasTextNode {
   const at = nowIso()
 
   return {
     id: createId(),
     canvasId,
+    topicSessionId,
     text: '双击编辑文字',
     position,
     width: 220,
@@ -125,6 +133,7 @@ export function createCanvasImageNode(
     naturalHeight?: number
     naturalWidth?: number
   },
+  topicSessionId?: string,
 ): CanvasImageNode {
   const at = nowIso()
   const size = fitImageSize(
@@ -135,6 +144,7 @@ export function createCanvasImageNode(
   return {
     id: createId(),
     canvasId,
+    topicSessionId,
     name: image.name.trim() || '粘贴图片',
     mimeType: image.mimeType || 'image/png',
     dataUrl: image.dataUrl,

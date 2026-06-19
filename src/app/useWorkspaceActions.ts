@@ -1,9 +1,11 @@
 import {
   addPromptCardToCanvas,
+  assignPromptCardToChatTopic,
   createChatTopicExport,
   createNextCanvas,
   createWorkspaceExport,
   deleteCanvasAndPickNext,
+  duplicateChatTopic,
   importChatTopicFile,
   importWorkspaceFile,
 } from '@/features/workspace/application/workspaceService'
@@ -37,7 +39,8 @@ export function useWorkspaceActions({
   }
 
   const deletePromptCard = async (id: string) => {
-    await workspaceRepository.deletePromptCardCascade(id)
+    const card = promptCards.find((item) => item.id === id)
+    await workspaceRepository.deletePromptCardNode(id, card?.canvasId ?? effectiveCanvasId)
     if (selectedCardId === id) setSelectedCardId(undefined)
   }
 
@@ -45,13 +48,18 @@ export function useWorkspaceActions({
     setActiveCanvasId(await deleteCanvasAndPickNext(id, canvases))
   }
 
-  const addPromptCard = async (position?: PromptCard['position']) => {
+  const addPromptCard = async (
+    position?: PromptCard['position'],
+    topicSessionId?: string,
+  ) => {
     const card = await addPromptCardToCanvas(
       effectiveCanvasId,
       promptCards,
       position,
+      topicSessionId,
     )
     if (card) setSelectedCardId(card.id)
+    return card
   }
 
   const downloadExportFile = (exportFile: { filename: string; text: string }) => {
@@ -87,9 +95,11 @@ export function useWorkspaceActions({
 
   return {
     addPromptCard,
+    assignPromptCardToChatTopic,
     createNextCanvas: createCanvas,
     deleteCanvas,
     deletePromptCard,
+    duplicateChatTopic,
     exportChatTopic,
     exportWorkspace,
     importChatTopic,

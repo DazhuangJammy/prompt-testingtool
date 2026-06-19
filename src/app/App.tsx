@@ -1,7 +1,7 @@
 import { ReactFlowProvider } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import '@/styles/app.css'
 import { ChatPanel } from '@/features/chat/ChatPanel'
 import {
@@ -16,8 +16,26 @@ import {
   deleteChatTopicAndPickNext,
   renameChatTopic,
 } from '@/features/chat/application/chatService'
+import {
+  copyChatCompareOpen,
+  getChatCompareModeStorageKey,
+  normalizeChatCompareMode,
+  setChatCompareOpen,
+  type ChatCompareModeMap,
+} from '@/features/chat/model/chatCompareMode'
+import {
+  copyChatPanelWidth,
+  getChatPanelWidthStorageKey,
+  normalizeChatPanelWidths,
+  resolveChatPanelWidth,
+  setChatPanelWidth,
+  type ChatPanelWidthMap,
+} from '@/features/chat/model/chatPanelWidth'
+import { repairLegacyChatTopicScope } from '@/features/workspace/application/workspaceService'
 import { chatRepository } from '@/features/chat/infrastructure/chatRepository'
 import { CanvasWorkspace } from '@/features/canvas/CanvasWorkspace'
+import { useScopedCanvasRecords } from '@/features/canvas/hooks/useScopedCanvasRecords'
+import { copyStoredCanvasViewport } from '@/features/canvas/model/canvasViewport'
 import { WorkspaceTopbar } from '@/features/canvas/WorkspaceTopbar'
 import { SettingsDialog } from '@/features/settings/SettingsDialog'
 import { Sidebar } from '@/features/sidebar/Sidebar'
@@ -29,6 +47,8 @@ import {
   normalizeProviderConfig,
 } from '@/features/settings/model/providerCatalog'
 import type { ChatSession } from '@/shared/types'
+import { resolveActiveChatCard, resolveChatScopePromptCardId } from './activeChatCard'
+import { resolveActiveChatSessionId, useActiveChatTopic } from './useActiveChatTopic'
 import { useResizablePanels } from './useResizablePanels'
 import { useResponsivePanels } from './useResponsivePanels'
 import { useCanvasToolShortcutSettings } from './useCanvasToolShortcutSettings'
@@ -38,12 +58,15 @@ import { useWorkspaceData } from './useWorkspaceData'
 
 function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [activeChatTopic, setActiveChatTopic] = useState<{
-    canvasId?: string
-    sessionId?: string
-  }>({})
+  const [compareOpenBySession, setCompareOpenBySession] =
+    useState<ChatCompareModeMap>(readStoredCompareMode)
+  const [chatWidthBySession, setChatWidthBySession] =
+    useState<ChatPanelWidthMap>(readStoredChatPanelWidths)
+  const [activeChatTopic, setActiveChatTopic] = useActiveChatTopic()
+  const [pendingActiveSession, setPendingActiveSession] = useState<
+    { sessionId: string; sessionListKey: string } | undefined
+  >()
   const panels = useResponsivePanels()
-  const resizablePanels = useResizablePanels()
   const canvasToolShortcuts = useCanvasToolShortcutSettings()
   const { theme, toggleTheme } = useThemeMode()
   const workspace = useWorkspaceData()
@@ -55,15 +78,16 @@ function App() {
     setActiveCanvasId: workspace.setActiveCanvasId,
     setSelectedCardId: workspace.setSelectedCardId,
   })
-  const sidebarChatSessions = useLiveQuery(
+  const sidebarChatSessions = useLiveQuery<ChatSession[], undefined>(
     () => chatRepository.listSessionsByUpdatedAt(),
     [],
-    [],
+    undefined,
   )
+  const sidebarSessionsLoaded = sidebarChatSessions !== undefined
   const sessionCanvasByPromptCard = new Map(
     workspace.promptCards.map((card) => [card.id, card.canvasId]),
   )
-  const sidebarSessions = sidebarChatSessions.map((session) =>
+  const sidebarSessions = (sidebarChatSessions ?? []).map((session) =>
     session.canvasId || !session.promptCardId
       ? session
       : {
@@ -71,13 +95,97 @@ function App() {
           canvasId: sessionCanvasByPromptCard.get(session.promptCardId),
         },
   )
+  const sidebarSessionListKey = sidebarSessions
+    .map((session) => `${session.id}:${session.canvasId ?? ''}`)
+    .join('|')
 
-  const activeChatSessionId =
-    activeChatTopic.canvasId === workspace.effectiveCanvasId
-      ? activeChatTopic.sessionId
-      : undefined
+  const activeChatSessionId = resolveActiveChatSessionId({
+    activeChatTopic,
+    effectiveCanvasId: workspace.effectiveCanvasId,
+    pendingSessionId:
+      pendingActiveSession?.sessionListKey === sidebarSessionListKey
+        ? pendingActiveSession.sessionId
+        : undefined,
+    sessions: sidebarSessions,
+    sidebarSessionsLoaded,
+  })
+  const activeChatSession = sidebarSessions.find(
+    (session) => session.id === activeChatSessionId,
+  )
+  const sessionPromptCard = activeChatSession?.promptCardId
+    ? workspace.promptCards.find((card) => card.id === activeChatSession.promptCardId)
+    : workspace.activeCard
+  const activeChatPromptCardId = resolveChatScopePromptCardId({
+    selectedCard: workspace.activeCard,
+    session: activeChatSession,
+  })
+  const scopedChatRecords = useScopedCanvasRecords({
+    canvasId: workspace.effectiveCanvasId,
+    promptCardId: activeChatPromptCardId,
+    promptCards: workspace.promptCards,
+    sessionId: activeChatSessionId,
+  })
+  const chatPromptCards = useMemo(() => {
+    if (scopedChatRecords.promptCards.length) return scopedChatRecords.promptCards
+    return sessionPromptCard ? [sessionPromptCard] : []
+  }, [sessionPromptCard, scopedChatRecords.promptCards])
+  const activeChatCard = resolveActiveChatCard({
+    chatPromptCards,
+    selectedCard: workspace.activeCard,
+    session: activeChatSession,
+    sessionPromptCard,
+  })
+  const compareOpen = Boolean(
+    activeChatSessionId && compareOpenBySession[activeChatSessionId],
+  )
+  const chatWidth = resolveChatPanelWidth(chatWidthBySession, activeChatSessionId)
+  const setActiveChatPanelWidth = (value: number | ((current: number) => number)) => {
+    setChatWidthBySession((current) => {
+      const nextWidth =
+        typeof value === 'function'
+          ? value(resolveChatPanelWidth(current, activeChatSessionId))
+          : value
+      return setChatPanelWidth(current, activeChatSessionId, nextWidth)
+    })
+  }
+  const resizablePanels = useResizablePanels(chatWidth, setActiveChatPanelWidth)
+
+  useEffect(() => {
+    void repairLegacyChatTopicScope(activeChatSessionId)
+  }, [activeChatSessionId])
+
+  useEffect(() => {
+    if (!activeChatSession || !workspace.effectiveCanvasId) return
+    if (
+      activeChatTopic.canvasId === workspace.effectiveCanvasId &&
+      activeChatTopic.sessionId === activeChatSession.id
+    ) {
+      return
+    }
+    setActiveChatTopic({
+      canvasId: workspace.effectiveCanvasId,
+      sessionId: activeChatSession.id,
+    })
+  }, [
+    activeChatSession,
+    activeChatTopic.canvasId,
+    activeChatTopic.sessionId,
+    setActiveChatTopic,
+    workspace.effectiveCanvasId,
+  ])
+
+  useEffect(() => {
+    writeStoredCompareMode(compareOpenBySession)
+  }, [compareOpenBySession])
+
+  useEffect(() => {
+    writeStoredChatPanelWidths(chatWidthBySession)
+  }, [chatWidthBySession])
 
   const setActiveChatSessionId = (sessionId?: string) => {
+    setPendingActiveSession(
+      sessionId ? { sessionId, sessionListKey: sidebarSessionListKey } : undefined,
+    )
     setActiveChatTopic({
       canvasId: workspace.effectiveCanvasId,
       sessionId,
@@ -85,22 +193,38 @@ function App() {
   }
 
   const setActiveChatSessionForCanvas = (canvasId: string, sessionId?: string) => {
+    setPendingActiveSession(
+      sessionId ? { sessionId, sessionListKey: sidebarSessionListKey } : undefined,
+    )
     setActiveChatTopic({ canvasId, sessionId })
+  }
+
+  const setActiveChatSessionCompareOpen = (open: boolean) => {
+    setCompareOpenBySession((current) =>
+      setChatCompareOpen(current, activeChatSessionId, open),
+    )
   }
 
   const selectChatSession = (sessionId?: string) => {
     const session = sidebarSessions.find((item) => item.id === sessionId)
     const canvasId = session?.canvasId ?? workspace.effectiveCanvasId
+    if (session?.promptCardId) {
+      workspace.setSelectedCardId(session.promptCardId)
+    }
     if (canvasId) setActiveChatSessionForCanvas(canvasId, sessionId)
     else setActiveChatSessionId(sessionId)
   }
 
   const createChatSession = async (canvasId = workspace.effectiveCanvasId) => {
     if (!canvasId) return
-    const promptCardId =
-      canvasId === workspace.activeCard?.canvasId ? workspace.activeCard.id : undefined
-    const session = await createChatTopic(canvasId, undefined, promptCardId)
+    const session = await createChatTopic(canvasId)
+    const card = await actions.addPromptCard(undefined, session.id)
+    const promptCardId = card?.id
+    await actions.assignPromptCardToChatTopic(promptCardId, session.id)
     workspace.setActiveCanvasId(canvasId)
+    if (promptCardId) {
+      workspace.setSelectedCardId(promptCardId)
+    }
     setActiveChatSessionForCanvas(canvasId, session.id)
   }
 
@@ -123,6 +247,35 @@ function App() {
     if (activeChatSessionId === session.id) {
       if (session.canvasId) setActiveChatSessionForCanvas(session.canvasId, nextSessionId)
       else setActiveChatSessionId(nextSessionId)
+    }
+  }
+
+  const duplicateChatSession = async (session: ChatSession) => {
+    const siblingSessions = sidebarSessions.filter(
+      (item) => item.canvasId === session.canvasId,
+    )
+    const copiedSession = await actions.duplicateChatTopic(session, siblingSessions)
+    const canvasId = copiedSession.canvasId ?? workspace.effectiveCanvasId
+    setCompareOpenBySession((current) =>
+      copyChatCompareOpen(current, session.id, copiedSession.id),
+    )
+    setChatWidthBySession((current) =>
+      copyChatPanelWidth(current, session.id, copiedSession.id, chatWidth),
+    )
+    if (canvasId) {
+      copyStoredCanvasViewport({
+        sourceCanvasId: session.canvasId ?? workspace.effectiveCanvasId,
+        sourceSessionId: session.id,
+        targetCanvasId: canvasId,
+        targetSessionId: copiedSession.id,
+      })
+      workspace.setActiveCanvasId(canvasId)
+      if (copiedSession.promptCardId) {
+        workspace.setSelectedCardId(copiedSession.promptCardId)
+      }
+      setActiveChatSessionForCanvas(canvasId, copiedSession.id)
+    } else {
+      setActiveChatSessionId(copiedSession.id)
     }
   }
 
@@ -161,6 +314,7 @@ function App() {
           onCreateSession={createChatSession}
           onRename={(id, title) => actions.updateCanvas(id, { title })}
           onRenameSession={renameChatSession}
+          onDuplicateSession={duplicateChatSession}
           onDelete={actions.deleteCanvas}
           onDeleteSession={deleteChatSession}
           onExportSession={exportChatSession}
@@ -168,6 +322,9 @@ function App() {
           onImport={async (file, targetCanvasId) => {
             const result = await actions.importChatTopic(file, targetCanvasId)
             setActiveChatSessionForCanvas(result.canvasId, result.sessionId)
+            if (result.promptCardId) {
+              workspace.setSelectedCardId(result.promptCardId)
+            }
           }}
           onOpenSettings={() => setSettingsOpen(true)}
           onResizeStart={resizablePanels.startSidebarResize}
@@ -181,6 +338,8 @@ function App() {
 
           <CanvasWorkspace
             effectiveCanvasId={workspace.effectiveCanvasId}
+            activeSessionId={activeChatSessionId}
+            activeSessionPromptCardId={activeChatPromptCardId}
             promptOptimizationProvider={workspace.defaultProvider}
             promptOptimizationSettings={workspace.defaultModelSettings}
             toolShortcuts={canvasToolShortcuts.shortcuts}
@@ -192,10 +351,11 @@ function App() {
         </main>
 
         <ChatPanel
-          card={workspace.activeCard}
+          card={activeChatCard}
           provider={workspace.activeProvider}
-          promptCards={workspace.promptCards}
+          promptCards={chatPromptCards}
           providers={workspace.providers}
+          compareOpen={compareOpen}
           collapsed={panels.chatCollapsed}
           onResizeStart={resizablePanels.startChatResize}
           activeSessionId={activeChatSessionId}
@@ -203,8 +363,9 @@ function App() {
           onSelectProvider={workspace.setActiveProviderId}
           onActiveSessionChange={setActiveChatSessionId}
           onActiveCardChange={workspace.setSelectedCardId}
+          onCompareOpenChange={setActiveChatSessionCompareOpen}
           onEnsureWidth={resizablePanels.ensureChatWidth}
-          width={resizablePanels.chatWidth}
+          width={chatWidth}
         />
 
         <SettingsDialog
@@ -242,6 +403,48 @@ function App() {
       </div>
     </ReactFlowProvider>
   )
+}
+
+function readStoredCompareMode() {
+  try {
+    return normalizeChatCompareMode(
+      JSON.parse(localStorage.getItem(getChatCompareModeStorageKey()) ?? '{}'),
+    )
+  } catch {
+    return {}
+  }
+}
+
+function writeStoredCompareMode(compareOpenBySession: ChatCompareModeMap) {
+  try {
+    localStorage.setItem(
+      getChatCompareModeStorageKey(),
+      JSON.stringify(compareOpenBySession),
+    )
+  } catch {
+    // Storage can be unavailable in restricted browser modes.
+  }
+}
+
+function readStoredChatPanelWidths() {
+  try {
+    return normalizeChatPanelWidths(
+      JSON.parse(localStorage.getItem(getChatPanelWidthStorageKey()) ?? '{}'),
+    )
+  } catch {
+    return {}
+  }
+}
+
+function writeStoredChatPanelWidths(chatWidthBySession: ChatPanelWidthMap) {
+  try {
+    localStorage.setItem(
+      getChatPanelWidthStorageKey(),
+      JSON.stringify(chatWidthBySession),
+    )
+  } catch {
+    // Storage can be unavailable in restricted browser modes.
+  }
 }
 
 export default App

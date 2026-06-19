@@ -27,9 +27,14 @@ export async function ensureChatSession(
   canvasId: string,
   effectiveSessionId?: string,
   promptCardId?: string,
+  options: {
+    comparePaneIndex?: number
+    hidden?: boolean
+    parentSessionId?: string
+  } = {},
 ) {
   if (effectiveSessionId) return effectiveSessionId
-  const session = createChatSession(canvasId, '测试', promptCardId)
+  const session = createChatSession(canvasId, '测试', promptCardId, options)
   await chatRepository.createSession(session)
   return session.id
 }
@@ -46,6 +51,13 @@ export async function createChatTopic(
 
 export async function renameChatTopic(sessionId: string, title: string) {
   await chatRepository.updateSessionTitle(sessionId, title)
+}
+
+export async function assignChatSessionPromptCard(
+  sessionId: string,
+  promptCardId: string,
+) {
+  await chatRepository.updateSessionPromptCard(sessionId, promptCardId)
 }
 
 export async function deleteChatTopicAndPickNext({
@@ -158,7 +170,7 @@ export async function sendChatMessage({
       : undefined,
     status: 'complete',
   })
-  await chatRepository.updateSessionAfterReply(sessionId, card.id)
+  await chatRepository.updateSessionAfterReply(sessionId)
   await autoNameChatTopic(sessionId, userMessage.content, provider)
 }
 
@@ -235,7 +247,7 @@ async function requestAssistantReply({
       : undefined,
     status: 'complete',
   })
-  await chatRepository.updateSessionAfterReply(sessionId, card.id)
+  await chatRepository.updateSessionAfterReply(sessionId)
   await autoNameChatTopic(sessionId, text, provider)
 }
 
@@ -246,7 +258,7 @@ async function autoNameChatTopic(
 ) {
   if (!userText.trim()) return
   const session = await chatRepository.getSession(sessionId)
-  if (!session || !shouldAutoNameChatTopic(session.title)) return
+  if (!session || session.hidden || !shouldAutoNameChatTopic(session.title)) return
 
   try {
     const title = normalizeGeneratedChatTopicTitle(

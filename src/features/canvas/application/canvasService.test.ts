@@ -3,9 +3,9 @@ import { canvasRepository } from '@/features/canvas/infrastructure/canvasReposit
 import {
   deleteCanvasEdge,
   deleteCanvasStroke,
-  deleteImageNodeCascade,
-  deleteShapeNodeCascade,
-  deleteTextNodeCascade,
+  deleteImageNodeRecord,
+  deleteShapeNodeRecord,
+  deleteTextNodeRecord,
   persistCanvasStrokePosition,
   persistImageNodePosition,
   persistPromptNodeChanges,
@@ -256,32 +256,32 @@ describe('canvas service', () => {
     expect(canvasRepository.touchCanvas).not.toHaveBeenCalled()
   })
 
-  it('deletes shape nodes with related edges', async () => {
+  it('deletes only shape node records', async () => {
     vi.clearAllMocks()
 
-    await deleteShapeNodeCascade('shape', 'canvas-1')
+    await deleteShapeNodeRecord('shape', 'canvas-1')
 
-    expect(canvasRepository.deleteEdgesForNode).toHaveBeenCalledWith('shape')
+    expect(canvasRepository.deleteEdgesForNode).not.toHaveBeenCalled()
     expect(canvasRepository.deleteShapeNode).toHaveBeenCalledWith('shape')
     expect(canvasRepository.touchCanvas).toHaveBeenCalledWith('canvas-1')
   })
 
-  it('deletes free text nodes with related edges', async () => {
+  it('deletes only free text node records', async () => {
     vi.clearAllMocks()
 
-    await deleteTextNodeCascade('text', 'canvas-1')
+    await deleteTextNodeRecord('text', 'canvas-1')
 
-    expect(canvasRepository.deleteEdgesForNode).toHaveBeenCalledWith('text')
+    expect(canvasRepository.deleteEdgesForNode).not.toHaveBeenCalled()
     expect(canvasRepository.deleteTextNode).toHaveBeenCalledWith('text')
     expect(canvasRepository.touchCanvas).toHaveBeenCalledWith('canvas-1')
   })
 
-  it('deletes image nodes with related edges', async () => {
+  it('deletes only image node records', async () => {
     vi.clearAllMocks()
 
-    await deleteImageNodeCascade('image', 'canvas-1')
+    await deleteImageNodeRecord('image', 'canvas-1')
 
-    expect(canvasRepository.deleteEdgesForNode).toHaveBeenCalledWith('image')
+    expect(canvasRepository.deleteEdgesForNode).not.toHaveBeenCalled()
     expect(canvasRepository.deleteImageNode).toHaveBeenCalledWith('image')
     expect(canvasRepository.touchCanvas).toHaveBeenCalledWith('canvas-1')
   })

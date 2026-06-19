@@ -226,6 +226,7 @@ export const createPromptCard = (
   canvasId: string,
   index: number,
   position = { x: 80 + index * 40, y: 80 + index * 30 },
+  topicSessionId?: string,
 ): PromptCard => {
   const at = nowIso()
   const sections = defaultSections()
@@ -233,6 +234,7 @@ export const createPromptCard = (
   return {
     id: createId(),
     canvasId,
+    topicSessionId,
     title: `提示词 ${index + 1}`,
     position,
     sections,

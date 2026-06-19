@@ -6,6 +6,7 @@ import type {
   PromptVersion,
 } from '@/shared/types'
 import { nowIso } from '@/shared/utils/time'
+import { sortChatSessionsForSidebar } from '@/features/chat/model/chatSessionOrdering'
 
 export const chatRepository = {
   async addMessage(message: ChatMessage) {
@@ -21,8 +22,15 @@ export const chatRepository = {
   },
 
   async deleteSessionCascade(sessionId: string) {
+    const childSessions = await db.chatSessions
+      .where('parentSessionId')
+      .equals(sessionId)
+      .toArray()
+    const sessionIds = [sessionId, ...childSessions.map((session) => session.id)]
+
     await Promise.all([
-      db.chatMessages.where('sessionId').equals(sessionId).delete(),
+      db.chatMessages.where('sessionId').anyOf(sessionIds).delete(),
+      db.chatSessions.where('parentSessionId').equals(sessionId).delete(),
       db.chatSessions.delete(sessionId),
     ])
   },
@@ -35,12 +43,8 @@ export const chatRepository = {
     await db.promptVersions.add(version)
   },
 
-  async updateSessionAfterReply(
-    sessionId: string,
-    promptCardId?: string,
-  ) {
+  async updateSessionAfterReply(sessionId: string) {
     await db.chatSessions.update(sessionId, {
-      promptCardId,
       updatedAt: nowIso(),
     })
   },
@@ -52,6 +56,13 @@ export const chatRepository = {
   async updateSessionTitle(sessionId: string, title: string) {
     await db.chatSessions.update(sessionId, {
       title: title.trim() || '未命名话题',
+      updatedAt: nowIso(),
+    })
+  },
+
+  async updateSessionPromptCard(sessionId: string, promptCardId: string) {
+    await db.chatSessions.update(sessionId, {
+      promptCardId,
       updatedAt: nowIso(),
     })
   },
@@ -95,14 +106,25 @@ export const chatRepository = {
     ])
 
     return uniqueSessions([...canvasSessions, ...legacySessions])
+      .filter((session) => !session.hidden)
   },
 
   async listSessionsByUpdatedAt() {
-    return db.chatSessions.reverse().sortBy('updatedAt')
+    const sessions = await db.chatSessions.toArray()
+    return sortChatSessionsForSidebar(
+      sessions.filter((session) => !session.hidden),
+    )
   },
 
   async listMessagesBySession(sessionId: string) {
     return db.chatMessages.where('sessionId').equals(sessionId).sortBy('createdAt')
+  },
+
+  async listChildSessions(parentSessionId: string) {
+    return db.chatSessions
+      .where('parentSessionId')
+      .equals(parentSessionId)
+      .toArray()
   },
 
   async listVersionsByPromptCard(promptCardId: string) {

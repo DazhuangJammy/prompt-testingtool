@@ -41,6 +41,7 @@ interface SidebarProps {
   onCreateSession: (canvasId?: string) => void
   onRename: (id: string, title: string) => void
   onRenameSession: (session: ChatSession) => void
+  onDuplicateSession: (session: ChatSession) => Promise<void>
   onDelete: (id: string) => void
   onDeleteSession: (session: ChatSession) => void
   onExportSession: (
@@ -69,6 +70,7 @@ export function Sidebar({
   onCreateSession,
   onRename,
   onRenameSession,
+  onDuplicateSession,
   onDelete,
   onDeleteSession,
   onExportSession,
@@ -78,7 +80,9 @@ export function Sidebar({
   onResizeStart,
   width,
 }: SidebarProps) {
-  const effectiveSessionId = pickSessionId(sessions, activeSessionId)
+  const effectiveSessionId = sessions.some((session) => session.id === activeSessionId)
+    ? activeSessionId
+    : undefined
   const [collapsedCanvasIds, setCollapsedCanvasIds] = useState<Set<string>>(
     () => new Set(),
   )
@@ -299,6 +303,17 @@ export function Sidebar({
                               <TopicActionsMenu
                                 session={session}
                                 onRename={onRenameSession}
+                                onDuplicate={(targetSession) => {
+                                  void onDuplicateSession(targetSession)
+                                    .then(() => setToastMessage('复制副本成功'))
+                                    .catch((error: unknown) => {
+                                      setToastMessage(
+                                        error instanceof Error
+                                          ? error.message
+                                          : '复制副本失败',
+                                      )
+                                    })
+                                }}
                                 onExport={(targetSession, action) => {
                                   void onExportSession(targetSession, action)
                                     .then(() => {
@@ -364,8 +379,4 @@ export function Sidebar({
       )}
     </aside>
   )
-}
-
-function pickSessionId(sessions: ChatSession[], id?: string) {
-  return sessions.some((session) => session.id === id) ? id : sessions[0]?.id
 }

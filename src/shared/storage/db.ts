@@ -120,6 +120,21 @@ class PromptCanvasDatabase extends Dexie {
       chatMessages: 'id, sessionId, createdAt, promptVersionId',
       compareRuns: 'id, promptCardId, createdAt',
     })
+    this.version(7).stores({
+      canvases: 'id, updatedAt',
+      promptCards: 'id, canvasId, updatedAt',
+      canvasShapeNodes: 'id, canvasId, updatedAt',
+      canvasEdges: 'id, canvasId, sourceId, targetId, updatedAt',
+      canvasStrokes: 'id, canvasId, updatedAt',
+      canvasTextNodes: 'id, canvasId, updatedAt',
+      canvasImageNodes: 'id, canvasId, updatedAt',
+      promptVersions: 'id, promptCardId, createdAt',
+      providerConfigs: 'id, updatedAt',
+      defaultModelSettings: 'id, updatedAt',
+      chatSessions: 'id, canvasId, promptCardId, parentSessionId, hidden, updatedAt',
+      chatMessages: 'id, sessionId, createdAt, promptVersionId',
+      compareRuns: 'id, promptCardId, createdAt',
+    })
   }
 }
 
