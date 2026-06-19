@@ -1,19 +1,27 @@
-import { Box, Server, X } from 'lucide-react'
+import { Box, Keyboard, Server, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { DefaultModelSettings, ProviderConfig } from '@/shared/types'
+import type {
+  CanvasTool,
+  CanvasToolShortcuts,
+} from '@/shared/model/canvasToolShortcuts'
 import { IconButton } from '@/shared/ui/IconButton'
 import { AddProviderDialog } from './components/AddProviderDialog'
 import { DefaultModelSettingsPanel } from './components/DefaultModelSettingsPanel'
 import { ProviderDetailPanel } from './components/ProviderDetailPanel'
 import { ProviderListPanel } from './components/ProviderListPanel'
+import { ShortcutSettingsPanel } from './components/ShortcutSettingsPanel'
 import { normalizeProviderConfig } from './model/providerCatalog'
 
 interface SettingsDialogProps {
   open: boolean
   defaultModelSettings?: DefaultModelSettings
+  canvasToolShortcuts: CanvasToolShortcuts
   providers: ProviderConfig[]
   activeProviderId?: string
   onClose: () => void
+  onResetCanvasToolShortcuts: () => void
+  onSaveCanvasToolShortcut: (tool: CanvasTool, key: string) => void
   onSaveDefaultModelSettings: (settings: DefaultModelSettings) => void
   onReorderProviders: (providers: ProviderConfig[]) => void
   onSave: (provider: ProviderConfig) => void
@@ -24,6 +32,7 @@ interface SettingsDialogProps {
 const SETTING_CATEGORIES = [
   { id: 'models', label: '模型服务', icon: Server },
   { id: 'default-model', label: '默认模型', icon: Box },
+  { id: 'shortcuts', label: '快捷键设置', icon: Keyboard },
 ] as const
 
 type SettingCategoryId = (typeof SETTING_CATEGORIES)[number]['id']
@@ -31,9 +40,12 @@ type SettingCategoryId = (typeof SETTING_CATEGORIES)[number]['id']
 export function SettingsDialog({
   open,
   defaultModelSettings,
+  canvasToolShortcuts,
   providers,
   activeProviderId,
   onClose,
+  onResetCanvasToolShortcuts,
+  onSaveCanvasToolShortcut,
   onSaveDefaultModelSettings,
   onReorderProviders,
   onSave,
@@ -117,12 +129,20 @@ export function SettingsDialog({
                 }}
               />
             </>
-          ) : (
+          ) : activeCategory === 'default-model' ? (
             <main className="settings-main-panel">
               <DefaultModelSettingsPanel
                 providers={normalizedProviders}
                 settings={defaultModelSettings}
                 onSave={onSaveDefaultModelSettings}
+              />
+            </main>
+          ) : (
+            <main className="settings-main-panel shortcut-settings-page">
+              <ShortcutSettingsPanel
+                shortcuts={canvasToolShortcuts}
+                onReset={onResetCanvasToolShortcuts}
+                onSaveShortcut={onSaveCanvasToolShortcut}
               />
             </main>
           )}

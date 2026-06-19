@@ -31,6 +31,7 @@ import {
 import type { ChatSession } from '@/shared/types'
 import { useResizablePanels } from './useResizablePanels'
 import { useResponsivePanels } from './useResponsivePanels'
+import { useCanvasToolShortcutSettings } from './useCanvasToolShortcutSettings'
 import { useThemeMode } from './useThemeMode'
 import { useWorkspaceActions } from './useWorkspaceActions'
 import { useWorkspaceData } from './useWorkspaceData'
@@ -43,6 +44,7 @@ function App() {
   }>({})
   const panels = useResponsivePanels()
   const resizablePanels = useResizablePanels()
+  const canvasToolShortcuts = useCanvasToolShortcutSettings()
   const { theme, toggleTheme } = useThemeMode()
   const workspace = useWorkspaceData()
   const actions = useWorkspaceActions({
@@ -177,12 +179,13 @@ function App() {
             title={workspace.activeCanvas?.title ?? '工作台'}
           />
 
-        <CanvasWorkspace
-          effectiveCanvasId={workspace.effectiveCanvasId}
-          promptOptimizationProvider={workspace.defaultProvider}
-          promptOptimizationSettings={workspace.defaultModelSettings}
-          promptCards={workspace.promptCards}
-          onAddPrompt={actions.addPromptCard}
+          <CanvasWorkspace
+            effectiveCanvasId={workspace.effectiveCanvasId}
+            promptOptimizationProvider={workspace.defaultProvider}
+            promptOptimizationSettings={workspace.defaultModelSettings}
+            toolShortcuts={canvasToolShortcuts.shortcuts}
+            promptCards={workspace.promptCards}
+            onAddPrompt={actions.addPromptCard}
             onDeleteCard={actions.deletePromptCard}
             onSelectCard={workspace.setSelectedCardId}
           />
@@ -207,10 +210,13 @@ function App() {
         <SettingsDialog
           open={settingsOpen}
           defaultModelSettings={workspace.defaultModelSettings}
+          canvasToolShortcuts={canvasToolShortcuts.shortcuts}
           providers={workspace.providerConfigs}
           activeProviderId={workspace.effectiveProviderConfigId}
           onClose={() => setSettingsOpen(false)}
+          onResetCanvasToolShortcuts={canvasToolShortcuts.resetShortcuts}
           onSelect={() => undefined}
+          onSaveCanvasToolShortcut={canvasToolShortcuts.setShortcut}
           onSaveDefaultModelSettings={async (settings) => {
             await defaultModelSettingsRepository.save(settings)
           }}

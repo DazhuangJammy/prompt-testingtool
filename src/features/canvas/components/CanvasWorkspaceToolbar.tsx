@@ -6,6 +6,7 @@ import {
   textColors,
 } from '@/features/canvas/model/textStyle'
 import { frameBorderColors, type CanvasFrameStyle } from '@/shared/model/nodeFrameStyle'
+import type { CanvasToolShortcuts } from '@/shared/model/canvasToolShortcuts'
 
 interface CanvasWorkspaceToolbarProps {
   activeTool: CanvasTool
@@ -16,6 +17,7 @@ interface CanvasWorkspaceToolbarProps {
   penColor: string
   penColors: Array<{ label: string; value: string }>
   textStyle: CanvasTextStyle
+  toolShortcuts: CanvasToolShortcuts
   onDeleteSelected: () => void
   onSelectFrameStyle: (updates: Partial<CanvasFrameStyle>) => void
   onSelectPenColor: (color: string) => void
@@ -37,6 +39,7 @@ export function CanvasWorkspaceToolbar({
   penColor,
   penColors,
   textStyle,
+  toolShortcuts,
 }: CanvasWorkspaceToolbarProps) {
   return (
     <CanvasToolbar
@@ -54,6 +57,7 @@ export function CanvasWorkspaceToolbar({
       textColor={textStyle.color}
       textColors={textColors}
       textFontSize={textStyle.fontSize}
+      toolShortcuts={toolShortcuts}
       onDeleteSelected={onDeleteSelected}
       onSelectFrameBorderColor={(borderColor) => onSelectFrameStyle({ borderColor })}
       onSelectPenColor={onSelectPenColor}

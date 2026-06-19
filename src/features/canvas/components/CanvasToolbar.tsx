@@ -12,6 +12,10 @@ import type { CSSProperties, ReactNode } from 'react'
 import { CanvasFrameStyleControls } from '@/features/canvas/components/CanvasFrameStyleControls'
 import { IconButton } from '@/shared/ui/IconButton'
 import type { CanvasTool } from '@/features/canvas/model/flowTypes'
+import {
+  formatCanvasToolTooltip,
+  type CanvasToolShortcuts,
+} from '@/shared/model/canvasToolShortcuts'
 
 interface CanvasToolbarProps {
   activeTool: CanvasTool
@@ -28,6 +32,7 @@ interface CanvasToolbarProps {
   textColor: string
   textColors: Array<{ label: string; value: string }>
   textFontSize: number
+  toolShortcuts: CanvasToolShortcuts
   onDeleteSelected: () => void
   onSelectFrameBorderColor: (color: string) => void
   onSelectPenColor: (color: string) => void
@@ -40,16 +45,15 @@ interface CanvasToolbarProps {
 
 const toolItems: Array<{
   icon: ReactNode
-  label: string
   tool: CanvasTool
 }> = [
-  { icon: <Hand />, label: '拖动画布', tool: 'pan' },
-  { icon: <MousePointer2 />, label: '选择', tool: 'select' },
-  { icon: <Plus />, label: '提示词', tool: 'prompt' },
-  { icon: <Square />, label: '步骤', tool: 'step' },
-  { icon: <GitBranch />, label: '判断', tool: 'decision' },
-  { icon: <Type />, label: '文本', tool: 'text' },
-  { icon: <Brush />, label: '画笔', tool: 'pen' },
+  { icon: <Hand />, tool: 'pan' },
+  { icon: <MousePointer2 />, tool: 'select' },
+  { icon: <Plus />, tool: 'prompt' },
+  { icon: <Square />, tool: 'step' },
+  { icon: <GitBranch />, tool: 'decision' },
+  { icon: <Type />, tool: 'text' },
+  { icon: <Brush />, tool: 'pen' },
 ]
 
 export function CanvasToolbar({
@@ -75,6 +79,7 @@ export function CanvasToolbar({
   textColor,
   textColors,
   textFontSize,
+  toolShortcuts,
 }: CanvasToolbarProps) {
   const showTextControls = activeTool === 'text' || canStyleText
 
@@ -86,7 +91,7 @@ export function CanvasToolbar({
             key={item.tool}
             active={activeTool === item.tool}
             icon={item.icon}
-            label={item.label}
+            label={formatCanvasToolTooltip(item.tool, toolShortcuts)}
             onClick={() => onSelectTool(item.tool)}
           />
         ))}

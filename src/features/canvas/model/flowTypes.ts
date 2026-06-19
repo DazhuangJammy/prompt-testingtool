@@ -1,4 +1,5 @@
 import type { Node } from '@xyflow/react'
+import type { CanvasTool as SharedCanvasTool } from '@/shared/model/canvasToolShortcuts'
 import type {
   CanvasPoint,
   CanvasImageNode,
@@ -7,14 +8,7 @@ import type {
   CanvasTextNode,
 } from '@/shared/types'
 
-export type CanvasTool =
-  | 'select'
-  | 'pan'
-  | 'prompt'
-  | 'step'
-  | 'decision'
-  | 'text'
-  | 'pen'
+export type CanvasTool = SharedCanvasTool
 
 export interface CanvasShapeNodeData extends Record<string, unknown> {
   node: CanvasShapeNode

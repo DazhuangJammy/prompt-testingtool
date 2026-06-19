@@ -34,12 +34,12 @@ import { useCanvasElements } from '@/features/canvas/hooks/useCanvasElements'
 import { useCanvasFlowState } from '@/features/canvas/hooks/useCanvasFlowState'
 import { useCanvasFrameStyle } from '@/features/canvas/hooks/useCanvasFrameStyle'
 import { useCanvasNodePersistence } from '@/features/canvas/hooks/useCanvasNodePersistence'
+import { useCanvasPaneClick } from '@/features/canvas/hooks/useCanvasPaneClick'
+import { useCanvasToolKeyboardShortcuts } from '@/features/canvas/hooks/useCanvasToolKeyboardShortcuts'
 import { useDraftStroke } from '@/features/canvas/hooks/useDraftStroke'
 import { canvasRepository } from '@/features/canvas/infrastructure/canvasRepository'
 import {
   createCanvasEdge,
-  createCanvasShapeNode,
-  createCanvasTextNode,
 } from '@/features/canvas/model/canvasElements'
 import { canvasNodeTypes, penColors } from '@/features/canvas/model/canvasWorkspaceRegistry'
 import {
@@ -47,7 +47,6 @@ import {
   createCanvasFlowNodes,
   type CanvasFlowNode,
 } from '@/features/canvas/model/canvasFlowMapping'
-import { isShapeTool } from '@/features/canvas/model/canvasTools'
 import type { CanvasTool } from '@/features/canvas/model/flowTypes'
 import {
   areFlowSelectionsEqual,
@@ -61,11 +60,13 @@ import {
   type CanvasTextStyle,
 } from '@/features/canvas/model/textStyle'
 import type { DefaultModelSettings, PromptCard, ProviderConfig } from '@/shared/types'
+import type { CanvasToolShortcuts } from '@/shared/model/canvasToolShortcuts'
 
 interface CanvasWorkspaceProps {
   effectiveCanvasId?: string
   promptOptimizationProvider?: ProviderConfig
   promptOptimizationSettings?: DefaultModelSettings
+  toolShortcuts: CanvasToolShortcuts
   promptCards: PromptCard[]
   onAddPrompt: (position?: PromptCard['position']) => void
   onDeleteCard: (id: string) => void
@@ -79,6 +80,7 @@ export function CanvasWorkspace({
   onSelectCard,
   promptOptimizationProvider,
   promptOptimizationSettings,
+  toolShortcuts,
   promptCards,
 }: CanvasWorkspaceProps) {
   const reactFlow = useReactFlow<CanvasFlowNode, Edge>()
@@ -289,42 +291,30 @@ export function CanvasWorkspace({
     [clearSelection, effectiveCanvasId],
   )
 
-  const handlePaneClick = useCallback(
-    (event: React.MouseEvent) => {
-      if (!effectiveCanvasId) return
-      const position = reactFlow.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      })
+  const selectTool = useCallback((tool: CanvasTool) => {
+    setActiveTool(tool)
+    if (tool !== 'select') clearSelection()
+  }, [clearSelection])
+  const {
+    activateShortcutScope,
+    deactivateShortcutScope,
+    handleShortcutKeyDown,
+    shortcutScopeRef,
+  } = useCanvasToolKeyboardShortcuts({
+    onSelectTool: selectTool,
+    shortcuts: toolShortcuts,
+  })
 
-      if (activeTool === 'prompt') {
-        onAddPrompt(position)
-        setActiveTool('select')
-        return
-      }
-
-      if (isShapeTool(activeTool)) {
-        void canvasRepository.saveShapeNode(
-          createCanvasShapeNode(effectiveCanvasId, activeTool, position),
-        )
-        setActiveTool('select')
-        return
-      }
-
-      if (activeTool === 'text') {
-        void canvasRepository.saveTextNode(
-          createCanvasTextNode(effectiveCanvasId, position, textStyle),
-        )
-        setActiveTool('select')
-        return
-      }
-
-      if (activeTool === 'select') {
-        clearSelection()
-      }
-    },
-    [activeTool, clearSelection, effectiveCanvasId, onAddPrompt, reactFlow, textStyle],
-  )
+  const handlePaneClick = useCanvasPaneClick({
+    activeTool,
+    canvasId: effectiveCanvasId,
+    onActivateShortcuts: activateShortcutScope,
+    onAddPrompt,
+    onClearSelection: clearSelection,
+    onSelectTool: selectTool,
+    screenToFlowPosition: reactFlow.screenToFlowPosition,
+    textStyle,
+  })
 
   const hasSelection = selectedFlowIds.edges.length > 0 || selectedFlowIds.nodes.length > 0
   const selectedTextNode = canvasTextNodes.find((node) =>
@@ -393,13 +383,14 @@ export function CanvasWorkspace({
     imageNodes: canvasImageNodes,
     textNodes: canvasTextNodes,
   })
-  const selectTool = useCallback((tool: CanvasTool) => {
-    setActiveTool(tool)
-    if (tool !== 'select') clearSelection()
-  }, [clearSelection])
-
   return (
-    <div className="flow-wrap" onMouseMove={updateCursorPosition}>
+    <div
+      ref={shortcutScopeRef}
+      className="flow-wrap"
+      tabIndex={-1}
+      onKeyDown={handleShortcutKeyDown}
+      onMouseMove={updateCursorPosition}
+    >
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}
@@ -411,6 +402,7 @@ export function CanvasWorkspace({
           updateSelection({ edges: [edge.id], nodes: [] })
         }}
         onNodeClick={(_, node) => {
+          deactivateShortcutScope()
           updateSelection({ edges: [], nodes: [node.id] })
           if (node.type === 'promptCard') {
             onSelectCard(node.id)
@@ -475,6 +467,7 @@ export function CanvasWorkspace({
             penColor={penColor}
             penColors={penColors}
             textStyle={activeTextStyle}
+            toolShortcuts={toolShortcuts}
             onDeleteSelected={deleteSelected}
             onSelectFrameStyle={updateFrameStyle}
             onSelectPenColor={setPenColor}
