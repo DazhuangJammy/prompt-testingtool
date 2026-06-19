@@ -5,13 +5,14 @@ import {
   type NodeProps,
   type ResizeParams,
 } from '@xyflow/react'
-import type { FocusEvent, MouseEvent } from 'react'
+import type { CSSProperties, FocusEvent, MouseEvent } from 'react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import {
   isFocusLeavingContainer,
   isTargetOutsideContainer,
 } from '@/features/canvas/components/editorFocus'
 import type { CanvasShapeFlowNode } from '@/features/canvas/model/flowTypes'
+import { resolveCanvasNodeFrameStyle } from '@/shared/model/nodeFrameStyle'
 import {
   getTextOffsetFromPoint,
   placeTextControlCaret,
@@ -31,6 +32,10 @@ function FlowShapeNode({ data }: NodeProps<CanvasShapeFlowNode>) {
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   const titleRef = useRef<HTMLInputElement>(null)
   const isSelected = selectedNodeId === node.id
+  const frameStyle = resolveCanvasNodeFrameStyle(node.frameStyle)
+  const nodeStyle = node.frameStyle?.borderColor
+    ? ({ '--node-frame-color': frameStyle.borderColor } as CSSProperties)
+    : undefined
 
   const saveDraft = useCallback(() => {
     const title = (titleRef.current?.value ?? titleDraft).trim() || node.title
@@ -112,7 +117,10 @@ function FlowShapeNode({ data }: NodeProps<CanvasShapeFlowNode>) {
     <section
       className={`flow-shape flow-shape-${node.kind} ${
         isSelected ? 'is-selected' : ''
-      } ${hovering ? 'is-hovered' : ''}`}
+      } ${hovering ? 'is-hovered' : ''} ${
+        frameStyle.highlighted ? 'is-highlighted' : ''
+      }`}
+      style={nodeStyle}
       onClick={() => onSelect(node.id)}
       onDoubleClick={startEditing}
       onPointerEnter={() => setHovering(true)}

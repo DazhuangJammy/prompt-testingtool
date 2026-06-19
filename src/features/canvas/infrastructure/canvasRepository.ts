@@ -30,7 +30,10 @@ export const canvasRepository = {
   async updateShapeNode(
     id: string,
     updates: Partial<
-      Pick<CanvasShapeNode, 'body' | 'height' | 'position' | 'title' | 'width'>
+      Pick<
+        CanvasShapeNode,
+        'body' | 'frameStyle' | 'height' | 'position' | 'title' | 'width'
+      >
     >,
   ) {
     await db.canvasShapeNodes.update(id, { ...updates, updatedAt: nowIso() })
@@ -153,6 +156,7 @@ export const canvasRepository = {
         | 'backgroundColor'
         | 'color'
         | 'fontSize'
+        | 'frameStyle'
         | 'position'
         | 'text'
         | 'width'

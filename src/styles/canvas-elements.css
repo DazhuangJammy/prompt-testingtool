@@ -84,7 +84,7 @@
 
 .flow-shape::before {
   background: color-mix(in srgb, var(--panel) 96%, var(--surface));
-  border: 1px solid var(--line);
+  border: 1px solid var(--node-frame-color, var(--line));
   border-radius: inherit;
   box-shadow: var(--shadow);
   content: '';
@@ -116,7 +116,7 @@
 }
 
 .flow-shape.is-selected::before {
-  border-color: var(--line-strong);
+  border-color: var(--node-frame-color, var(--line-strong));
 }
 
 .flow-shape-decision {
@@ -295,7 +295,7 @@
 
 .free-text-node {
   background: var(--free-text-bg);
-  border: 1px solid transparent;
+  border: 1px solid var(--node-frame-color, transparent);
   border-radius: 6px;
   color: var(--free-text-color);
   font-size: var(--free-text-size);
@@ -308,7 +308,7 @@
 }
 
 .free-text-node.is-selected {
-  border-color: var(--line-strong);
+  border-color: var(--node-frame-color, var(--line-strong));
 }
 
 .free-text-drag-area {

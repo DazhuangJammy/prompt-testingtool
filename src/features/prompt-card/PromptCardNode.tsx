@@ -1,9 +1,10 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
   optimizeFullPrompt,
   optimizeSelectedPromptText,
 } from '@/features/prompt-card/application/promptOptimizationService'
+import { resolveCanvasNodeFrameStyle } from '@/shared/model/nodeFrameStyle'
 import {
   insertMarkdownChildOutlineNode,
   moveTopLevelMarkdownHeading,
@@ -11,10 +12,11 @@ import {
 } from '@/features/prompt-card/model/markdownEditing'
 import {
   compilePrompt,
-  importMarkdownToPromptCard,
+  findMarkdownOutlineNodeById,
   type MarkdownOutlineNode,
   normalizePromptCard,
   parseMarkdownOutline,
+  remapCollapsedMarkdownHeadingIds,
   updatePromptMarkdown,
 } from '@/features/prompt-card/model/prompt'
 import {
@@ -54,12 +56,10 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
   >('idle')
   const [importPanelOpen, setImportPanelOpen] = useState(false)
   const [importDraft, setImportDraft] = useState('')
-  const [optimizationMode, setOptimizationMode] =
-    useState<PromptOptimizationMode>()
+  const [optimizationMode, setOptimizationMode] = useState<PromptOptimizationMode>()
   const [optimizationError, setOptimizationError] = useState('')
   const [optimizationLoading, setOptimizationLoading] = useState(false)
-  const [selectionOptimization, setSelectionOptimization] =
-    useState<TextSelectionRange>()
+  const [selectionOptimization, setSelectionOptimization] = useState<TextSelectionRange>()
   const copyTimerRef = useRef<number | undefined>(undefined)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const markdownTextareaRef = useRef<HTMLTextAreaElement>(null)
@@ -67,16 +67,18 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
   const [editingTitle, setEditingTitle] = useState(false)
   const [editingMarkdown, setEditingMarkdown] = useState(false)
   const [editingNodeId, setEditingNodeId] = useState<string | undefined>()
-  const [editingNodeFocus, setEditingNodeFocus] =
-    useState<MarkdownNodeEditFocus>('body')
-  const [editingNodeCursorOffset, setEditingNodeCursorOffset] =
-    useState<number | undefined>()
+  const [editingNodeFocus, setEditingNodeFocus] = useState<MarkdownNodeEditFocus>('body')
+  const [editingNodeCursorOffset, setEditingNodeCursorOffset] = useState<number | undefined>()
   const [collapsedHeadingIds, setCollapsedHeadingIds] = useState<Set<string>>(
     () => new Set(),
   )
   const [hovering, setHovering] = useState(false)
   const [titleDraft, setTitleDraft] = useState(card.title)
   const isSelected = selectedCardId === card.id
+  const frameStyle = resolveCanvasNodeFrameStyle(card.frameStyle)
+  const nodeStyle = card.frameStyle?.borderColor
+    ? ({ '--node-frame-color': frameStyle.borderColor } as CSSProperties)
+    : undefined
   const compiledMarkdown = useMemo(() => compilePrompt(card), [card])
   const [markdownDraft, setMarkdownDraft] = useState(compiledMarkdown)
   const outline = useMemo(
@@ -84,7 +86,7 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
     [compiledMarkdown],
   )
   const activeEditingNodeId =
-    editingNodeId && findNodeById(outline.nodes, editingNodeId)
+    editingNodeId && findMarkdownOutlineNodeById(outline.nodes, editingNodeId)
       ? editingNodeId
       : undefined
   const promptOptimizationThinkingMode = normalizeThinkingMode(
@@ -94,6 +96,15 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
 
   const updateCard = (nextCard: typeof card) => {
     onChange({ ...nextCard, updatedAt: new Date().toISOString() })
+  }
+
+  const updateCardWithMarkdown = (nextMarkdown: string) => {
+    const previousOutline = parseMarkdownOutline(compiledMarkdown)
+    const nextOutline = parseMarkdownOutline(nextMarkdown)
+    setCollapsedHeadingIds((current) =>
+      remapCollapsedMarkdownHeadingIds(previousOutline, nextOutline, current),
+    )
+    updateCard(updatePromptMarkdown(card, nextMarkdown))
   }
 
   const showToast = (state: Exclude<typeof toastState, 'idle'>) => {
@@ -114,7 +125,7 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
 
   const importPromptMarkdown = async () => {
     if (!importDraft.trim()) return
-    updateCard(importMarkdownToPromptCard(card, importDraft))
+    updateCardWithMarkdown(importDraft)
     setImportDraft('')
     setImportPanelOpen(false)
     showToast('imported')
@@ -212,7 +223,7 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
           systemPrompt: promptOptimizationSettings?.prompt,
           thinkingMode: promptOptimizationThinkingMode,
         })
-        updateCard(updatePromptMarkdown(card, optimizedPrompt))
+        updateCardWithMarkdown(optimizedPrompt)
         setMarkdownDraft(optimizedPrompt)
       }
 
@@ -268,7 +279,7 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
 
   const saveMarkdown = () => {
     const nextMarkdown = markdownDraft.trim()
-    updateCard(updatePromptMarkdown(card, nextMarkdown))
+    updateCardWithMarkdown(nextMarkdown)
     setMarkdownDraft(nextMarkdown)
     setEditingMarkdown(false)
   }
@@ -280,8 +291,7 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
 
   const appendChildHeading = (node: MarkdownOutlineNode) => {
     const result = insertMarkdownChildOutlineNode(compiledMarkdown, node)
-    const nextCard = updatePromptMarkdown(card, result.markdown)
-    updateCard(nextCard)
+    updateCardWithMarkdown(result.markdown)
     setEditingMarkdown(false)
     setEditingNodeId(result.nodeId)
     setEditingNodeFocus('title')
@@ -305,7 +315,7 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
       title,
       body,
     )
-    updateCard(updatePromptMarkdown(card, nextMarkdown))
+    updateCardWithMarkdown(nextMarkdown)
     setEditingNodeId(undefined)
     setEditingNodeCursorOffset(undefined)
   }
@@ -317,7 +327,7 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
       overId,
     )
     if (nextMarkdown === compiledMarkdown) return
-    updateCard(updatePromptMarkdown(card, nextMarkdown))
+    updateCardWithMarkdown(nextMarkdown)
   }
 
   const toggleHeadingCollapse = (id: string) => {
@@ -358,7 +368,8 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
     <section
       className={`prompt-node ${isSelected ? 'is-selected' : ''} ${
         hovering ? 'is-hovered' : ''
-      }`}
+      } ${frameStyle.highlighted ? 'is-highlighted' : ''}`}
+      style={nodeStyle}
       onClick={() => onSelect(card.id)}
       onPointerEnter={() => setHovering(true)}
       onPointerLeave={() => setHovering(false)}
@@ -481,19 +492,6 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
       )}
     </section>
   )
-}
-
-function findNodeById(
-  nodes: MarkdownOutlineNode[],
-  id: string,
-): MarkdownOutlineNode | undefined {
-  for (const node of nodes) {
-    if (node.id === id) return node
-    const child = findNodeById(node.children, id)
-    if (child) return child
-  }
-
-  return undefined
 }
 
 export default memo(PromptCardNode)

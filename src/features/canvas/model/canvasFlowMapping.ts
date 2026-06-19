@@ -49,7 +49,10 @@ interface CreateCanvasNodesOptions {
   onUpdateShape: (
     id: string,
     updates: Partial<
-      Pick<CanvasShapeNode, 'body' | 'height' | 'position' | 'title' | 'width'>
+      Pick<
+        CanvasShapeNode,
+        'body' | 'frameStyle' | 'height' | 'position' | 'title' | 'width'
+      >
     >,
   ) => void
   onUpdateText: (
@@ -57,7 +60,13 @@ interface CreateCanvasNodesOptions {
     updates: Partial<
       Pick<
         CanvasTextNode,
-        'backgroundColor' | 'color' | 'fontSize' | 'position' | 'text' | 'width'
+        | 'backgroundColor'
+        | 'color'
+        | 'fontSize'
+        | 'frameStyle'
+        | 'position'
+        | 'text'
+        | 'width'
       >
     >,
   ) => void

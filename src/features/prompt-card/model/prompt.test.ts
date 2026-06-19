@@ -16,6 +16,7 @@ import {
   normalizePromptCard,
   parseMarkdownHeadingBlocks,
   parseMarkdownOutline,
+  remapCollapsedMarkdownHeadingIds,
   updatePromptMarkdown,
 } from './prompt'
 import { defaultWorkflowStepPrompt } from './sectionRegistry'
@@ -381,5 +382,28 @@ describe('prompt model', () => {
       .toBe(markdown)
     expect(moveTopLevelMarkdownHeading(markdown, 'missing', roleNode.id))
       .toBe(markdown)
+  })
+
+  it('remaps collapsed outline ids after local edits shift heading line numbers', () => {
+    const markdown = ['# 角色', '内容', '# 规则', '规则正文', '# 输出格式', 'JSON'].join(
+      '\n\n',
+    )
+    const previousOutline = parseMarkdownOutline(markdown)
+    const collapsedIds = new Set([
+      previousOutline.nodes[1].id,
+      previousOutline.nodes[2].id,
+    ])
+    const updated = updateMarkdownOutlineNode(
+      markdown,
+      previousOutline.nodes[0],
+      '角色',
+      ['内容', '新增一行'].join('\n'),
+    )
+    const nextOutline = parseMarkdownOutline(updated)
+
+    expect(nextOutline.nodes[1].id).not.toBe(previousOutline.nodes[1].id)
+    expect(
+      remapCollapsedMarkdownHeadingIds(previousOutline, nextOutline, collapsedIds),
+    ).toEqual(new Set([nextOutline.nodes[1].id, nextOutline.nodes[2].id]))
   })
 })

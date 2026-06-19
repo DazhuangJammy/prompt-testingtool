@@ -42,8 +42,8 @@ export function useCanvasNodePersistence({
     [canvasId],
   )
 
-  const onNodeDragStop = useCallback<OnNodeDrag<CanvasFlowNode>>(
-    (_, node) => {
+  const persistNodePosition = useCallback(
+    (node: CanvasFlowNode) => {
       if (node.type === 'promptCard') {
         void persistPromptNodePosition(node.id, node.position, promptCards, canvasId)
         return
@@ -65,6 +65,13 @@ export function useCanvasNodePersistence({
     [canvasId, imageNodes, promptCards, shapeNodes, strokes, textNodes],
   )
 
+  const onNodeDragStop = useCallback<OnNodeDrag<CanvasFlowNode>>(
+    (_, node) => {
+      persistNodePosition(node)
+    },
+    [persistNodePosition],
+  )
+
   const updateImageNode = useCallback(
     (
       id: string,
@@ -79,7 +86,10 @@ export function useCanvasNodePersistence({
     (
       id: string,
       updates: Partial<
-        Pick<CanvasShapeNode, 'body' | 'height' | 'position' | 'title' | 'width'>
+        Pick<
+          CanvasShapeNode,
+          'body' | 'frameStyle' | 'height' | 'position' | 'title' | 'width'
+        >
       >,
     ) => {
       void touchAfter(canvasRepository.updateShapeNode(id, updates))
@@ -93,7 +103,13 @@ export function useCanvasNodePersistence({
       updates: Partial<
         Pick<
           CanvasTextNode,
-          'backgroundColor' | 'color' | 'fontSize' | 'position' | 'text' | 'width'
+          | 'backgroundColor'
+          | 'color'
+          | 'fontSize'
+          | 'frameStyle'
+          | 'position'
+          | 'text'
+          | 'width'
         >
       >,
     ) => {
@@ -104,6 +120,7 @@ export function useCanvasNodePersistence({
 
   return {
     onNodeDragStop,
+    persistNodePosition,
     updateImageNode,
     updateShapeNode,
     updateTextNode,

@@ -53,5 +53,6 @@ export function useCanvasFlowState({
     flowNodes,
     handleEdgesChange,
     handleNodeChanges,
+    setFlowNodes,
   }
 }

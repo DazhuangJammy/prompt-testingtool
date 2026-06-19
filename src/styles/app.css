@@ -5,6 +5,8 @@
 @import './sidebar-topic-menu.css';
 @import './canvas-elements.css';
 @import './prompt-card.css';
+@import './canvas-frame-style.css';
+@import './canvas-alignment.css';
 @import './prompt-markdown-card.css';
 @import './markdown-content.css';
 @import './chat.css';

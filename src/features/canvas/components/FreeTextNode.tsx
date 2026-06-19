@@ -2,6 +2,7 @@ import { NodeResizer, type NodeProps, type ResizeParams } from '@xyflow/react'
 import { memo, useEffect, useRef, useState } from 'react'
 import type { CSSProperties, KeyboardEvent, MouseEvent } from 'react'
 import type { CanvasTextFlowNode } from '@/features/canvas/model/flowTypes'
+import { resolveCanvasNodeFrameStyle } from '@/shared/model/nodeFrameStyle'
 import {
   getTextOffsetFromPoint,
   placeTextControlCaret,
@@ -17,6 +18,7 @@ function FreeTextNode({ data }: NodeProps<CanvasTextFlowNode>) {
   const previewRef = useRef<HTMLDivElement>(null)
   const previewHeightRef = useRef(22)
   const isSelected = selectedNodeId === node.id
+  const frameStyle = resolveCanvasNodeFrameStyle(node.frameStyle)
 
   useEffect(() => {
     if (!editing) return
@@ -92,11 +94,16 @@ function FreeTextNode({ data }: NodeProps<CanvasTextFlowNode>) {
     '--free-text-bg': node.backgroundColor,
     '--free-text-color': node.color,
     '--free-text-size': `${node.fontSize}px`,
+    ...(node.frameStyle?.borderColor
+      ? { '--node-frame-color': frameStyle.borderColor }
+      : {}),
   } as CSSProperties
 
   return (
     <div
-      className={`free-text-node ${isSelected ? 'is-selected' : ''}`}
+      className={`free-text-node ${isSelected ? 'is-selected' : ''} ${
+        frameStyle.highlighted ? 'is-highlighted' : ''
+      }`}
       style={style}
       onClick={() => onSelect(node.id)}
       onDoubleClick={startEditing}

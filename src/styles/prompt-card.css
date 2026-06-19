@@ -1,6 +1,6 @@
 .prompt-node {
   background: var(--panel);
-  border: 1px solid var(--line);
+  border: 1px solid var(--node-frame-color, var(--line));
   border-radius: 8px;
   box-shadow: var(--shadow);
   color: var(--text);
@@ -9,7 +9,7 @@
 }
 
 .prompt-node.is-selected {
-  border-color: var(--line-strong);
+  border-color: var(--node-frame-color, var(--line-strong));
 }
 
 .prompt-node-head {

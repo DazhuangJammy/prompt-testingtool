@@ -23,7 +23,10 @@ export interface CanvasShapeNodeData extends Record<string, unknown> {
   onUpdate: (
     id: string,
     updates: Partial<
-      Pick<CanvasShapeNode, 'body' | 'height' | 'position' | 'title' | 'width'>
+      Pick<
+        CanvasShapeNode,
+        'body' | 'frameStyle' | 'height' | 'position' | 'title' | 'width'
+      >
     >,
   ) => void
 }
@@ -39,7 +42,13 @@ export interface CanvasTextNodeData extends Record<string, unknown> {
     updates: Partial<
       Pick<
         CanvasTextNode,
-        'backgroundColor' | 'color' | 'fontSize' | 'position' | 'text' | 'width'
+        | 'backgroundColor'
+        | 'color'
+        | 'fontSize'
+        | 'frameStyle'
+        | 'position'
+        | 'text'
+        | 'width'
       >
     >,
   ) => void

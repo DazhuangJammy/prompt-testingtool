@@ -5,15 +5,19 @@ import {
   textBackgroundColors,
   textColors,
 } from '@/features/canvas/model/textStyle'
+import { frameBorderColors, type CanvasFrameStyle } from '@/shared/model/nodeFrameStyle'
 
 interface CanvasWorkspaceToolbarProps {
   activeTool: CanvasTool
   canDelete: boolean
+  canStyleFrame: boolean
   canStyleText: boolean
+  frameStyle: CanvasFrameStyle
   penColor: string
   penColors: Array<{ label: string; value: string }>
   textStyle: CanvasTextStyle
   onDeleteSelected: () => void
+  onSelectFrameStyle: (updates: Partial<CanvasFrameStyle>) => void
   onSelectPenColor: (color: string) => void
   onSelectTextStyle: (updates: Partial<CanvasTextStyle>) => void
   onSelectTool: (tool: CanvasTool) => void
@@ -22,8 +26,11 @@ interface CanvasWorkspaceToolbarProps {
 export function CanvasWorkspaceToolbar({
   activeTool,
   canDelete,
+  canStyleFrame,
   canStyleText,
+  frameStyle,
   onDeleteSelected,
+  onSelectFrameStyle,
   onSelectPenColor,
   onSelectTextStyle,
   onSelectTool,
@@ -35,7 +42,11 @@ export function CanvasWorkspaceToolbar({
     <CanvasToolbar
       activeTool={activeTool}
       canDelete={canDelete}
+      canStyleFrame={canStyleFrame}
       canStyleText={canStyleText}
+      frameBorderColor={frameStyle.borderColor}
+      frameBorderColors={frameBorderColors}
+      frameHighlighted={frameStyle.highlighted}
       penColor={penColor}
       penColors={penColors}
       textBackgroundColor={textStyle.backgroundColor}
@@ -44,6 +55,7 @@ export function CanvasWorkspaceToolbar({
       textColors={textColors}
       textFontSize={textStyle.fontSize}
       onDeleteSelected={onDeleteSelected}
+      onSelectFrameBorderColor={(borderColor) => onSelectFrameStyle({ borderColor })}
       onSelectPenColor={onSelectPenColor}
       onSelectTextBackgroundColor={(color) =>
         onSelectTextStyle({ backgroundColor: color })
@@ -51,6 +63,9 @@ export function CanvasWorkspaceToolbar({
       onSelectTextColor={(color) => onSelectTextStyle({ color })}
       onSelectTextFontSize={(fontSize) => onSelectTextStyle({ fontSize })}
       onSelectTool={onSelectTool}
+      onToggleFrameHighlight={() =>
+        onSelectFrameStyle({ highlighted: !frameStyle.highlighted })
+      }
     />
   )
 }

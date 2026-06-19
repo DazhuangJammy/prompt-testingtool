@@ -34,6 +34,12 @@ export interface MarkdownEditResult {
   nodeId?: string
 }
 
+interface MarkdownOutlineNodeDescriptor {
+  id: string
+  indexPath: string
+  titlePath: string
+}
+
 const importableHeadingToKey = new Map<string, string>([
   ['角色', 'role'],
   ['规则', 'rules'],
@@ -178,6 +184,42 @@ export const parseMarkdownOutline = (markdown: string): MarkdownOutline => {
     preface: lines.slice(0, headings[0].lineIndex).join('\n').trim(),
     nodes: roots,
   }
+}
+
+export const remapCollapsedMarkdownHeadingIds = (
+  previousOutline: MarkdownOutline,
+  nextOutline: MarkdownOutline,
+  collapsedHeadingIds: Set<string>,
+) => {
+  const nextNodes = describeOutlineNodes(nextOutline.nodes)
+  const nextById = indexBy(nextNodes, (node) => node.id)
+  const nextByTitlePath = indexBy(nextNodes, (node) => node.titlePath)
+  const nextByIndexPath = indexBy(nextNodes, (node) => node.indexPath)
+  const nextCollapsedIds = new Set<string>()
+
+  describeOutlineNodes(previousOutline.nodes).forEach((previousNode) => {
+    if (!collapsedHeadingIds.has(previousNode.id)) return
+    const nextNode =
+      nextById.get(previousNode.id) ??
+      nextByTitlePath.get(previousNode.titlePath) ??
+      nextByIndexPath.get(previousNode.indexPath)
+    if (nextNode) nextCollapsedIds.add(nextNode.id)
+  })
+
+  return nextCollapsedIds
+}
+
+export function findMarkdownOutlineNodeById(
+  nodes: MarkdownOutlineNode[],
+  id: string,
+): MarkdownOutlineNode | undefined {
+  for (const node of nodes) {
+    if (node.id === id) return node
+    const child = findMarkdownOutlineNodeById(node.children, id)
+    if (child) return child
+  }
+
+  return undefined
 }
 
 export const createPromptCard = (
@@ -375,4 +417,38 @@ function appendSection(sections: Map<string, string>, key: string, block: string
 
   const current = sections.get(key)
   sections.set(key, current ? `${current}\n\n${trimmedBlock}` : trimmedBlock)
+}
+
+function describeOutlineNodes(
+  nodes: MarkdownOutlineNode[],
+  parentTitlePath: string[] = [],
+  parentIndexPath: number[] = [],
+): MarkdownOutlineNodeDescriptor[] {
+  return nodes.flatMap((node, index) => {
+    const titleOccurrence = nodes
+      .slice(0, index)
+      .filter((item) => item.depth === node.depth && item.title === node.title).length
+    const titlePath = [
+      ...parentTitlePath,
+      `${node.depth}:${node.title}:${titleOccurrence}`,
+    ]
+    const indexPath = [...parentIndexPath, index]
+    return [
+      {
+        id: node.id,
+        indexPath: indexPath.join('.'),
+        titlePath: titlePath.join('>'),
+      },
+      ...describeOutlineNodes(node.children, titlePath, indexPath),
+    ]
+  })
+}
+
+function indexBy<T>(items: T[], getKey: (item: T) => string) {
+  const indexed = new Map<string, T>()
+  items.forEach((item) => {
+    const key = getKey(item)
+    if (!indexed.has(key)) indexed.set(key, item)
+  })
+  return indexed
 }

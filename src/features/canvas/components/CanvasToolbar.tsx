@@ -9,13 +9,18 @@ import {
   Type,
 } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
+import { CanvasFrameStyleControls } from '@/features/canvas/components/CanvasFrameStyleControls'
 import { IconButton } from '@/shared/ui/IconButton'
 import type { CanvasTool } from '@/features/canvas/model/flowTypes'
 
 interface CanvasToolbarProps {
   activeTool: CanvasTool
   canDelete: boolean
+  canStyleFrame: boolean
   canStyleText: boolean
+  frameBorderColor: string
+  frameBorderColors: Array<{ label: string; value: string }>
+  frameHighlighted: boolean
   penColor: string
   penColors: Array<{ label: string; value: string }>
   textBackgroundColor: string
@@ -24,11 +29,13 @@ interface CanvasToolbarProps {
   textColors: Array<{ label: string; value: string }>
   textFontSize: number
   onDeleteSelected: () => void
+  onSelectFrameBorderColor: (color: string) => void
   onSelectPenColor: (color: string) => void
   onSelectTextBackgroundColor: (color: string) => void
   onSelectTextColor: (color: string) => void
   onSelectTextFontSize: (fontSize: number) => void
   onSelectTool: (tool: CanvasTool) => void
+  onToggleFrameHighlight: () => void
 }
 
 const toolItems: Array<{
@@ -48,13 +55,19 @@ const toolItems: Array<{
 export function CanvasToolbar({
   activeTool,
   canDelete,
+  canStyleFrame,
   canStyleText,
-  onSelectPenColor,
+  frameBorderColor,
+  frameBorderColors,
+  frameHighlighted,
   onDeleteSelected,
+  onSelectFrameBorderColor,
+  onSelectPenColor,
   onSelectTextBackgroundColor,
   onSelectTextColor,
   onSelectTextFontSize,
   onSelectTool,
+  onToggleFrameHighlight,
   penColor,
   penColors,
   textBackgroundColor,
@@ -146,6 +159,18 @@ export function CanvasToolbar({
               const nextSize = Number(event.target.value)
               if (Number.isFinite(nextSize)) onSelectTextFontSize(nextSize)
             }}
+          />
+        </>
+      )}
+      {canStyleFrame && (
+        <>
+          <div className="canvas-toolbar-separator" />
+          <CanvasFrameStyleControls
+            borderColor={frameBorderColor}
+            borderColors={frameBorderColors}
+            highlighted={frameHighlighted}
+            onSelectBorderColor={onSelectFrameBorderColor}
+            onToggleHighlight={onToggleFrameHighlight}
           />
         </>
       )}

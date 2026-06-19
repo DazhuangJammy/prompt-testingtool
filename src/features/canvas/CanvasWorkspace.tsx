@@ -23,12 +23,16 @@ import {
   deleteCanvasEdge,
   reconnectCanvasEdge,
 } from '@/features/canvas/application/canvasService'
+import { CanvasAlignmentGuides } from '@/features/canvas/components/CanvasAlignmentGuides'
+import { CanvasLayoutControls } from '@/features/canvas/components/CanvasLayoutControls'
 import { CanvasWorkspaceToolbar } from '@/features/canvas/components/CanvasWorkspaceToolbar'
 import { DraftStrokeLayer } from '@/features/canvas/components/DraftStrokeLayer'
+import { useCanvasAlignment } from '@/features/canvas/hooks/useCanvasAlignment'
 import { useCanvasClipboard } from '@/features/canvas/hooks/useCanvasClipboard'
 import { useCanvasDeletion } from '@/features/canvas/hooks/useCanvasDeletion'
 import { useCanvasElements } from '@/features/canvas/hooks/useCanvasElements'
 import { useCanvasFlowState } from '@/features/canvas/hooks/useCanvasFlowState'
+import { useCanvasFrameStyle } from '@/features/canvas/hooks/useCanvasFrameStyle'
 import { useCanvasNodePersistence } from '@/features/canvas/hooks/useCanvasNodePersistence'
 import { useDraftStroke } from '@/features/canvas/hooks/useDraftStroke'
 import { canvasRepository } from '@/features/canvas/infrastructure/canvasRepository'
@@ -171,7 +175,20 @@ export function CanvasWorkspace({
     flowNodes,
     handleEdgesChange: updateFlowEdges,
     handleNodeChanges,
+    setFlowNodes,
   } = useCanvasFlowState({ businessEdges, businessNodes })
+  const getFlowNode = useCallback(
+    (nodeId: string) => reactFlow.getNode(nodeId) as CanvasFlowNode | undefined,
+    [reactFlow],
+  )
+  const canvasAlignment = useCanvasAlignment({
+    flowEdges,
+    flowNodes,
+    getNode: getFlowNode,
+    onPersistNode: nodePersistence.persistNodePosition,
+    selectedNodeIds: selectedFlowIds.nodes,
+    setFlowNodes,
+  })
 
   const { draftPoints, handlePointerDown } = useDraftStroke({
     activeTool,
@@ -320,6 +337,17 @@ export function CanvasWorkspace({
         fontSize: selectedTextNode.fontSize,
       }
     : textStyle
+  const {
+    activeFrameStyle,
+    canStyleFrame,
+    updateFrameStyle,
+  } = useCanvasFrameStyle({
+    canvasId: effectiveCanvasId,
+    promptCards,
+    selectedNodeIds: selectedFlowIds.nodes,
+    shapeNodes: canvasShapeNodes,
+    textNodes: canvasTextNodes,
+  })
   const updateTextStyle = useCallback(
     (updates: Partial<CanvasTextStyle>) => {
       const normalizedUpdates = {
@@ -388,7 +416,8 @@ export function CanvasWorkspace({
             onSelectCard(node.id)
           }
         }}
-        onNodeDragStop={nodePersistence.onNodeDragStop}
+        onNodeDrag={canvasAlignment.handleNodeDrag}
+        onNodeDragStop={canvasAlignment.handleNodeDragStop}
         onEdgesChange={handleEdgesChange}
         onNodesChange={handleNodeChanges}
         onPaneClick={handlePaneClick}
@@ -427,18 +456,27 @@ export function CanvasWorkspace({
         )}
         <ViewportPortal>
           <DraftStrokeLayer points={draftPoints} />
+          <CanvasAlignmentGuides guides={canvasAlignment.alignmentGuides} />
         </ViewportPortal>
-        <Controls position="bottom-left" showInteractive={false} />
+        <Controls position="bottom-left" showInteractive={false}>
+          <CanvasLayoutControls
+            disabled={flowEdges.length === 0}
+            onArrange={canvasAlignment.arrangeCanvas}
+          />
+        </Controls>
         <MiniMap pannable position="bottom-right" zoomable />
         <Panel position="bottom-center">
           <CanvasWorkspaceToolbar
             activeTool={activeTool}
             canDelete={hasSelection}
+            canStyleFrame={canStyleFrame}
             canStyleText={Boolean(selectedTextNode)}
+            frameStyle={activeFrameStyle}
             penColor={penColor}
             penColors={penColors}
             textStyle={activeTextStyle}
             onDeleteSelected={deleteSelected}
+            onSelectFrameStyle={updateFrameStyle}
             onSelectPenColor={setPenColor}
             onSelectTextStyle={updateTextStyle}
             onSelectTool={selectTool}

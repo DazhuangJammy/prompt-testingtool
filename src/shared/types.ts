@@ -9,11 +9,17 @@ export interface Canvas {
   updatedAt: string
 }
 
+export interface CanvasNodeFrameStyle {
+  borderColor?: string
+  highlighted?: boolean
+}
+
 export interface PromptCard {
   id: string
   canvasId: string
   title: string
   position: { x: number; y: number }
+  frameStyle?: CanvasNodeFrameStyle
   markdown?: string
   sections: Record<PromptSectionKey, PromptSection>
   createdAt: string
@@ -36,6 +42,7 @@ export interface CanvasShapeNode {
   position: CanvasPoint
   width: number
   height: number
+  frameStyle?: CanvasNodeFrameStyle
   createdAt: string
   updatedAt: string
 }
@@ -70,6 +77,7 @@ export interface CanvasTextNode {
   color: string
   fontSize: number
   backgroundColor: string
+  frameStyle?: CanvasNodeFrameStyle
   createdAt: string
   updatedAt: string
 }

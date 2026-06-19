@@ -1,0 +1,63 @@
+.canvas-frame-color-button {
+  border-color: color-mix(in srgb, var(--swatch) 42%, var(--line-strong));
+}
+
+.canvas-custom-color-input {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  height: 22px;
+  overflow: hidden;
+  padding: 0;
+  width: 22px;
+}
+
+.canvas-custom-color-input::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.canvas-custom-color-input::-webkit-color-swatch {
+  border: 0;
+  border-radius: 999px;
+}
+
+.canvas-highlight-button.is-active {
+  border-color: var(--line-strong);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 16%, transparent);
+}
+
+.flow-shape.is-highlighted::before,
+.free-text-node.is-highlighted,
+.prompt-node.is-highlighted {
+  border-color: var(--node-frame-color, var(--line-strong));
+}
+
+.flow-shape.is-highlighted::before {
+  box-shadow:
+    var(--shadow),
+    0 0 0 1px color-mix(in srgb, var(--node-frame-color, var(--accent)) 20%, transparent),
+    0 0 22px color-mix(in srgb, var(--node-frame-color, var(--accent)) 24%, transparent);
+}
+
+.flow-shape-decision.is-highlighted::before {
+  box-shadow: none;
+  filter:
+    drop-shadow(0 14px 42px rgba(0, 0, 0, 0.35))
+    drop-shadow(
+      0 0 18px color-mix(in srgb, var(--node-frame-color, var(--accent)) 26%, transparent)
+    );
+}
+
+.free-text-node.is-highlighted {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--node-frame-color, var(--accent)) 18%, transparent),
+    0 0 18px color-mix(in srgb, var(--node-frame-color, var(--accent)) 22%, transparent);
+}
+
+.prompt-node.is-highlighted {
+  box-shadow:
+    var(--shadow),
+    0 0 0 1px color-mix(in srgb, var(--node-frame-color, var(--accent)) 16%, transparent),
+    0 0 24px color-mix(in srgb, var(--node-frame-color, var(--accent)) 20%, transparent);
+}
