@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { workspaceRepository } from '@/features/workspace/infrastructure/workspaceRepository'
 import {
   addPromptCardToCanvas,
+  createChatTopicExport,
   createNextCanvas,
   createWorkspaceExport,
   deleteCanvasAndPickNext,
+  importChatTopicFile,
   importWorkspaceFile,
 } from './workspaceService'
 import type { Canvas, ExportPayload } from '@/shared/types'
@@ -14,7 +16,9 @@ vi.mock('@/features/workspace/infrastructure/workspaceRepository', () => ({
     createCanvas: vi.fn(),
     createPromptCard: vi.fn(),
     deleteCanvasCascade: vi.fn(),
+    exportChatTopic: vi.fn(),
     exportWorkspace: vi.fn(),
+    importChatTopic: vi.fn(),
     importWorkspace: vi.fn(),
     listCanvasesByUpdatedAt: vi.fn(),
   },
@@ -110,5 +114,54 @@ describe('workspace service', () => {
 
     expect(result.filename).toMatch(/^prompt-canvas-\d{4}-\d{2}-\d{2}.json$/)
     expect(JSON.parse(result.text).canvases).toHaveLength(2)
+  })
+
+  it('creates chat topic export file payload', async () => {
+    vi.mocked(workspaceRepository.exportChatTopic).mockResolvedValue({
+      kind: 'prompt-canvas-chat-topic',
+      version: 1,
+      exportedAt: 'now',
+      chatSession: {
+        id: 'session',
+        title: 'SOP 流程梳理',
+        createdAt: 'now',
+        updatedAt: 'now',
+      },
+      chatMessages: [],
+      promptCards: [],
+      promptVersions: [],
+      compareRuns: [],
+    })
+
+    const result = await createChatTopicExport('session')
+
+    expect(result.filename).toMatch(/^prompt-topic-SOP-流程梳理-\d{4}-\d{2}-\d{2}.json$/)
+    expect(JSON.parse(result.text).kind).toBe('prompt-canvas-chat-topic')
+  })
+
+  it('imports chat topic file into target canvas', async () => {
+    vi.mocked(workspaceRepository.importChatTopic).mockResolvedValue({
+      canvasId: 'canvas',
+      sessionId: '00000000-0000-4000-8000-000000000001',
+    })
+    const file = new File(
+      [
+        JSON.stringify({
+          kind: 'prompt-canvas-chat-topic',
+          version: 1,
+          chatSession: { id: 'session', title: 'T' },
+        }),
+      ],
+      'topic.json',
+    )
+
+    await expect(importChatTopicFile(file, 'canvas')).resolves.toEqual({
+      canvasId: 'canvas',
+      sessionId: '00000000-0000-4000-8000-000000000001',
+    })
+    expect(workspaceRepository.importChatTopic).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'prompt-canvas-chat-topic' }),
+      'canvas',
+    )
   })
 })

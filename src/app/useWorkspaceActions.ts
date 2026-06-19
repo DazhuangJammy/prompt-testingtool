@@ -1,8 +1,10 @@
 import {
   addPromptCardToCanvas,
+  createChatTopicExport,
   createNextCanvas,
   createWorkspaceExport,
   deleteCanvasAndPickNext,
+  importChatTopicFile,
   importWorkspaceFile,
 } from '@/features/workspace/application/workspaceService'
 import { workspaceRepository } from '@/features/workspace/infrastructure/workspaceRepository'
@@ -52,8 +54,7 @@ export function useWorkspaceActions({
     if (card) setSelectedCardId(card.id)
   }
 
-  const exportWorkspace = async () => {
-    const exportFile = await createWorkspaceExport()
+  const downloadExportFile = (exportFile: { filename: string; text: string }) => {
     const blob = new Blob([exportFile.text], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
@@ -63,9 +64,25 @@ export function useWorkspaceActions({
     URL.revokeObjectURL(url)
   }
 
+  const exportWorkspace = async () => {
+    downloadExportFile(await createWorkspaceExport())
+  }
+
+  const exportChatTopic = async (sessionId?: string) => {
+    if (!sessionId) throw new Error('请选择要导出的话题')
+    downloadExportFile(await createChatTopicExport(sessionId))
+  }
+
   const importWorkspace = async (file: File) => {
     setActiveCanvasId(await importWorkspaceFile(file))
     setSelectedCardId(undefined)
+  }
+
+  const importChatTopic = async (file: File, targetCanvasId?: string) => {
+    const result = await importChatTopicFile(file, targetCanvasId)
+    setActiveCanvasId(result.canvasId)
+    setSelectedCardId(undefined)
+    return result
   }
 
   return {
@@ -73,7 +90,9 @@ export function useWorkspaceActions({
     createNextCanvas: createCanvas,
     deleteCanvas,
     deletePromptCard,
+    exportChatTopic,
     exportWorkspace,
+    importChatTopic,
     importWorkspace,
     updateCanvas,
   }

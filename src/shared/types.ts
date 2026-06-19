@@ -236,3 +236,20 @@ export interface ExportPayload {
   chatMessages: ChatMessage[]
   compareRuns: CompareRun[]
 }
+
+export interface ChatTopicExportPayload {
+  kind: 'prompt-canvas-chat-topic'
+  version: 1
+  exportedAt: string
+  sourceCanvas?: Canvas
+  chatSession: ChatSession
+  chatMessages: ChatMessage[]
+  promptCards: PromptCard[]
+  canvasShapeNodes?: CanvasShapeNode[]
+  canvasEdges?: CanvasEdge[]
+  canvasStrokes?: CanvasStroke[]
+  canvasTextNodes?: CanvasTextNode[]
+  canvasImageNodes?: CanvasImageNode[]
+  promptVersions: PromptVersion[]
+  compareRuns: CompareRun[]
+}

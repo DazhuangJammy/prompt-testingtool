@@ -23,6 +23,7 @@ vi.mock('@/shared/storage/db', () => ({
       bulkPut: vi.fn(),
       clear: vi.fn(),
       delete: vi.fn(),
+      get: vi.fn(() => undefined),
       reverse: vi.fn(() => ({ sortBy: vi.fn(() => [{ id: 'canvas' }]) })),
       toArray: vi.fn(() => []),
       update: vi.fn(),
@@ -64,8 +65,10 @@ vi.mock('@/shared/storage/db', () => ({
       where: vi.fn(() => chain([])),
     },
     chatSessions: {
+      add: vi.fn(),
       bulkPut: vi.fn(),
       clear: vi.fn(),
+      get: vi.fn(() => undefined),
       toArray: vi.fn(() => []),
       where: vi.fn(() => chain([])),
     },
@@ -245,6 +248,176 @@ describe('workspace repository', () => {
     await expect(workspaceRepository.listCanvasesByUpdatedAt()).resolves.toEqual([
       { id: 'canvas' },
     ])
+  })
+
+  it('exports one chat topic package with its canvas records', async () => {
+    vi.mocked(db.chatSessions.get).mockResolvedValueOnce({
+      id: 'session',
+      canvasId: 'canvas',
+      promptCardId: 'card',
+      title: '话题',
+      createdAt: 'now',
+      updatedAt: 'now',
+    })
+    vi.mocked(db.canvases.get).mockResolvedValueOnce({
+      id: 'canvas',
+      title: '工作台',
+      createdAt: 'now',
+      updatedAt: 'now',
+    })
+    vi.mocked(db.promptCards.where).mockReturnValueOnce(
+      chain([
+        {
+          id: 'card',
+          canvasId: 'canvas',
+          title: '卡片',
+          position: { x: 0, y: 0 },
+          sections: {},
+          createdAt: 'now',
+          updatedAt: 'now',
+        },
+      ]) as never,
+    )
+    vi.mocked(db.chatMessages.where).mockReturnValueOnce(
+      chain([
+        {
+          id: 'message',
+          sessionId: 'session',
+          role: 'user',
+          content: '你好',
+          promptVersionId: 'version',
+          createdAt: 'now',
+        },
+      ]) as never,
+    )
+    vi.mocked(db.promptVersions.where).mockReturnValueOnce(
+      chain([{ id: 'version', promptCardId: 'card' }]) as never,
+    )
+
+    await expect(workspaceRepository.exportChatTopic('session')).resolves.toMatchObject({
+      kind: 'prompt-canvas-chat-topic',
+      chatSession: { id: 'session' },
+      chatMessages: [{ id: 'message' }],
+      promptVersions: [{ id: 'version' }],
+    })
+  })
+
+  it('imports chat topic package into a selected canvas with remapped ids', async () => {
+    await expect(
+      workspaceRepository.importChatTopic(
+        {
+          kind: 'prompt-canvas-chat-topic',
+          version: 1,
+          exportedAt: 'now',
+          chatSession: {
+            id: 'session',
+            canvasId: 'old-canvas',
+            promptCardId: 'card',
+            title: '导入话题',
+            createdAt: 'old',
+            updatedAt: 'old',
+          },
+          chatMessages: [
+            {
+              id: 'message',
+              sessionId: 'session',
+              role: 'user',
+              content: '你好',
+              promptVersionId: 'version',
+              createdAt: 'old',
+            },
+          ],
+          promptCards: [
+            {
+              id: 'card',
+              canvasId: 'old-canvas',
+              title: '卡片',
+              position: { x: 0, y: 0 },
+              sections: {},
+              createdAt: 'old',
+              updatedAt: 'old',
+            },
+          ],
+          canvasShapeNodes: [],
+          canvasEdges: [
+            {
+              id: 'edge',
+              canvasId: 'old-canvas',
+              sourceId: 'card',
+              targetId: 'card',
+              createdAt: 'old',
+              updatedAt: 'old',
+            },
+          ],
+          promptVersions: [
+            {
+              id: 'version',
+              promptCardId: 'card',
+              compiledMarkdown: 'md',
+              reason: 'chat-send',
+              createdAt: 'old',
+            },
+          ],
+          compareRuns: [],
+        },
+        'target-canvas',
+      ),
+    ).resolves.toMatchObject({ canvasId: 'target-canvas' })
+
+    expect(db.canvases.add).not.toHaveBeenCalled()
+    expect(db.chatSessions.add).toHaveBeenCalledWith(
+      expect.objectContaining({ canvasId: 'target-canvas', title: '导入话题' }),
+    )
+    expect(db.promptCards.bulkPut).toHaveBeenCalledWith([
+      expect.objectContaining({ canvasId: 'target-canvas' }),
+    ])
+    expect(db.chatMessages.bulkPut).toHaveBeenCalledWith([
+      expect.objectContaining({ sessionId: expect.any(String) }),
+    ])
+  })
+
+  it('creates a canvas when importing a topic without target canvas', async () => {
+    await expect(
+      workspaceRepository.importChatTopic({
+        kind: 'prompt-canvas-chat-topic',
+        version: 1,
+        exportedAt: 'now',
+        sourceCanvas: {
+          id: 'old-canvas',
+          title: '原工作台',
+          createdAt: 'old',
+          updatedAt: 'old',
+        },
+        chatSession: {
+          id: 'session',
+          title: '导入话题',
+          createdAt: 'old',
+          updatedAt: 'old',
+        },
+        chatMessages: [],
+        promptCards: [],
+        promptVersions: [],
+        compareRuns: [],
+      }),
+    ).resolves.toMatchObject({ canvasId: expect.any(String) })
+
+    expect(db.canvases.add).toHaveBeenCalledWith(
+      expect.objectContaining({ title: '原工作台' }),
+    )
+  })
+
+  it('rejects unsupported chat topic package', async () => {
+    await expect(
+      workspaceRepository.importChatTopic({ kind: 'other', version: 1 } as never),
+    ).rejects.toThrow('Unsupported topic file')
+  })
+
+  it('throws when exporting a missing chat topic', async () => {
+    vi.mocked(db.chatSessions.get).mockResolvedValueOnce(undefined)
+
+    await expect(workspaceRepository.exportChatTopic('missing')).rejects.toThrow(
+      '未找到要导出的话题',
+    )
   })
 
   it('lists prompt cards and providers', async () => {

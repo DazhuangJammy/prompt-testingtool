@@ -162,8 +162,11 @@ function App() {
           onDelete={actions.deleteCanvas}
           onDeleteSession={deleteChatSession}
           onExportSession={exportChatSession}
-          onExport={actions.exportWorkspace}
-          onImport={actions.importWorkspace}
+          onExport={actions.exportChatTopic}
+          onImport={async (file, targetCanvasId) => {
+            const result = await actions.importChatTopic(file, targetCanvasId)
+            setActiveChatSessionForCanvas(result.canvasId, result.sessionId)
+          }}
           onOpenSettings={() => setSettingsOpen(true)}
           onResizeStart={resizablePanels.startSidebarResize}
           width={resizablePanels.sidebarWidth}

@@ -140,12 +140,16 @@ describe('MarkdownCardPreview', () => {
 
     await act(async () => {
       textarea!.setSelectionRange(0, 2)
+      textarea!.dispatchEvent(new Event('select', { bubbles: true }))
       textarea!.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
     })
-    const optimizeButton = document.querySelector<HTMLButtonElement>(
-      'button.prompt-selection-optimize',
-    )
-    expect(optimizeButton).toBeTruthy()
+    let optimizeButton: HTMLButtonElement | null = null
+    await waitForAssertion(() => {
+      optimizeButton = document.querySelector<HTMLButtonElement>(
+        'button.prompt-selection-optimize',
+      )
+      expect(optimizeButton).toBeTruthy()
+    })
     await act(async () => {
       optimizeButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
@@ -216,6 +220,7 @@ describe('MarkdownCardPreview', () => {
     )
     await act(async () => {
       textarea!.setSelectionRange(0, 2)
+      textarea!.dispatchEvent(new Event('select', { bubbles: true }))
       textarea!.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
     })
     await act(async () => {

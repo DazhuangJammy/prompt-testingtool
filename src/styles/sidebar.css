@@ -349,3 +349,142 @@
   border-color: var(--line);
   color: var(--text);
 }
+
+.sidebar-dialog-backdrop {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.48);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 18px;
+  position: fixed;
+  z-index: 180;
+}
+
+.topic-import-dialog {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  color: var(--text);
+  display: grid;
+  gap: 16px;
+  max-width: min(440px, calc(100vw - 36px));
+  padding: 18px;
+  width: 100%;
+}
+
+.topic-import-dialog header,
+.topic-import-dialog footer {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.topic-import-dialog h2 {
+  font-size: 17px;
+  margin: 0;
+}
+
+.topic-import-body {
+  display: grid;
+  gap: 14px;
+}
+
+.topic-import-body label {
+  display: grid;
+  gap: 7px;
+}
+
+.topic-import-body label > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.topic-import-body select,
+.topic-import-file > div {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  display: flex;
+  height: 44px;
+  min-width: 0;
+  padding: 0 12px;
+}
+
+.topic-import-body select {
+  appearance: none;
+}
+
+.topic-import-file > div {
+  cursor: pointer;
+  gap: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+.topic-import-file input {
+  cursor: pointer;
+  inset: 0;
+  opacity: 0;
+  position: absolute;
+}
+
+.topic-import-file svg {
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+
+.topic-import-file span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topic-import-error {
+  border: 1px solid color-mix(in srgb, var(--danger) 52%, var(--line));
+  border-radius: 8px;
+  color: var(--danger);
+  margin: 0;
+  padding: 9px 10px;
+}
+
+.topic-import-dialog footer {
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.topic-import-dialog .primary-button,
+.topic-import-dialog .secondary-button {
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 650;
+  height: 40px;
+  padding: 0 16px;
+}
+
+.topic-import-dialog .primary-button {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: var(--bg);
+}
+
+.topic-import-dialog .primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.topic-import-dialog .secondary-button {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.topic-import-dialog .secondary-button:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}

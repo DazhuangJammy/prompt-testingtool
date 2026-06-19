@@ -17,17 +17,13 @@ import {
   Sun,
   Trash2,
 } from 'lucide-react'
-import type {
-  ChangeEvent,
-  CSSProperties,
-  PointerEvent as ReactPointerEvent,
-} from 'react'
+import type { CSSProperties } from 'react'
 import { useEffect, useState } from 'react'
 import { IconButton } from '@/shared/ui/IconButton'
-import { hideTooltip, showTooltip } from '@/shared/ui/tooltip'
 import type { Canvas, ChatSession, ThemeMode } from '@/shared/types'
 import { AppVersionBadge } from './components/AppVersionBadge'
 import { TopicActionsMenu } from './components/TopicActionsMenu'
+import { TopicImportDialog } from './components/TopicImportDialog'
 import type { ChatSessionExportAction } from './sidebar.types'
 
 interface SidebarProps {
@@ -51,10 +47,10 @@ interface SidebarProps {
     session: ChatSession,
     action: ChatSessionExportAction,
   ) => Promise<void>
-  onExport: () => void
-  onImport: (file: File) => void
+  onExport: (sessionId?: string) => Promise<void>
+  onImport: (file: File, targetCanvasId?: string) => Promise<void>
   onOpenSettings: () => void
-  onResizeStart: (event: ReactPointerEvent) => void
+  onResizeStart: (event: React.PointerEvent) => void
   width: number
 }
 
@@ -87,6 +83,7 @@ export function Sidebar({
     () => new Set(),
   )
   const [menuCanvasId, setMenuCanvasId] = useState<string>()
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
 
   useEffect(() => {
@@ -119,18 +116,13 @@ export function Sidebar({
     }
   }, [menuCanvasId])
 
-  const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      await onImport(file)
-      setToastMessage('导入成功')
-    }
-    event.target.value = ''
-  }
-
   const handleExport = async () => {
-    await onExport()
-    setToastMessage('导出成功')
+    try {
+      await onExport(effectiveSessionId)
+      setToastMessage('导出成功')
+    } catch (error) {
+      setToastMessage(error instanceof Error ? error.message : '导出失败')
+    }
   }
 
   const toggleCanvas = (canvasId: string) => {
@@ -200,26 +192,15 @@ export function Sidebar({
             <div className="sidebar-section-head">
               <span>工作台</span>
               <div className="sidebar-section-actions">
-                <label
-                  className="icon-button file-button"
-                  data-tooltip="导入"
-                  onBlur={hideTooltip}
-                  onClick={hideTooltip}
-                  onFocus={(event) => showTooltip(event.currentTarget, '导入')}
-                  onMouseEnter={(event) => showTooltip(event.currentTarget, '导入')}
-                  onMouseLeave={hideTooltip}
-                  onPointerDown={hideTooltip}
-                >
-                  <FileInput />
-                  <input
-                    accept="application/json"
-                    type="file"
-                    onChange={(event) => void handleImport(event)}
-                  />
-                </label>
+                <IconButton
+                  icon={<FileInput />}
+                  label="导入话题"
+                  onClick={() => setImportDialogOpen(true)}
+                />
                 <IconButton
                   icon={<Download />}
-                  label="导出"
+                  label="导出话题"
+                  disabled={!effectiveSessionId}
                   onClick={() => void handleExport()}
                 />
                 <IconButton icon={<Plus />} label="新建工作台" onClick={onCreate} />
@@ -368,6 +349,17 @@ export function Sidebar({
           className="panel-resizer is-right"
           aria-label="调整宽度"
           onPointerDown={onResizeStart}
+        />
+      )}
+      {importDialogOpen && (
+        <TopicImportDialog
+          activeCanvasId={activeCanvasId}
+          canvases={canvases}
+          onClose={() => setImportDialogOpen(false)}
+          onImport={async (file, targetCanvasId) => {
+            await onImport(file, targetCanvasId)
+            setToastMessage('导入成功')
+          }}
         />
       )}
     </aside>
