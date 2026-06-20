@@ -136,6 +136,7 @@ export function useCanvasClipboard({
 
       const key = event.key.toLowerCase()
       if (key === 'c') {
+        if (hasTextSelection()) return
         event.preventDefault()
         copySelection()
       }
@@ -180,4 +181,17 @@ function isCopyPasteModifier(event: KeyboardEvent) {
 function isEditableTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false
   return Boolean(target.closest('input, textarea, [contenteditable="true"]'))
+}
+
+export function hasTextSelection() {
+  const activeElement = document.activeElement
+  if (
+    activeElement instanceof HTMLInputElement ||
+    activeElement instanceof HTMLTextAreaElement
+  ) {
+    return (activeElement.selectionStart ?? 0) !== (activeElement.selectionEnd ?? 0)
+  }
+
+  const selection = window.getSelection()
+  return Boolean(selection && !selection.isCollapsed && selection.toString().trim())
 }

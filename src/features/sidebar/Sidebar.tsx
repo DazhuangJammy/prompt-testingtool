@@ -41,6 +41,11 @@ interface SidebarProps {
   onCreateSession: (canvasId?: string) => void
   onRename: (id: string, title: string) => void
   onRenameSession: (session: ChatSession) => void
+  onReorderSessions: (
+    canvasId: string,
+    draggedId: string,
+    targetId: string,
+  ) => Promise<void>
   onDuplicateSession: (session: ChatSession) => Promise<void>
   onDelete: (id: string) => void
   onDeleteSession: (session: ChatSession) => void
@@ -70,6 +75,7 @@ export function Sidebar({
   onCreateSession,
   onRename,
   onRenameSession,
+  onReorderSessions,
   onDuplicateSession,
   onDelete,
   onDeleteSession,
@@ -87,6 +93,8 @@ export function Sidebar({
     () => new Set(),
   )
   const [menuCanvasId, setMenuCanvasId] = useState<string>()
+  const [draggingSessionId, setDraggingSessionId] = useState<string>()
+  const [dragOverSessionId, setDragOverSessionId] = useState<string>()
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
 
@@ -147,6 +155,11 @@ export function Sidebar({
     const next = prompt('重命名工作台', canvas.title)
     if (next) onRename(canvas.id, next)
     setMenuCanvasId(undefined)
+  }
+
+  const clearTopicDragState = () => {
+    setDraggingSessionId(undefined)
+    setDragOverSessionId(undefined)
   }
 
   return (
@@ -287,11 +300,60 @@ export function Sidebar({
                             <div
                               className={`topic-row ${
                                 session.id === effectiveSessionId ? 'is-active' : ''
+                              } ${
+                                session.id === draggingSessionId
+                                  ? 'is-dragging'
+                                  : ''
+                              } ${
+                                session.id === dragOverSessionId &&
+                                session.id !== draggingSessionId
+                                  ? 'is-drag-over'
+                                  : ''
                               }`}
                               key={session.id}
+                              draggable
+                              onDragStart={(event) => {
+                                setDraggingSessionId(session.id)
+                                event.dataTransfer.effectAllowed = 'move'
+                                event.dataTransfer.setData(
+                                  'text/chat-session-id',
+                                  session.id,
+                                )
+                              }}
+                              onDragOver={(event) => {
+                                event.preventDefault()
+                                event.dataTransfer.dropEffect = 'move'
+                                setDragOverSessionId(session.id)
+                              }}
+                              onDragLeave={() => {
+                                setDragOverSessionId((id) =>
+                                  id === session.id ? undefined : id,
+                                )
+                              }}
+                              onDragEnd={clearTopicDragState}
+                              onDrop={(event) => {
+                                event.preventDefault()
+                                const draggedId = event.dataTransfer.getData(
+                                  'text/chat-session-id',
+                                )
+                                clearTopicDragState()
+                                if (!draggedId || draggedId === session.id) return
+                                void onReorderSessions(
+                                  canvas.id,
+                                  draggedId,
+                                  session.id,
+                                ).catch((error: unknown) => {
+                                  setToastMessage(
+                                    error instanceof Error
+                                      ? error.message
+                                      : '排序失败',
+                                  )
+                                })
+                              }}
                             >
                               <button
                                 type="button"
+                                draggable={false}
                                 title={session.title}
                                 onClick={() => {
                                   onSelect(canvas.id)

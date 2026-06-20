@@ -60,6 +60,21 @@ export const chatRepository = {
     })
   },
 
+  async updateSessionSortOrders(updates: { id: string; sortOrder: number }[]) {
+    if (!updates.length) return
+    const at = nowIso()
+    await db.transaction('rw', db.chatSessions, async () => {
+      await Promise.all(
+        updates.map((update) =>
+          db.chatSessions.update(update.id, {
+            sortOrder: update.sortOrder,
+            updatedAt: at,
+          }),
+        ),
+      )
+    })
+  },
+
   async updateSessionPromptCard(sessionId: string, promptCardId: string) {
     await db.chatSessions.update(sessionId, {
       promptCardId,
@@ -145,6 +160,7 @@ export const chatRepository = {
 }
 
 function uniqueSessions(sessions: ChatSession[]) {
-  return Array.from(new Map(sessions.map((session) => [session.id, session])).values())
-    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+  return sortChatSessionsForSidebar(
+    Array.from(new Map(sessions.map((session) => [session.id, session])).values()),
+  )
 }

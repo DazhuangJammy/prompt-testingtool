@@ -2,6 +2,7 @@ import { requestCompletion, requestCompletionStream } from '@/shared/api/ai'
 import type {
   ChatAttachment,
   ChatMessage,
+  ChatSession,
   PromptInjectionMode,
   PromptCard,
   ProviderConfig,
@@ -21,6 +22,7 @@ import {
   shouldAutoNameChatTopic,
 } from '@/features/chat/model/topicTitle'
 import { createChatSession } from '@/features/chat/model/chatSession'
+import { createReorderedChatSessionSortUpdates } from '@/features/chat/model/chatSessionOrdering'
 import { chatRepository } from '@/features/chat/infrastructure/chatRepository'
 
 export async function ensureChatSession(
@@ -51,6 +53,20 @@ export async function createChatTopic(
 
 export async function renameChatTopic(sessionId: string, title: string) {
   await chatRepository.updateSessionTitle(sessionId, title)
+}
+
+export async function reorderChatTopics(
+  sessions: ChatSession[],
+  draggedId: string,
+  targetId: string,
+) {
+  const updates = createReorderedChatSessionSortUpdates(
+    sessions,
+    draggedId,
+    targetId,
+  )
+  if (!updates.length) return
+  await chatRepository.updateSessionSortOrders(updates)
 }
 
 export async function assignChatSessionPromptCard(

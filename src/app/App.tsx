@@ -15,6 +15,7 @@ import {
   createChatTopic,
   deleteChatTopicAndPickNext,
   renameChatTopic,
+  reorderChatTopics,
 } from '@/features/chat/application/chatService'
 import {
   copyChatCompareOpen,
@@ -37,6 +38,7 @@ import { CanvasWorkspace } from '@/features/canvas/CanvasWorkspace'
 import { useScopedCanvasRecords } from '@/features/canvas/hooks/useScopedCanvasRecords'
 import { copyStoredCanvasViewport } from '@/features/canvas/model/canvasViewport'
 import { WorkspaceTopbar } from '@/features/canvas/WorkspaceTopbar'
+import { SelectionMagnifierOverlay } from '@/features/settings/components/SelectionMagnifierOverlay'
 import { SettingsDialog } from '@/features/settings/SettingsDialog'
 import { Sidebar } from '@/features/sidebar/Sidebar'
 import type { ChatSessionExportAction } from '@/features/sidebar/sidebar.types'
@@ -52,6 +54,7 @@ import { resolveActiveChatSessionId, useActiveChatTopic } from './useActiveChatT
 import { useResizablePanels } from './useResizablePanels'
 import { useResponsivePanels } from './useResponsivePanels'
 import { useCanvasToolShortcutSettings } from './useCanvasToolShortcutSettings'
+import { useSelectionMagnifierSettings } from './useSelectionMagnifierSettings'
 import { useThemeMode } from './useThemeMode'
 import { useWorkspaceActions } from './useWorkspaceActions'
 import { useWorkspaceData } from './useWorkspaceData'
@@ -68,6 +71,7 @@ function App() {
   >()
   const panels = useResponsivePanels()
   const canvasToolShortcuts = useCanvasToolShortcutSettings()
+  const selectionMagnifier = useSelectionMagnifierSettings()
   const { theme, toggleTheme } = useThemeMode()
   const workspace = useWorkspaceData()
   const actions = useWorkspaceActions({
@@ -234,6 +238,17 @@ function App() {
     await renameChatTopic(session.id, next)
   }
 
+  const reorderChatSessions = async (
+    canvasId: string,
+    draggedId: string,
+    targetId: string,
+  ) => {
+    const canvasSessions = sidebarSessions.filter(
+      (session) => session.canvasId === canvasId,
+    )
+    await reorderChatTopics(canvasSessions, draggedId, targetId)
+  }
+
   const deleteChatSession = async (session: ChatSession) => {
     if (!confirm(`删除话题「${session.title}」？`)) return
     const siblingSessions = sidebarSessions.filter(
@@ -314,6 +329,7 @@ function App() {
           onCreateSession={createChatSession}
           onRename={(id, title) => actions.updateCanvas(id, { title })}
           onRenameSession={renameChatSession}
+          onReorderSessions={reorderChatSessions}
           onDuplicateSession={duplicateChatSession}
           onDelete={actions.deleteCanvas}
           onDeleteSession={deleteChatSession}
@@ -368,13 +384,23 @@ function App() {
           width={chatWidth}
         />
 
+        {selectionMagnifier.selectionMagnifierSettings.enabled && (
+          <SelectionMagnifierOverlay
+            settings={selectionMagnifier.selectionMagnifierSettings}
+          />
+        )}
+
         <SettingsDialog
           open={settingsOpen}
           defaultModelSettings={workspace.defaultModelSettings}
           canvasToolShortcuts={canvasToolShortcuts.shortcuts}
+          selectionMagnifier={selectionMagnifier.selectionMagnifierSettings}
           providers={workspace.providerConfigs}
           activeProviderId={workspace.effectiveProviderConfigId}
           onClose={() => setSettingsOpen(false)}
+          onSelectionMagnifierChange={
+            selectionMagnifier.updateSelectionMagnifierSettings
+          }
           onResetCanvasToolShortcuts={canvasToolShortcuts.resetShortcuts}
           onSelect={() => undefined}
           onSaveCanvasToolShortcut={canvasToolShortcuts.setShortcut}

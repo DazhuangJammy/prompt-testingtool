@@ -1,13 +1,15 @@
-import { Box, Keyboard, Server, X } from 'lucide-react'
+import { Box, Keyboard, MoreHorizontal, Server, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { DefaultModelSettings, ProviderConfig } from '@/shared/types'
 import type {
   CanvasTool,
   CanvasToolShortcuts,
 } from '@/shared/model/canvasToolShortcuts'
+import type { SelectionMagnifierSettings } from '@/shared/model/selectionMagnifier'
 import { IconButton } from '@/shared/ui/IconButton'
 import { AddProviderDialog } from './components/AddProviderDialog'
 import { DefaultModelSettingsPanel } from './components/DefaultModelSettingsPanel'
+import { OtherSettingsPanel } from './components/OtherSettingsPanel'
 import { ProviderDetailPanel } from './components/ProviderDetailPanel'
 import { ProviderListPanel } from './components/ProviderListPanel'
 import { ShortcutSettingsPanel } from './components/ShortcutSettingsPanel'
@@ -17,9 +19,11 @@ interface SettingsDialogProps {
   open: boolean
   defaultModelSettings?: DefaultModelSettings
   canvasToolShortcuts: CanvasToolShortcuts
+  selectionMagnifier: SelectionMagnifierSettings
   providers: ProviderConfig[]
   activeProviderId?: string
   onClose: () => void
+  onSelectionMagnifierChange: (settings: Partial<SelectionMagnifierSettings>) => void
   onResetCanvasToolShortcuts: () => void
   onSaveCanvasToolShortcut: (tool: CanvasTool, key: string) => void
   onSaveDefaultModelSettings: (settings: DefaultModelSettings) => void
@@ -33,6 +37,7 @@ const SETTING_CATEGORIES = [
   { id: 'models', label: '模型服务', icon: Server },
   { id: 'default-model', label: '默认模型', icon: Box },
   { id: 'shortcuts', label: '快捷键设置', icon: Keyboard },
+  { id: 'other', label: '其他设置', icon: MoreHorizontal },
 ] as const
 
 type SettingCategoryId = (typeof SETTING_CATEGORIES)[number]['id']
@@ -41,9 +46,11 @@ export function SettingsDialog({
   open,
   defaultModelSettings,
   canvasToolShortcuts,
+  selectionMagnifier,
   providers,
   activeProviderId,
   onClose,
+  onSelectionMagnifierChange,
   onResetCanvasToolShortcuts,
   onSaveCanvasToolShortcut,
   onSaveDefaultModelSettings,
@@ -137,12 +144,19 @@ export function SettingsDialog({
                 onSave={onSaveDefaultModelSettings}
               />
             </main>
-          ) : (
+          ) : activeCategory === 'shortcuts' ? (
             <main className="settings-main-panel shortcut-settings-page">
               <ShortcutSettingsPanel
                 shortcuts={canvasToolShortcuts}
                 onReset={onResetCanvasToolShortcuts}
                 onSaveShortcut={onSaveCanvasToolShortcut}
+              />
+            </main>
+          ) : (
+            <main className="settings-main-panel other-settings-page">
+              <OtherSettingsPanel
+                selectionMagnifier={selectionMagnifier}
+                onSelectionMagnifierChange={onSelectionMagnifierChange}
               />
             </main>
           )}

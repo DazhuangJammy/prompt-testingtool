@@ -274,6 +274,7 @@
 .topic-row {
   align-items: center;
   border-radius: 7px;
+  cursor: grab;
   display: grid;
   gap: 2px;
   grid-template-columns: minmax(0, 1fr);
@@ -281,12 +282,21 @@
   position: relative;
 }
 
+.topic-row.is-dragging { opacity: 0.54; }
+
+.topic-row:active { cursor: grabbing; }
+
+.topic-row.is-drag-over > button:first-child {
+  background: var(--panel-2);
+  border-color: var(--line-strong);
+}
+
 .topic-row > button:first-child {
   background: transparent;
   border: 1px solid transparent;
   border-radius: 7px;
   color: var(--muted);
-  cursor: pointer;
+  cursor: inherit;
   height: 32px;
   min-width: 0;
   overflow: hidden;

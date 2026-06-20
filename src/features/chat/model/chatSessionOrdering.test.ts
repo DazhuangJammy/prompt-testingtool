@@ -3,6 +3,7 @@ import type { ChatSession } from '@/shared/types'
 import {
   createDuplicateChatSessionSortOrder,
   createDuplicateChatSessionTitle,
+  createReorderedChatSessionSortUpdates,
   getChatSessionSortOrder,
   sortChatSessionsForSidebar,
 } from './chatSessionOrdering'
@@ -82,6 +83,40 @@ describe('chat session ordering', () => {
 
     expect(createDuplicateChatSessionSortOrder(source, [source, next])).toBe(15)
     expect(createDuplicateChatSessionSortOrder(next, [source, next])).toBe(21)
+  })
+
+  it('creates explicit sort updates after dragging a topic', () => {
+    const sessions = [
+      session({ id: 'one', sortOrder: 1 }),
+      session({ id: 'two', sortOrder: 2 }),
+      session({ id: 'three', sortOrder: 3 }),
+    ]
+
+    expect(
+      createReorderedChatSessionSortUpdates(sessions, 'three', 'one'),
+    ).toEqual([
+      { id: 'three', sortOrder: 1 },
+      { id: 'one', sortOrder: 2 },
+      { id: 'two', sortOrder: 3 },
+    ])
+  })
+
+  it('ignores missing drag targets and hidden compare sessions while reordering', () => {
+    const sessions = [
+      session({ id: 'one', sortOrder: 1 }),
+      session({ id: 'hidden', hidden: true, sortOrder: 2 }),
+      session({ id: 'two', sortOrder: 3 }),
+    ]
+
+    expect(
+      createReorderedChatSessionSortUpdates(sessions, 'two', 'one'),
+    ).toEqual([
+      { id: 'two', sortOrder: 1 },
+      { id: 'one', sortOrder: 2 },
+    ])
+    expect(createReorderedChatSessionSortUpdates(sessions, 'missing', 'one')).toEqual(
+      [],
+    )
   })
 
   it('falls back when the source is missing or the next order is not greater', () => {

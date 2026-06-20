@@ -1,0 +1,135 @@
+.other-settings-page {
+  padding: 22px 24px;
+}
+
+.other-settings-card {
+  background: color-mix(in srgb, var(--surface) 76%, var(--panel));
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+}
+
+.other-settings-head h2 {
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.2;
+  margin: 0 0 8px;
+}
+
+.other-settings-head span,
+.other-settings-feature-title span {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.other-settings-feature {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px;
+}
+
+.other-settings-feature-head {
+  align-items: center;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+}
+
+.other-settings-feature-title {
+  align-items: flex-start;
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.other-settings-feature-title svg {
+  color: var(--muted);
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.other-settings-feature-title strong {
+  color: var(--text);
+  display: block;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.other-settings-controls {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) 132px;
+  padding-top: 18px;
+}
+
+.magnifier-color-control > div {
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: flex;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 10px;
+}
+
+.magnifier-color-control input[type='color'] {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  height: 26px;
+  padding: 0;
+  width: 26px;
+}
+
+.magnifier-color-control input[type='color']::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.magnifier-color-control input[type='color']::-webkit-color-swatch {
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+}
+
+.magnifier-color-control input[type='text'] {
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  font-size: 14px;
+  min-width: 0;
+  outline: 0;
+  width: 100%;
+}
+
+.other-settings-controls .settings-field input[type='number'] {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  height: 44px;
+  outline: 0;
+  padding: 0 12px;
+}
+
+.magnifier-color-control > div:focus-within,
+.other-settings-controls .settings-field input[type='number']:focus {
+  border-color: var(--line-strong);
+  outline: 1px solid var(--focus);
+  outline-offset: 1px;
+}
+
+@media (max-width: 1020px) {
+  .other-settings-controls {
+    grid-template-columns: 1fr;
+  }
+}

@@ -44,6 +44,28 @@ export function createDuplicateChatSessionSortOrder(
   return sourceOrder + 0.001
 }
 
+export function createReorderedChatSessionSortUpdates(
+  sessions: ChatSession[],
+  draggedId: string,
+  targetId: string,
+) {
+  if (draggedId === targetId) return []
+  const sorted = sortChatSessionsForSidebar(sessions)
+  const draggedIndex = sorted.findIndex((session) => session.id === draggedId)
+  const targetIndex = sorted.findIndex((session) => session.id === targetId)
+  if (draggedIndex < 0 || targetIndex < 0) return []
+
+  const next = [...sorted]
+  const [draggedSession] = next.splice(draggedIndex, 1)
+  if (!draggedSession) return []
+  next.splice(targetIndex, 0, draggedSession)
+
+  return next.map((session, index) => ({
+    id: session.id,
+    sortOrder: index + 1,
+  }))
+}
+
 export function getChatSessionSortOrder(session: ChatSession) {
   if (typeof session.sortOrder === 'number' && Number.isFinite(session.sortOrder)) {
     return session.sortOrder

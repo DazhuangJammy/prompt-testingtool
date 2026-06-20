@@ -146,10 +146,24 @@
   color: var(--text);
 }
 
-.composer-error {
+.composer-error-toast {
+  background: color-mix(in srgb, var(--surface) 94%, var(--danger));
+  border: 1px solid color-mix(in srgb, var(--danger) 42%, var(--line-strong));
+  border-radius: 8px;
+  box-shadow: var(--shadow);
   color: var(--danger);
-  font-size: 12px;
-  line-height: 1.35;
+  font-size: 13px;
+  left: 50%;
+  line-height: 1.4;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 10px 13px;
+  pointer-events: none;
+  position: fixed;
+  text-align: center;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  white-space: normal;
+  z-index: 10000;
 }
 
 .composer-menu-shell {

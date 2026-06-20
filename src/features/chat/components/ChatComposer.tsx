@@ -82,6 +82,13 @@ export function ChatComposer({
   const acceptedFileTypes = 'image/*,.txt,.md,.pdf,.doc,.docx'
 
   useEffect(() => {
+    if (!attachmentError) return
+
+    const timer = window.setTimeout(() => setAttachmentError(''), 3000)
+    return () => window.clearTimeout(timer)
+  }, [attachmentError])
+
+  useEffect(() => {
     if (!thinkingMenuOpen && !promptModeMenuOpen) return
 
     const closeOnOutsidePointer = (event: PointerEvent) => {
@@ -178,7 +185,11 @@ export function ChatComposer({
           }}
         />
       </div>
-      {attachmentError && <div className="composer-error">{attachmentError}</div>}
+      {attachmentError && (
+        <div className="composer-error-toast" role="alert">
+          {attachmentError}
+        </div>
+      )}
       <div className="composer-toolbar">
         <div className="composer-tool-group">
           <IconButton

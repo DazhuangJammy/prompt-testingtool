@@ -17,4 +17,6 @@
 @import './settings-model-dialog.css';
 @import './settings-default-model.css';
 @import './settings-shortcuts.css';
+@import './settings-other.css';
+@import './selection-magnifier.css';
 @import './responsive.css';

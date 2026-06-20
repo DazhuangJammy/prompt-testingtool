@@ -14,6 +14,7 @@ vi.mock('@/shared/storage/db', () => ({
       update: vi.fn(),
       where: vi.fn(),
     },
+    transaction: vi.fn(async (_mode, _table, callback) => callback()),
     compareRuns: { add: vi.fn(), where: vi.fn() },
     promptCards: { where: vi.fn() },
     promptVersions: { add: vi.fn(), where: vi.fn() },
@@ -54,6 +55,10 @@ describe('chat repository', () => {
     await chatRepository.clearMessages('session')
     await chatRepository.updateMessageContent('message', 'updated')
     await chatRepository.updateSessionTitle('session', '  话题  ')
+    await chatRepository.updateSessionSortOrders([
+      { id: 'first', sortOrder: 1 },
+      { id: 'second', sortOrder: 2 },
+    ])
     await chatRepository.updateSessionPromptCard('session', 'card-2')
     await chatRepository.updateAssistantMessage('assistant', {
       content: 'stream',
@@ -71,6 +76,14 @@ describe('chat repository', () => {
     expect(db.chatSessions.update).toHaveBeenCalledWith(
       'session',
       expect.objectContaining({ title: '话题' }),
+    )
+    expect(db.chatSessions.update).toHaveBeenCalledWith(
+      'first',
+      expect.objectContaining({ sortOrder: 1 }),
+    )
+    expect(db.chatSessions.update).toHaveBeenCalledWith(
+      'second',
+      expect.objectContaining({ sortOrder: 2 }),
     )
     expect(db.chatSessions.update).toHaveBeenCalledWith(
       'session',
