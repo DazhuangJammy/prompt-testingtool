@@ -12,6 +12,36 @@
   border-color: var(--node-frame-color, var(--line-strong));
 }
 
+.prompt-node.is-generating-flow-prompt {
+  border-color: var(--line-strong);
+}
+
+.prompt-node.is-generating-flow-prompt .prompt-markdown-shell {
+  position: relative;
+}
+
+.prompt-node.is-generating-flow-prompt .prompt-markdown-shell::after {
+  animation: prompt-flow-loading 1.15s ease-in-out infinite;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--accent) 12%, transparent),
+      transparent
+    );
+  content: '';
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  transform: translateX(-100%);
+}
+
+@keyframes prompt-flow-loading {
+  to {
+    transform: translateX(100%);
+  }
+}
+
 .prompt-node-head {
   border-bottom: 1px solid var(--line);
   height: 44px;

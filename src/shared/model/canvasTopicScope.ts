@@ -19,6 +19,7 @@ export interface CanvasTopicRecords {
 export interface CanvasTopicScopeOptions extends CanvasTopicRecords {
   promptCardId?: string
   sessionId?: string
+  sessionCreatedAt?: string
 }
 
 type TopicScopedRecord = { createdAt: string; id: string; topicSessionId?: string }
@@ -32,6 +33,7 @@ export function filterCanvasRecordsForTopic({
   promptCardId,
   promptCards,
   sessionId,
+  sessionCreatedAt,
 }: CanvasTopicScopeOptions): CanvasTopicRecords {
   if (!sessionId) {
     return filterRecordsByTopicSession({
@@ -44,53 +46,55 @@ export function filterCanvasRecordsForTopic({
     })
   }
 
-  const scoped = filterRecordsByTopicSession(
-    {
-      canvasEdges,
-      canvasImageNodes,
-      canvasShapeNodes,
-      canvasStrokes,
-      canvasTextNodes,
-      promptCards,
-    },
-    sessionId,
-  )
-  if (hasTopicRecords(scoped)) return scoped
-
-  const legacyBatch = filterLegacyBatchByPromptCardCreatedAt(
-    {
-      canvasEdges,
-      canvasImageNodes,
-      canvasShapeNodes,
-      canvasStrokes,
-      canvasTextNodes,
-      promptCards,
-    },
-    promptCardId,
-  )
-  if (legacyBatch) return legacyBatch
-
-  const legacyConnected = filterLegacyConnectedRecords(
-    {
-      canvasEdges,
-      canvasImageNodes,
-      canvasShapeNodes,
-      canvasStrokes,
-      canvasTextNodes,
-      promptCards,
-    },
-    promptCardId,
-  )
-  if (legacyConnected) return legacyConnected
-
-  return filterRecordsByTopicSession({
+  const records = {
     canvasEdges,
     canvasImageNodes,
     canvasShapeNodes,
     canvasStrokes,
     canvasTextNodes,
     promptCards,
-  })
+  }
+  const scoped = filterRecordsByTopicSession(
+    records,
+    sessionId,
+  )
+
+  const legacyBatch = filterLegacyBatchByPromptCardCreatedAt(
+    records,
+    promptCardId,
+    sessionId,
+  )
+
+  const legacyConnected = filterLegacyConnectedRecords(
+    records,
+    promptCardId,
+    sessionId,
+  )
+  const legacyForScopedPrompts = filterLegacyRecordsForScopedPromptCards(
+    records,
+    scoped.promptCards,
+    sessionId,
+  )
+  const legacyFallback = promptCardId
+    ? undefined
+    : filterUnscopedRecordsCreatedSince(records, sessionCreatedAt)
+  const mergedLegacy = mergeDefinedTopicRecords([
+    legacyBatch,
+    legacyConnected,
+    legacyForScopedPrompts,
+    legacyFallback,
+  ])
+  if (mergedLegacy) {
+    return withMergedVisibleEdges(
+      records,
+      mergeTopicRecords(scoped, mergedLegacy),
+      sessionId,
+      sessionCreatedAt,
+    )
+  }
+  if (hasTopicRecords(scoped)) return scoped
+
+  return scoped
 }
 
 export function hasTopicRecords(records: CanvasTopicRecords) {
@@ -136,18 +140,41 @@ function filterRecordsByTopicSession(
 function filterLegacyBatchByPromptCardCreatedAt(
   records: CanvasTopicRecords,
   promptCardId?: string,
+  sessionId?: string,
 ) {
   const promptCard = records.promptCards.find(
-    (card) => card.id === promptCardId && !card.topicSessionId,
+    (card) =>
+      card.id === promptCardId &&
+      (!card.topicSessionId || card.topicSessionId === sessionId),
   )
   if (!promptCard) return undefined
 
   const createdAt = promptCard.createdAt
-  const promptCards = filterUnscopedByCreatedAt(records.promptCards, createdAt)
-  const canvasImageNodes = filterUnscopedByCreatedAt(records.canvasImageNodes, createdAt)
-  const canvasShapeNodes = filterUnscopedByCreatedAt(records.canvasShapeNodes, createdAt)
-  const canvasStrokes = filterUnscopedByCreatedAt(records.canvasStrokes, createdAt)
-  const canvasTextNodes = filterUnscopedByCreatedAt(records.canvasTextNodes, createdAt)
+  const promptCards = filterLegacyByCreatedAt(
+    records.promptCards,
+    createdAt,
+    sessionId,
+  )
+  const canvasImageNodes = filterLegacyByCreatedAt(
+    records.canvasImageNodes,
+    createdAt,
+    sessionId,
+  )
+  const canvasShapeNodes = filterLegacyByCreatedAt(
+    records.canvasShapeNodes,
+    createdAt,
+    sessionId,
+  )
+  const canvasStrokes = filterLegacyByCreatedAt(
+    records.canvasStrokes,
+    createdAt,
+    sessionId,
+  )
+  const canvasTextNodes = filterLegacyByCreatedAt(
+    records.canvasTextNodes,
+    createdAt,
+    sessionId,
+  )
   const nodeIds = collectNodeIds({
     promptCards,
     canvasImageNodes,
@@ -157,7 +184,7 @@ function filterLegacyBatchByPromptCardCreatedAt(
     canvasEdges: [],
   })
   const canvasEdges = filterEdgesForNodes(
-    filterUnscopedByCreatedAt(records.canvasEdges, createdAt),
+    filterLegacyByCreatedAt(records.canvasEdges, createdAt, sessionId),
     nodeIds,
   )
 
@@ -185,8 +212,15 @@ function filterLegacyBatchByPromptCardCreatedAt(
 function filterLegacyConnectedRecords(
   records: CanvasTopicRecords,
   promptCardId?: string,
+  sessionId?: string,
 ) {
   if (!promptCardId) return undefined
+  const promptCard = records.promptCards.find(
+    (card) =>
+      card.id === promptCardId &&
+      (!card.topicSessionId || card.topicSessionId === sessionId),
+  )
+  if (!promptCard) return undefined
   const unscopedEdges = records.canvasEdges.filter((edge) => !edge.topicSessionId)
   const reachableIds = collectReachableNodeIds(promptCardId, unscopedEdges)
   if (!reachableIds.has(promptCardId)) return undefined
@@ -207,6 +241,140 @@ function filterLegacyConnectedRecords(
   }
 }
 
+function filterLegacyRecordsForScopedPromptCards(
+  records: CanvasTopicRecords,
+  promptCards: PromptCard[],
+  sessionId?: string,
+) {
+  const legacyRecords = promptCards
+    .map((card) =>
+      filterLegacyBatchByPromptCardCreatedAt(records, card.id, sessionId),
+    )
+    .filter((item): item is CanvasTopicRecords => Boolean(item))
+
+  return mergeDefinedTopicRecords(legacyRecords)
+}
+
+function mergeDefinedTopicRecords(records: Array<CanvasTopicRecords | undefined>) {
+  const definedRecords = records.filter((item): item is CanvasTopicRecords =>
+    Boolean(item),
+  )
+  if (!definedRecords.length) return undefined
+
+  return definedRecords.reduce((merged, current) =>
+    mergeTopicRecords(merged, current),
+  )
+}
+
+function mergeTopicRecords(
+  first: CanvasTopicRecords,
+  second: CanvasTopicRecords,
+): CanvasTopicRecords {
+  return {
+    canvasEdges: uniqueById([...first.canvasEdges, ...second.canvasEdges]),
+    canvasImageNodes: uniqueById([
+      ...first.canvasImageNodes,
+      ...second.canvasImageNodes,
+    ]),
+    canvasShapeNodes: uniqueById([
+      ...first.canvasShapeNodes,
+      ...second.canvasShapeNodes,
+    ]),
+    canvasStrokes: uniqueById([...first.canvasStrokes, ...second.canvasStrokes]),
+    canvasTextNodes: uniqueById([
+      ...first.canvasTextNodes,
+      ...second.canvasTextNodes,
+    ]),
+    promptCards: uniqueById([...first.promptCards, ...second.promptCards]),
+  }
+}
+
+function withMergedVisibleEdges(
+  source: CanvasTopicRecords,
+  records: CanvasTopicRecords,
+  sessionId: string,
+  sessionCreatedAt?: string,
+): CanvasTopicRecords {
+  const nodeIds = collectNodeIds({ ...records, canvasEdges: [] })
+  return {
+    ...records,
+    canvasEdges: uniqueById([
+      ...records.canvasEdges,
+      ...source.canvasEdges.filter(
+        (edge) =>
+          (edge.topicSessionId === sessionId ||
+            (!edge.topicSessionId &&
+              isCreatedAtOrAfter(edge.createdAt, sessionCreatedAt))) &&
+          nodeIds.has(edge.sourceId) &&
+          nodeIds.has(edge.targetId),
+      ),
+    ]),
+  }
+}
+
+function filterUnscopedRecordsCreatedSince(
+  records: CanvasTopicRecords,
+  createdAt?: string,
+) {
+  if (!createdAt) return undefined
+  const promptCards = filterUnscopedCreatedSince(records.promptCards, createdAt)
+  const canvasImageNodes = filterUnscopedCreatedSince(
+    records.canvasImageNodes,
+    createdAt,
+  )
+  const canvasShapeNodes = filterUnscopedCreatedSince(
+    records.canvasShapeNodes,
+    createdAt,
+  )
+  const canvasStrokes = filterUnscopedCreatedSince(records.canvasStrokes, createdAt)
+  const canvasTextNodes = filterUnscopedCreatedSince(
+    records.canvasTextNodes,
+    createdAt,
+  )
+  const nodeIds = collectNodeIds({
+    promptCards,
+    canvasImageNodes,
+    canvasShapeNodes,
+    canvasStrokes,
+    canvasTextNodes,
+    canvasEdges: [],
+  })
+  const canvasEdges = filterEdgesForNodes(
+    filterUnscopedCreatedSince(records.canvasEdges, createdAt),
+    nodeIds,
+  )
+  const scoped = {
+    canvasEdges,
+    canvasImageNodes,
+    canvasShapeNodes,
+    canvasStrokes,
+    canvasTextNodes,
+    promptCards,
+  }
+
+  return hasTopicRecords(scoped) ? scoped : undefined
+}
+
+function filterUnscopedCreatedSince<T extends TopicScopedRecord>(
+  items: T[],
+  createdAt: string,
+) {
+  return items.filter(
+    (item) =>
+      !item.topicSessionId && isCreatedAtOrAfter(item.createdAt, createdAt),
+  )
+}
+
+function isCreatedAtOrAfter(value: string, lowerBound?: string) {
+  if (!lowerBound) return false
+  const parsedValue = Date.parse(value)
+  const parsedLowerBound = Date.parse(lowerBound)
+  if (Number.isFinite(parsedValue) && Number.isFinite(parsedLowerBound)) {
+    return parsedValue >= parsedLowerBound
+  }
+  return value >= lowerBound
+}
+
 function filterByTopic<T extends { topicSessionId?: string }>(
   items: T[],
   sessionId?: string,
@@ -216,11 +384,16 @@ function filterByTopic<T extends { topicSessionId?: string }>(
   )
 }
 
-function filterUnscopedByCreatedAt<T extends TopicScopedRecord>(
+function filterLegacyByCreatedAt<T extends TopicScopedRecord>(
   items: T[],
   createdAt: string,
+  sessionId?: string,
 ) {
-  return items.filter((item) => !item.topicSessionId && item.createdAt === createdAt)
+  return items.filter(
+    (item) =>
+      item.createdAt === createdAt &&
+      (!item.topicSessionId || item.topicSessionId === sessionId),
+  )
 }
 
 function filterUnscopedByIds<T extends TopicScopedRecord>(
@@ -271,4 +444,8 @@ function collectReachableNodeIds(rootId: string, edges: CanvasEdge[]) {
   }
 
   return reachableIds
+}
+
+function uniqueById<T extends { id: string }>(items: T[]) {
+  return [...new Map(items.map((item) => [item.id, item])).values()]
 }

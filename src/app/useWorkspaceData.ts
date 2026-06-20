@@ -4,13 +4,13 @@ import { defaultModelSettingsRepository } from '@/features/settings/infrastructu
 import { providerRepository } from '@/features/settings/infrastructure/providerRepository'
 import {
   DEFAULT_MODEL_SETTINGS_ID,
+  FLOWCHART_MODEL_SETTINGS_ID,
   resolveDefaultModelProvider,
 } from '@/features/settings/model/defaultModelSettings'
 import { deriveSelectableProviders } from '@/features/settings/model/providerCatalog'
 import { ensureSeedData } from '@/features/workspace/application/seedWorkspace'
 import { repairLegacyWorkspaceTopicScopes } from '@/features/workspace/application/workspaceService'
 import { workspaceRepository } from '@/features/workspace/infrastructure/workspaceRepository'
-import { db } from '@/shared/storage/db'
 import type {
   Canvas,
   DefaultModelSettings,
@@ -53,7 +53,15 @@ export function useWorkspaceData() {
     DefaultModelSettings | undefined,
     DefaultModelSettings | undefined
   >(
-    () => db.defaultModelSettings.get(DEFAULT_MODEL_SETTINGS_ID),
+    () => defaultModelSettingsRepository.get(DEFAULT_MODEL_SETTINGS_ID),
+    [],
+    undefined,
+  )
+  const flowchartModelSettings = useLiveQuery<
+    DefaultModelSettings | undefined,
+    DefaultModelSettings | undefined
+  >(
+    () => defaultModelSettingsRepository.get(FLOWCHART_MODEL_SETTINGS_ID),
     [],
     undefined,
   )
@@ -63,6 +71,7 @@ export function useWorkspaceData() {
       .then(async () => {
         await providerRepository.ensureBuiltInProviders()
         await defaultModelSettingsRepository.ensure()
+        await defaultModelSettingsRepository.ensureFlowchart()
         await repairLegacyWorkspaceTopicScopes()
       })
       .catch(() => undefined)
@@ -89,6 +98,10 @@ export function useWorkspaceData() {
     () => resolveDefaultModelProvider(providers ?? [], defaultModelSettings),
     [defaultModelSettings, providers],
   )
+  const flowchartProvider = useMemo(
+    () => resolveDefaultModelProvider(providers ?? [], flowchartModelSettings),
+    [flowchartModelSettings, providers],
+  )
   const effectiveProviderId = selectableProviders.some(
     (provider) => provider.id === activeProviderId,
   )
@@ -112,6 +125,8 @@ export function useWorkspaceData() {
       effectiveSelectedCardId,
       defaultModelSettings,
       defaultProvider,
+      flowchartModelSettings,
+      flowchartProvider,
       promptCards: promptCards ?? [],
       providerConfigs: providers ?? [],
       providers: selectableProviders,
@@ -128,6 +143,8 @@ export function useWorkspaceData() {
       defaultModelSettings,
       defaultProvider,
       promptCards,
+      flowchartModelSettings,
+      flowchartProvider,
       providers,
       selectableProviders,
     ],

@@ -247,6 +247,31 @@ describe('canvas flow mapping', () => {
     expect(syncedNode.selected).toBe(true)
   })
 
+  it('keeps flowchart preview nodes while syncing business data', () => {
+    const [businessNode] = createCanvasFlowNodes({
+      promptCards: [card],
+      selectedNodeIds: [],
+      imageNodes: [],
+      shapeNodes: [],
+      strokes: [],
+      textNodes: [],
+      ...baseHandlers,
+    })
+    const previewNode = {
+      ...businessNode,
+      id: 'flow-preview-step-01',
+      position: { x: 99, y: 100 },
+    }
+
+    const syncedNodes = syncCanvasNodes([businessNode, previewNode], [businessNode])
+
+    expect(syncedNodes.map((node) => node.id)).toEqual([
+      'card',
+      'flow-preview-step-01',
+    ])
+    expect(syncedNodes[1].position).toEqual({ x: 99, y: 100 })
+  })
+
   it('keeps transient React Flow edge selection while syncing business data', () => {
     const [businessEdge] = createCanvasFlowEdges([
       {
@@ -265,5 +290,35 @@ describe('canvas flow mapping', () => {
     )
 
     expect(syncedEdge.selected).toBe(true)
+  })
+
+  it('keeps flowchart preview edges while syncing business data', () => {
+    const [businessEdge] = createCanvasFlowEdges([
+      {
+        id: 'edge',
+        canvasId: 'canvas',
+        sourceId: 'a',
+        targetId: 'b',
+        createdAt: 'now',
+        updatedAt: 'now',
+      },
+    ])
+    const previewEdge = {
+      ...businessEdge,
+      id: 'flow-preview-edge-01',
+      source: 'flow-preview-step-01',
+      target: 'flow-preview-step-02',
+    }
+
+    const syncedEdges = syncCanvasEdges([businessEdge, previewEdge], [businessEdge])
+
+    expect(syncedEdges.map((edge) => edge.id)).toEqual([
+      'edge',
+      'flow-preview-edge-01',
+    ])
+    expect(syncedEdges[1]).toMatchObject({
+      source: 'flow-preview-step-01',
+      target: 'flow-preview-step-02',
+    })
   })
 })

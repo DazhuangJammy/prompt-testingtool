@@ -34,6 +34,7 @@ import {
 } from '@/features/prompt-card/model/textSelection'
 import { subscribeCanvasCommitActiveEdit } from '@/shared/model/canvasEditEvents'
 import { normalizeThinkingMode } from '@/shared/model/thinking'
+import { useDefaultCollapsedHeadings } from './hooks/useDefaultCollapsedHeadings'
 import {
   MarkdownCardPreview,
   type MarkdownNodeEditRequest,
@@ -61,9 +62,7 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
   } = data
   const card = normalizePromptCard(rawCard)
   const [previewOpen, setPreviewOpen] = useState(false)
-  const [toastState, setToastState] = useState<
-    'idle' | 'copied' | 'imported' | 'optimized'
-  >('idle')
+  const [toastState, setToastState] = useState<'idle' | 'copied' | 'imported' | 'optimized'>('idle')
   const [importPanelOpen, setImportPanelOpen] = useState(false)
   const [importDraft, setImportDraft] = useState('')
   const [optimizationMode, setOptimizationMode] = useState<PromptOptimizationMode>()
@@ -79,9 +78,7 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
   const [editingNodeId, setEditingNodeId] = useState<string | undefined>()
   const [editingNodeFocus, setEditingNodeFocus] = useState<MarkdownNodeEditFocus>('body')
   const [editingNodeCursorOffset, setEditingNodeCursorOffset] = useState<number | undefined>()
-  const [collapsedHeadingIds, setCollapsedHeadingIds] = useState<Set<string>>(
-    () => new Set(),
-  )
+  const [collapsedHeadingIds, setCollapsedHeadingIds] = useState<Set<string>>(() => new Set())
   const [hovering, setHovering] = useState(false)
   const [titleDraft, setTitleDraft] = useState(card.title)
   const isSelected = selectedCardId === card.id
@@ -90,11 +87,9 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
     ? ({ '--node-frame-color': frameStyle.borderColor } as CSSProperties)
     : undefined
   const compiledMarkdown = useMemo(() => compilePrompt(card), [card])
+  const generatingFlowPrompt = compiledMarkdown.startsWith('# 生成中')
   const [markdownDraft, setMarkdownDraft] = useState(compiledMarkdown)
-  const outline = useMemo(
-    () => parseMarkdownOutline(compiledMarkdown),
-    [compiledMarkdown],
-  )
+  const outline = useMemo(() => parseMarkdownOutline(compiledMarkdown), [compiledMarkdown])
   const activeEditingNodeId =
     editingNodeId && findMarkdownOutlineNodeById(outline.nodes, editingNodeId)
       ? editingNodeId
@@ -284,22 +279,18 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
     setEditingTitle(false)
   }
 
-  const startMarkdownEditing = (
-    nextDraft = compiledMarkdown,
-    cursorIndex?: number,
-  ) => {
+  const startMarkdownEditing = (nextDraft = compiledMarkdown, cursorIndex?: number) => {
     pendingCursorIndexRef.current = cursorIndex
     setMarkdownDraft(nextDraft)
     setEditingMarkdown(true)
   }
 
-  const saveMarkdown = useCallback(
-    () => {
-      const nextMarkdown = markdownDraft.trim()
-      updateCardWithMarkdown(nextMarkdown)
-      setMarkdownDraft(nextMarkdown)
-      setEditingMarkdown(false)
-    },
+  const saveMarkdown = useCallback(() => {
+    const nextMarkdown = markdownDraft.trim()
+    updateCardWithMarkdown(nextMarkdown)
+    setMarkdownDraft(nextMarkdown)
+    setEditingMarkdown(false)
+  },
     [markdownDraft, setEditingMarkdown, setMarkdownDraft, updateCardWithMarkdown],
   )
 
@@ -317,10 +308,7 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
     setEditingNodeCursorOffset(undefined)
   }
 
-  const startNodeEditing = (
-    node: MarkdownOutlineNode,
-    request: MarkdownNodeEditRequest,
-  ) => {
+  const startNodeEditing = (node: MarkdownOutlineNode, request: MarkdownNodeEditRequest) => {
     setEditingMarkdown(false)
     setEditingNodeId(node.id)
     setEditingNodeFocus(request.focus)
@@ -388,11 +376,21 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
     return subscribeCanvasCommitActiveEdit(saveMarkdown)
   }, [editingMarkdown, saveMarkdown])
 
+  useDefaultCollapsedHeadings({
+    cardId: card.id,
+    defaultCollapsed: card.defaultCollapsed,
+    generating: generatingFlowPrompt,
+    nodes: outline.nodes,
+    setCollapsedHeadingIds,
+  })
+
   return (
     <section
       className={`prompt-node ${isSelected ? 'is-selected' : ''} ${
         hovering ? 'is-hovered' : ''
-      } ${frameStyle.highlighted ? 'is-highlighted' : ''}`}
+      } ${frameStyle.highlighted ? 'is-highlighted' : ''} ${
+        generatingFlowPrompt ? 'is-generating-flow-prompt' : ''
+      }`}
       style={nodeStyle}
       onClick={() => onSelect(card.id)}
       onPointerDownCapture={() => onSelect(card.id)}

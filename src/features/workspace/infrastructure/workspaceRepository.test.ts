@@ -99,9 +99,11 @@ vi.mock('@/shared/storage/db', () => ({
       toArray: vi.fn(() => []),
     },
     defaultModelSettings: {
+      bulkPut: vi.fn(),
       clear: vi.fn(),
       get: vi.fn(() => undefined),
       put: vi.fn(),
+      toArray: vi.fn(() => []),
     },
     transaction: vi.fn(async (_mode, _tables, callback) => callback()),
   },
@@ -196,7 +198,7 @@ describe('workspace repository', () => {
     }
 
     await expect(workspaceRepository.exportWorkspace()).resolves.toMatchObject({
-      version: 7,
+      version: 8,
       canvasShapeNodes: [],
       canvasImageNodes: [],
       canvasEdges: [],
@@ -213,12 +215,12 @@ describe('workspace repository', () => {
     expect(db.canvasStrokes.bulkPut).toHaveBeenCalledWith([])
     expect(db.canvasTextNodes.bulkPut).toHaveBeenCalledWith([])
     expect(db.defaultModelSettings.clear).toHaveBeenCalled()
-    expect(db.defaultModelSettings.put).not.toHaveBeenCalled()
+    expect(db.defaultModelSettings.bulkPut).toHaveBeenCalledWith([])
   })
 
   it('imports default model settings when present', async () => {
     const payload: ExportPayload = {
-      version: 7,
+      version: 8,
       exportedAt: 'now',
       canvases: [],
       promptCards: [],
@@ -240,24 +242,96 @@ describe('workspace repository', () => {
 
     await workspaceRepository.importWorkspace(payload)
 
-    expect(db.defaultModelSettings.put).toHaveBeenCalledWith(
+    expect(db.defaultModelSettings.bulkPut).toHaveBeenCalledWith([
       payload.defaultModelSettings,
+    ])
+  })
+
+  it('imports default model settings lists when present', async () => {
+    const payload: ExportPayload = {
+      version: 8,
+      exportedAt: 'now',
+      canvases: [],
+      promptCards: [],
+      promptVersions: [],
+      providerConfigs: [],
+      defaultModelSettings: undefined,
+      defaultModelSettingsList: [
+        {
+          id: 'default-model',
+          assistantName: '默认助手',
+          prompt: 'prompt',
+          createdAt: 'now',
+          updatedAt: 'now',
+        },
+        {
+          id: 'flowchart-model',
+          assistantName: '流程图助手',
+          prompt: 'flow',
+          createdAt: 'now',
+          updatedAt: 'now',
+        },
+      ],
+      chatSessions: [],
+      chatMessages: [],
+      compareRuns: [],
+    }
+
+    await workspaceRepository.importWorkspace(payload)
+
+    expect(db.defaultModelSettings.bulkPut).toHaveBeenCalledWith(
+      payload.defaultModelSettingsList,
     )
   })
 
   it('rejects unsupported imports and lists canvases', async () => {
+    vi.mocked(db.canvases.toArray).mockResolvedValueOnce([
+      {
+        id: 'newer',
+        title: 'Newer',
+        createdAt: '2026-01-02T00:00:00.000Z',
+        updatedAt: '2026-01-10T00:00:00.000Z',
+      },
+      {
+        id: 'older',
+        title: 'Older',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-20T00:00:00.000Z',
+      },
+    ])
+
     await expect(
-      workspaceRepository.importWorkspace({ version: 8 } as never),
+      workspaceRepository.importWorkspace({ version: 9 } as never),
     ).rejects.toThrow('Unsupported file')
     await expect(workspaceRepository.listCanvasesByUpdatedAt()).resolves.toEqual([
-      { id: 'canvas' },
+      expect.objectContaining({ id: 'older' }),
+      expect.objectContaining({ id: 'newer' }),
     ])
   })
 
+  it('updates canvas sort orders during manual reorder', async () => {
+    await workspaceRepository.updateCanvasSortOrders([
+      { id: 'two', sortOrder: 1 },
+      { id: 'one', sortOrder: 2 },
+    ])
+
+    expect(db.transaction).toHaveBeenCalled()
+    expect(db.canvases.update).toHaveBeenCalledWith(
+      'two',
+      expect.objectContaining({ sortOrder: 1 }),
+    )
+    expect(db.canvases.update).toHaveBeenCalledWith(
+      'one',
+      expect.objectContaining({ sortOrder: 2 }),
+    )
+  })
+
   it('lists prompt cards and providers', async () => {
+    await workspaceRepository.listPromptCards()
     await workspaceRepository.listPromptCardsByCanvas('canvas')
     await workspaceRepository.listProvidersByUpdatedAt()
 
+    expect(db.promptCards.toArray).toHaveBeenCalled()
     expect(db.promptCards.where).toHaveBeenCalledWith('canvasId')
     expect(db.providerConfigs.toArray).not.toHaveBeenCalled()
     expect(db.providerConfigs.bulkPut).not.toHaveBeenCalledWith(undefined)

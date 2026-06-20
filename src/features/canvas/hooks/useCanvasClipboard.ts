@@ -9,6 +9,10 @@ import {
 } from '@/features/canvas/model/canvasClipboard'
 import { createCanvasImageNode } from '@/features/canvas/model/canvasElements'
 import {
+  mergeSelectedFlowNodeIds,
+  replaceSelectedFlowItems,
+} from '@/features/canvas/model/flowSelection'
+import {
   getClipboardImageFiles,
   readClipboardImage,
 } from '@/features/canvas/model/canvasImageClipboard'
@@ -69,11 +73,15 @@ export function useCanvasClipboard({
   )
 
   const copySelection = useCallback(() => {
+    const selectedNodeIds = mergeSelectedFlowNodeIds(
+      selectedFlowIds.nodes,
+      reactFlow.getNodes(),
+    )
     const nextClipboard = createCanvasClipboard({
       edges: canvasEdges,
       imageNodes,
       promptCards,
-      selectedNodeIds: selectedFlowIds.nodes,
+      selectedNodeIds,
       shapeNodes,
       strokes,
       textNodes,
@@ -84,6 +92,7 @@ export function useCanvasClipboard({
     canvasEdges,
     imageNodes,
     promptCards,
+    reactFlow,
     selectedFlowIds.nodes,
     shapeNodes,
     strokes,
@@ -99,10 +108,11 @@ export function useCanvasClipboard({
     )
     if (!result) return
 
+    selectOnlyPastedItems(reactFlow, result.nodeIds, [])
     onPasteSelection(result.nodeIds)
     const selectedPromptId = result.promptCardIds[0]
     if (selectedPromptId) onSelectPrompt(selectedPromptId)
-  }, [canvasId, onPasteSelection, onSelectPrompt, topicSessionId])
+  }, [canvasId, onPasteSelection, onSelectPrompt, reactFlow, topicSessionId])
 
   const pasteImages = useCallback(
     async (files: File[]) => {
@@ -124,10 +134,11 @@ export function useCanvasClipboard({
         createdNodeIds.push(node.id)
       }
 
+      selectOnlyPastedItems(reactFlow, createdNodeIds, [])
       onPasteSelection(createdNodeIds)
       return true
     },
-    [canvasId, onPasteSelection, topicSessionId],
+    [canvasId, onPasteSelection, reactFlow, topicSessionId],
   )
 
   useEffect(() => {
@@ -181,6 +192,15 @@ function isCopyPasteModifier(event: KeyboardEvent) {
 function isEditableTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false
   return Boolean(target.closest('input, textarea, [contenteditable="true"]'))
+}
+
+function selectOnlyPastedItems(
+  reactFlow: ReactFlowInstance<CanvasFlowNode, Edge>,
+  nodeIds: string[],
+  edgeIds: string[],
+) {
+  reactFlow.setNodes((nodes) => replaceSelectedFlowItems(nodes, nodeIds))
+  reactFlow.setEdges((edges) => replaceSelectedFlowItems(edges, edgeIds))
 }
 
 export function hasTextSelection() {

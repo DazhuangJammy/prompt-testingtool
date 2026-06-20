@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   areFlowSelectionsEqual,
   emptyFlowSelection,
+  mergeSelectedFlowNodeIds,
+  replaceSelectedFlowItems,
   toFlowSelectionIds,
 } from './flowSelection'
 
@@ -38,5 +40,33 @@ describe('flow selection', () => {
 
   it('exposes a shared empty selection value', () => {
     expect(emptyFlowSelection).toEqual({ edges: [], nodes: [] })
+  })
+
+  it('merges stored selection with transient React Flow node selection', () => {
+    expect(
+      mergeSelectedFlowNodeIds(
+        ['node-1'],
+        [
+          { id: 'node-1', selected: true },
+          { id: 'node-2', selected: true },
+          { id: 'node-3', selected: false },
+        ],
+      ),
+    ).toEqual(['node-1', 'node-2'])
+  })
+
+  it('replaces transient selected flags with a new selection', () => {
+    expect(
+      replaceSelectedFlowItems(
+        [
+          { id: 'old-node', selected: true },
+          { id: 'new-node', selected: false },
+        ],
+        ['new-node'],
+      ),
+    ).toEqual([
+      { id: 'old-node', selected: false },
+      { id: 'new-node', selected: true },
+    ])
   })
 })

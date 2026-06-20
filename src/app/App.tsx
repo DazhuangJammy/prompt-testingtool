@@ -37,6 +37,7 @@ import { chatRepository } from '@/features/chat/infrastructure/chatRepository'
 import { CanvasWorkspace } from '@/features/canvas/CanvasWorkspace'
 import { useScopedCanvasRecords } from '@/features/canvas/hooks/useScopedCanvasRecords'
 import { copyStoredCanvasViewport } from '@/features/canvas/model/canvasViewport'
+import { workspaceRepository } from '@/features/workspace/infrastructure/workspaceRepository'
 import { WorkspaceTopbar } from '@/features/canvas/WorkspaceTopbar'
 import { SelectionMagnifierOverlay } from '@/features/settings/components/SelectionMagnifierOverlay'
 import { SettingsDialog } from '@/features/settings/SettingsDialog'
@@ -50,6 +51,7 @@ import {
 } from '@/features/settings/model/providerCatalog'
 import type { ChatSession } from '@/shared/types'
 import { resolveActiveChatCard, resolveChatScopePromptCardId } from './activeChatCard'
+import { resolveSidebarSessions } from './sidebarSessions'
 import { resolveActiveChatSessionId, useActiveChatTopic } from './useActiveChatTopic'
 import { useResizablePanels } from './useResizablePanels'
 import { useResponsivePanels } from './useResponsivePanels'
@@ -87,18 +89,17 @@ function App() {
     [],
     undefined,
   )
+  const sidebarPromptCards = useLiveQuery(
+    () => workspaceRepository.listPromptCards(),
+    [],
+    undefined,
+  )
   const sidebarSessionsLoaded = sidebarChatSessions !== undefined
-  const sessionCanvasByPromptCard = new Map(
-    workspace.promptCards.map((card) => [card.id, card.canvasId]),
-  )
-  const sidebarSessions = (sidebarChatSessions ?? []).map((session) =>
-    session.canvasId || !session.promptCardId
-      ? session
-      : {
-          ...session,
-          canvasId: sessionCanvasByPromptCard.get(session.promptCardId),
-        },
-  )
+  const sidebarSessions = resolveSidebarSessions({
+    fallbackPromptCards: workspace.promptCards,
+    promptCards: sidebarPromptCards,
+    sessions: sidebarChatSessions ?? [],
+  })
   const sidebarSessionListKey = sidebarSessions
     .map((session) => `${session.id}:${session.canvasId ?? ''}`)
     .join('|')
@@ -128,6 +129,7 @@ function App() {
     promptCardId: activeChatPromptCardId,
     promptCards: workspace.promptCards,
     sessionId: activeChatSessionId,
+    sessionCreatedAt: activeChatSession?.createdAt,
   })
   const chatPromptCards = useMemo(() => {
     if (scopedChatRecords.promptCards.length) return scopedChatRecords.promptCards
@@ -222,13 +224,8 @@ function App() {
   const createChatSession = async (canvasId = workspace.effectiveCanvasId) => {
     if (!canvasId) return
     const session = await createChatTopic(canvasId)
-    const card = await actions.addPromptCard(undefined, session.id)
-    const promptCardId = card?.id
-    await actions.assignPromptCardToChatTopic(promptCardId, session.id)
     workspace.setActiveCanvasId(canvasId)
-    if (promptCardId) {
-      workspace.setSelectedCardId(promptCardId)
-    }
+    workspace.setSelectedCardId(undefined)
     setActiveChatSessionForCanvas(canvasId, session.id)
   }
 
@@ -330,6 +327,7 @@ function App() {
           onRename={(id, title) => actions.updateCanvas(id, { title })}
           onRenameSession={renameChatSession}
           onReorderSessions={reorderChatSessions}
+          onReorderCanvases={actions.reorderCanvases}
           onDuplicateSession={duplicateChatSession}
           onDelete={actions.deleteCanvas}
           onDeleteSession={deleteChatSession}
@@ -355,7 +353,10 @@ function App() {
           <CanvasWorkspace
             effectiveCanvasId={workspace.effectiveCanvasId}
             activeSessionId={activeChatSessionId}
+            activeSessionCreatedAt={activeChatSession?.createdAt}
             activeSessionPromptCardId={activeChatPromptCardId}
+            flowchartProvider={workspace.flowchartProvider}
+            flowchartSettings={workspace.flowchartModelSettings}
             promptOptimizationProvider={workspace.defaultProvider}
             promptOptimizationSettings={workspace.defaultModelSettings}
             toolShortcuts={canvasToolShortcuts.shortcuts}
@@ -393,6 +394,7 @@ function App() {
         <SettingsDialog
           open={settingsOpen}
           defaultModelSettings={workspace.defaultModelSettings}
+          flowchartModelSettings={workspace.flowchartModelSettings}
           canvasToolShortcuts={canvasToolShortcuts.shortcuts}
           selectionMagnifier={selectionMagnifier.selectionMagnifierSettings}
           providers={workspace.providerConfigs}

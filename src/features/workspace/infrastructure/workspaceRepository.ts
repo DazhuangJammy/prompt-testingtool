@@ -3,12 +3,8 @@ import { DEFAULT_MODEL_SETTINGS_ID } from '@/features/settings/model/defaultMode
 import { selectActiveCompareChildSessions } from '@/features/chat/model/comparePanes'
 import { db } from '@/shared/storage/db'
 import { filterCanvasRecordsForTopic } from '@/shared/model/canvasTopicScope'
-import type {
-  Canvas,
-  ChatTopicExportPayload,
-  ExportPayload,
-  PromptCard,
-} from '@/shared/types'
+import { sortCanvasesForSidebar } from '@/features/workspace/model/canvasOrdering'
+import type { Canvas, ChatTopicExportPayload, ExportPayload, PromptCard } from '@/shared/types'
 import { nowIso } from '@/shared/utils/time'
 import {
   cloneChatMessageAttachments,
@@ -18,6 +14,7 @@ import {
   mapRequiredId,
   uniqueById,
 } from './topicIdMap'
+import { getImportedDefaultModelSettings } from './defaultModelSettingsPayload'
 
 export const workspaceRepository = {
   async createCanvas(title?: string) {
@@ -69,12 +66,12 @@ export const workspaceRepository = {
       [
         db.canvases,
         db.promptCards,
-      db.canvasShapeNodes,
-      db.canvasImageNodes,
-      db.canvasEdges,
-      db.canvasStrokes,
-      db.canvasTextNodes,
-      db.promptVersions,
+        db.canvasShapeNodes,
+        db.canvasImageNodes,
+        db.canvasEdges,
+        db.canvasStrokes,
+        db.canvasTextNodes,
+        db.promptVersions,
         db.chatSessions,
         db.chatMessages,
         db.compareRuns,
@@ -82,13 +79,8 @@ export const workspaceRepository = {
       async () => {
         const cards = await db.promptCards.where('canvasId').equals(id).toArray()
         const cardIds = cards.map((card) => card.id)
-        const sessionsByCanvas = await db.chatSessions
-          .where('canvasId')
-          .equals(id)
-          .toArray()
-        const legacySessions = cardIds.length
-          ? await db.chatSessions.where('promptCardId').anyOf(cardIds).toArray()
-          : []
+        const sessionsByCanvas = await db.chatSessions.where('canvasId').equals(id).toArray()
+        const legacySessions = cardIds.length ? await db.chatSessions.where('promptCardId').anyOf(cardIds).toArray() : []
         const sessionIds = Array.from(
           new Set(
             [...sessionsByCanvas, ...legacySessions].map((session) => session.id),
@@ -110,10 +102,7 @@ export const workspaceRepository = {
             ? db.chatSessions.where('promptCardId').anyOf(cardIds).delete()
             : Promise.resolve(),
           sessionIds.length
-            ? db.chatMessages
-                .where('sessionId')
-                .anyOf(sessionIds)
-                .delete()
+            ? db.chatMessages.where('sessionId').anyOf(sessionIds).delete()
             : Promise.resolve(),
           cardIds.length
             ? db.compareRuns.where('promptCardId').anyOf(cardIds).delete()
@@ -124,8 +113,10 @@ export const workspaceRepository = {
   },
 
   async exportWorkspace(): Promise<ExportPayload> {
+    const defaultModelSettings = await db.defaultModelSettings.toArray()
+
     return {
-      version: 7,
+      version: 8,
       exportedAt: nowIso(),
       canvases: await db.canvases.toArray(),
       promptCards: await db.promptCards.toArray(),
@@ -136,9 +127,10 @@ export const workspaceRepository = {
       canvasTextNodes: await db.canvasTextNodes.toArray(),
       promptVersions: await db.promptVersions.toArray(),
       providerConfigs: await db.providerConfigs.toArray(),
-      defaultModelSettings: await db.defaultModelSettings.get(
-        DEFAULT_MODEL_SETTINGS_ID,
+      defaultModelSettings: defaultModelSettings.find(
+        (settings) => settings.id === DEFAULT_MODEL_SETTINGS_ID,
       ),
+      defaultModelSettingsList: defaultModelSettings,
       chatSessions: await db.chatSessions.toArray(),
       chatMessages: await db.chatMessages.toArray(),
       compareRuns: await db.compareRuns.toArray(),
@@ -193,9 +185,7 @@ export const workspaceRepository = {
           db.canvasTextNodes.bulkPut(payload.canvasTextNodes ?? []),
           db.promptVersions.bulkPut(payload.promptVersions ?? []),
           db.providerConfigs.bulkPut(payload.providerConfigs ?? []),
-          payload.defaultModelSettings
-            ? db.defaultModelSettings.put(payload.defaultModelSettings)
-            : Promise.resolve(),
+          db.defaultModelSettings.bulkPut(getImportedDefaultModelSettings(payload)),
           db.chatSessions.bulkPut(payload.chatSessions ?? []),
           db.chatMessages.bulkPut(payload.chatMessages ?? []),
           db.compareRuns.bulkPut(payload.compareRuns ?? []),
@@ -258,6 +248,7 @@ export const workspaceRepository = {
       promptCardId: session.promptCardId,
       promptCards: canvasPromptCards,
       sessionId,
+      sessionCreatedAt: session.createdAt,
     })
     const promptCards = scopedRecords.promptCards
     const promptCardIds = promptCards.map((card) => card.id)
@@ -273,10 +264,7 @@ export const workspaceRepository = {
         ? db.promptVersions.where('id').anyOf(messagePromptVersionIds).toArray()
         : Promise.resolve([]),
     ])
-    const promptVersions = uniqueById([
-      ...cardPromptVersions,
-      ...messagePromptVersions,
-    ])
+    const promptVersions = uniqueById([...cardPromptVersions, ...messagePromptVersions])
     const compareRuns = promptCardIds.length
       ? await db.compareRuns.where('promptCardId').anyOf(promptCardIds).toArray()
       : []
@@ -468,12 +456,29 @@ export const workspaceRepository = {
   },
 
   async listCanvasesByUpdatedAt() {
-    return db.canvases.reverse().sortBy('updatedAt')
+    return sortCanvasesForSidebar(await db.canvases.toArray())
+  },
+
+  async updateCanvasSortOrders(updates: { id: string; sortOrder: number }[]) {
+    if (!updates.length) return
+    const at = nowIso()
+    await db.transaction('rw', db.canvases, async () => {
+      await Promise.all(
+        updates.map((update) =>
+          db.canvases.update(update.id, {
+            sortOrder: update.sortOrder,
+            updatedAt: at,
+          }),
+        ),
+      )
+    })
   },
 
   async listPromptCardsByCanvas(canvasId: string) {
     return db.promptCards.where('canvasId').equals(canvasId).sortBy('updatedAt')
   },
+
+  async listPromptCards() { return db.promptCards.toArray() },
 
   async assignPromptCardToTopic(promptCardId: string, topicSessionId: string) {
     const at = nowIso()

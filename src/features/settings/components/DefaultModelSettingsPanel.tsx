@@ -9,25 +9,85 @@ import {
 import { IconButton } from '@/shared/ui/IconButton'
 import {
   createDefaultModelSettings,
+  createFlowchartModelSettings,
   deriveEnabledModelOptions,
   resolveDefaultModelProvider,
   resolveDefaultModelOption,
 } from '../model/defaultModelSettings'
 
 interface DefaultModelSettingsPanelProps {
+  flowchartSettings?: DefaultModelSettings
   providers: ProviderConfig[]
   settings?: DefaultModelSettings
   onSave: (settings: DefaultModelSettings) => void
 }
 
+interface DefaultModelCardConfig {
+  assistantTitle: string
+  description: string
+  editorTitle: string
+  emptySettings: () => DefaultModelSettings
+  icon: 'flowchart' | 'prompt'
+  label: string
+  placeholder: string
+  settings?: DefaultModelSettings
+}
+
 export function DefaultModelSettingsPanel({
+  flowchartSettings,
   providers,
   settings,
   onSave,
 }: DefaultModelSettingsPanelProps) {
+  const cards: DefaultModelCardConfig[] = [
+    {
+      assistantTitle: '提示词优化助手',
+      description: '优化整张提示词卡片或选中文本时使用的模型',
+      editorTitle: '提示词优化助手',
+      emptySettings: createDefaultModelSettings,
+      icon: 'prompt',
+      label: '提示词优化模型',
+      placeholder: '写下提示词优化时的系统提示词',
+      settings,
+    },
+    {
+      assistantTitle: '流程图生成助手',
+      description: '根据需求生成步骤、判断、提示词节点和连线时使用的模型',
+      editorTitle: '流程图生成助手',
+      emptySettings: createFlowchartModelSettings,
+      icon: 'flowchart',
+      label: '流程图模型',
+      placeholder: '写下流程图生成时的系统提示词',
+      settings: flowchartSettings,
+    },
+  ]
+
+  return (
+    <section className="default-model-panel">
+      {cards.map((card) => (
+        <DefaultModelCard
+          key={card.label}
+          config={card}
+          providers={providers}
+          onSave={onSave}
+        />
+      ))}
+    </section>
+  )
+}
+
+function DefaultModelCard({
+  config,
+  providers,
+  onSave,
+}: {
+  config: DefaultModelCardConfig
+  providers: ProviderConfig[]
+  onSave: (settings: DefaultModelSettings) => void
+}) {
   const normalizedSettings = useMemo(
-    () => settings ?? createDefaultModelSettings(),
-    [settings],
+    () => config.settings ?? config.emptySettings(),
+    [config],
   )
   const modelOptions = useMemo(
     () => deriveEnabledModelOptions(providers),
@@ -60,20 +120,22 @@ export function DefaultModelSettingsPanel({
   }
 
   return (
-    <section className="default-model-panel">
+    <>
       <div className="default-model-card">
         <div className="default-model-card-head">
-          <MessageSquareText size={20} />
+          {config.icon === 'flowchart'
+            ? <Lightbulb size={20} />
+            : <MessageSquareText size={20} />}
           <div>
-            <h2>提示词优化模型</h2>
-            <span>优化整张提示词卡片或选中文本时使用的模型</span>
+            <h2>{config.label}</h2>
+            <span>{config.description}</span>
           </div>
         </div>
 
         <div className="default-model-picker-row">
           <label className="default-model-select">
             <select
-              aria-label="提示词优化模型"
+              aria-label={config.label}
               value={displayedOption?.id ?? ''}
               onChange={(event) => selectModel(event.target.value)}
             >
@@ -87,7 +149,7 @@ export function DefaultModelSettingsPanel({
           </label>
           <IconButton
             icon={<Settings2 />}
-            label="设置提示词优化模型"
+            label={`设置${config.label}`}
             onClick={() => setEditorOpen(true)}
           />
         </div>
@@ -99,6 +161,7 @@ export function DefaultModelSettingsPanel({
 
       {editorOpen && (
         <DefaultModelEditorDialog
+          config={config}
           provider={displayedProvider}
           settings={displayedSettings}
           onClose={() => setEditorOpen(false)}
@@ -108,7 +171,7 @@ export function DefaultModelSettingsPanel({
           }}
         />
       )}
-    </section>
+    </>
   )
 }
 
@@ -125,6 +188,7 @@ function applyDisplayedModel(
 }
 
 interface DefaultModelEditorDialogProps {
+  config: DefaultModelCardConfig
   provider?: ProviderConfig
   settings: DefaultModelSettings
   onClose: () => void
@@ -132,6 +196,7 @@ interface DefaultModelEditorDialogProps {
 }
 
 function DefaultModelEditorDialog({
+  config,
   provider,
   settings,
   onClose,
@@ -161,7 +226,7 @@ function DefaultModelEditorDialog({
         }}
       >
         <div className="default-model-editor-head">
-          <h2>提示词优化助手</h2>
+          <h2>{config.editorTitle}</h2>
           <IconButton icon={<X />} label="关闭" onClick={onClose} />
         </div>
 
@@ -171,7 +236,7 @@ function DefaultModelEditorDialog({
             <input
               autoFocus
               value={draft.assistantName}
-              placeholder="提示词优化助手"
+              placeholder={config.assistantTitle}
               onChange={(event) =>
                 setDraft((current) => ({
                   ...current,
@@ -185,7 +250,7 @@ function DefaultModelEditorDialog({
             <span>提示词</span>
             <textarea
               value={draft.prompt}
-              placeholder="写下提示词优化时的系统提示词"
+              placeholder={config.placeholder}
               onChange={(event) =>
                 setDraft((current) => ({
                   ...current,

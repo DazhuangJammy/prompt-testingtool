@@ -18,11 +18,12 @@ export async function repairLegacyTopicScopeRecords({
   sessionId: string
 }) {
   const promptCard = await db.promptCards.get(promptCardId)
-  if (!promptCard || promptCard.topicSessionId === sessionId) return
+  if (!promptCard) return
+  if (promptCard.topicSessionId && promptCard.topicSessionId !== sessionId) return
 
   const records = await listCanvasRecordsByCanvas(canvasId)
   const createdAt = promptCard.createdAt
-  const promptCards = filterLegacyBatch(records.promptCards, createdAt)
+  const promptCards = filterLegacyBatch(records.promptCards, createdAt, sessionId)
   const canvasShapeNodes = filterLegacyBatch(records.canvasShapeNodes, createdAt)
   const canvasImageNodes = filterLegacyBatch(records.canvasImageNodes, createdAt)
   const canvasStrokes = filterLegacyBatch(records.canvasStrokes, createdAt)
@@ -43,22 +44,22 @@ export async function repairLegacyTopicScopeRecords({
   )
 
   await Promise.all([
-    ...promptCards.map((card) =>
+    ...promptCards.filter(needsTopicUpdate(sessionId)).map((card) =>
       db.promptCards.update(card.id, { topicSessionId: sessionId }),
     ),
-    ...canvasShapeNodes.map((node) =>
+    ...canvasShapeNodes.filter(needsTopicUpdate(sessionId)).map((node) =>
       db.canvasShapeNodes.update(node.id, { topicSessionId: sessionId }),
     ),
-    ...canvasImageNodes.map((node) =>
+    ...canvasImageNodes.filter(needsTopicUpdate(sessionId)).map((node) =>
       db.canvasImageNodes.update(node.id, { topicSessionId: sessionId }),
     ),
-    ...canvasStrokes.map((stroke) =>
+    ...canvasStrokes.filter(needsTopicUpdate(sessionId)).map((stroke) =>
       db.canvasStrokes.update(stroke.id, { topicSessionId: sessionId }),
     ),
-    ...canvasTextNodes.map((node) =>
+    ...canvasTextNodes.filter(needsTopicUpdate(sessionId)).map((node) =>
       db.canvasTextNodes.update(node.id, { topicSessionId: sessionId }),
     ),
-    ...canvasEdges.map((edge) =>
+    ...canvasEdges.filter(needsTopicUpdate(sessionId)).map((edge) =>
       db.canvasEdges.update(edge.id, { topicSessionId: sessionId }),
     ),
   ])
@@ -117,9 +118,12 @@ async function listCanvasRecordsByCanvas(canvasId: string) {
 function filterLegacyBatch<T extends ScopedCanvasRecord>(
   records: T[],
   createdAt: string,
+  sessionId?: string,
 ) {
   return records.filter(
-    (record) => !record.topicSessionId && record.createdAt === createdAt,
+    (record) =>
+      record.createdAt === createdAt &&
+      (!record.topicSessionId || record.topicSessionId === sessionId),
   )
 }
 
@@ -130,3 +134,7 @@ type ScopedCanvasRecord =
   | CanvasStroke
   | CanvasTextNode
   | PromptCard
+
+function needsTopicUpdate(sessionId: string) {
+  return (record: ScopedCanvasRecord) => record.topicSessionId !== sessionId
+}

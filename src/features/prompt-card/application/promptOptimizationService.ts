@@ -6,6 +6,7 @@ interface FullPromptOptimizationInput {
   onUpdate?: (text: string) => void
   promptMarkdown: string
   provider: ProviderConfig
+  signal?: AbortSignal
   systemPrompt?: string
   thinkingMode?: ThinkingMode
 }
@@ -25,6 +26,7 @@ export async function optimizeFullPrompt({
   onUpdate,
   promptMarkdown,
   provider,
+  signal,
   systemPrompt,
   thinkingMode = 'off',
 }: FullPromptOptimizationInput) {
@@ -33,6 +35,7 @@ export async function optimizeFullPrompt({
     buildFullPromptOptimizationMessages({ instruction, promptMarkdown, systemPrompt }),
     thinkingMode,
     onUpdate,
+    signal,
   )
 
   return result
@@ -57,6 +60,7 @@ export async function optimizeSelectedPromptText({
     }),
     thinkingMode,
     onUpdate,
+    undefined,
   )
 
   return result
@@ -155,6 +159,7 @@ async function requestVisibleOptimizationStream(
   messages: CompletionMessage[],
   thinkingMode: ThinkingMode,
   onUpdate?: (text: string) => void,
+  signal?: AbortSignal,
 ) {
   let rawText = ''
   let visibleText = ''
@@ -172,6 +177,7 @@ async function requestVisibleOptimizationStream(
       onThinking: () => undefined,
     },
     thinkingMode,
+    signal,
   )
   if (!rawText && streamedText) rawText = streamedText
 

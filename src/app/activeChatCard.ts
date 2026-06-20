@@ -32,10 +32,9 @@ export function resolveActiveChatCard({
 }
 
 export function resolveChatScopePromptCardId({
-  selectedCard,
   session,
 }: Pick<ResolveActiveChatCardOptions, 'selectedCard' | 'session'>) {
-  return session?.promptCardId ?? selectedCard?.id
+  return session?.promptCardId
 }
 
 function findCard(cards: PromptCard[], id?: string) {

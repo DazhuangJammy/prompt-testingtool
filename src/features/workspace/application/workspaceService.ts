@@ -7,6 +7,7 @@ import {
   createDuplicateChatSessionSortOrder,
   createDuplicateChatSessionTitle,
 } from '@/features/chat/model/chatSessionOrdering'
+import { createReorderedCanvasSortUpdates } from '@/features/workspace/model/canvasOrdering'
 import type {
   Canvas,
   ChatTopicExportPayload,
@@ -18,6 +19,16 @@ import { nowIso } from '@/shared/utils/time'
 
 export async function createNextCanvas(canvases: Canvas[]) {
   return workspaceRepository.createCanvas(`画布 ${canvases.length + 1}`)
+}
+
+export async function reorderCanvases(
+  canvases: Canvas[],
+  draggedId: string,
+  targetId: string,
+) {
+  const updates = createReorderedCanvasSortUpdates(canvases, draggedId, targetId)
+  if (!updates.length) return
+  await workspaceRepository.updateCanvasSortOrders(updates)
 }
 
 export async function addPromptCardToCanvas(

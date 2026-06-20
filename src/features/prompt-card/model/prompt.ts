@@ -209,6 +209,13 @@ export const remapCollapsedMarkdownHeadingIds = (
   return nextCollapsedIds
 }
 
+export function collectMarkdownOutlineNodeIds(nodes: MarkdownOutlineNode[]): string[] {
+  return nodes.flatMap((node) => [
+    node.id,
+    ...collectMarkdownOutlineNodeIds(node.children),
+  ])
+}
+
 export function findMarkdownOutlineNodeById(
   nodes: MarkdownOutlineNode[],
   id: string,

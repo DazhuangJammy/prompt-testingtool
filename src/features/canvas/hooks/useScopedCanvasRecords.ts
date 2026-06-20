@@ -8,11 +8,13 @@ export function useScopedCanvasRecords({
   promptCardId,
   promptCards,
   sessionId,
+  sessionCreatedAt,
 }: {
   canvasId?: string
   promptCardId?: string
   promptCards: PromptCard[]
   sessionId?: string
+  sessionCreatedAt?: string
 }) {
   const {
     canvasEdges,
@@ -33,6 +35,7 @@ export function useScopedCanvasRecords({
         promptCardId,
         promptCards,
         sessionId,
+        sessionCreatedAt,
       }),
     [
       canvasEdges,
@@ -40,6 +43,7 @@ export function useScopedCanvasRecords({
       promptCardId,
       promptCards,
       sessionId,
+      sessionCreatedAt,
       shapeNodes,
       strokes,
       textNodes,

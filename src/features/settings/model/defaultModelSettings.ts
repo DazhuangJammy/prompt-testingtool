@@ -90,6 +90,91 @@ export const DEFAULT_ASSISTANT_PROMPT = `# 角色：
 
 现在：请严格遵守<角色>和<规则>，执行<工作流程>1`
 
+export const FLOWCHART_MODEL_SETTINGS_ID = 'flowchart-model'
+export const FLOWCHART_ASSISTANT_NAME = '流程图生成助手'
+export const FLOWCHART_ASSISTANT_PROMPT = `# 角色：
+- 你是流程图结构生成专家，专门负责把用户的零散需求、业务说明、流程描述，转换成可以直接渲染到画布上的结构化流程图 JSON。
+- 你是严格的信息架构师，只能使用步骤节点和提示词节点组织流程。
+- 你是谨慎的画布编排专家，必须让步骤从上到下顺序清晰，输出结果稳定可解析。
+
+# 规则：
+- 最终只能输出 JSON，禁止输出解释、寒暄、分析过程、Markdown 代码块围栏。
+- JSON 只能包含 nodes 和 edges 两个顶层字段。
+- nodes 里的节点 kind 只能是 step、prompt。
+- 禁止生成 decision、condition、branch 等判断节点。
+- step 节点必须有 title 和 body。
+- step 节点 title 必须以两位序号开头，格式为【01】、【02】、【03】。
+- prompt 节点表示该步骤可能用到的智能体提示词卡片，只写标题和生成要求，不写完整提示词正文。
+- 每个 step 节点可按实际需要连接多个 prompt 节点，可以没有 prompt 节点，不设置数量上限。
+- 如果一个步骤包含多个智能体，必须为每个明确需要独立工作的智能体生成对应 prompt 节点，不要因为数量多而合并或省略。
+- edges 只需要表达 step 到 prompt 的从属关系；主流程步骤顺序由系统自动按 nodes 中 step 顺序连接。
+- 禁止输出 step 到 step 的复杂多重关系；复杂关系写进对应 step 的 body。
+- edges 只能连接 nodes 中已经存在的 id，且只能从 step 指向 prompt。
+- 禁止编造事实、数据、资质、案例；没有依据的内容只能写成通用流程要求。
+
+# 流程图 JSON 结构：
+- nodes 是节点数组，每个节点必须包含 id、kind、title、body。
+- prompt 节点必须额外包含 promptInstruction，用来描述后续提示词优化模型要生成什么提示词。
+- edges 是连线数组，每条连线必须包含 sourceId、targetId。
+- id 必须使用稳定英文小写、数字和短横线，禁止中文和空格。
+
+# 输出格式：
+- 最终只输出一份 JSON 对象。
+- JSON 示例结构如下：
+{
+  "nodes": [
+    {
+      "id": "step-01",
+      "kind": "step",
+      "title": "【01】需求理解",
+      "body": "- 梳理用户目标\\n- 确认输入材料\\n- 记录关键约束"
+    },
+    {
+      "id": "prompt-01",
+      "kind": "prompt",
+      "title": "需求分析提示词",
+      "body": "用于分析用户需求的智能体提示词。",
+      "promptInstruction": "生成一个需求分析智能体提示词，要求能识别目标、输入、约束和缺失信息。"
+    }
+  ],
+  "edges": [
+    { "sourceId": "step-01", "targetId": "prompt-01" }
+  ]
+}
+
+# 工作流程:
+深呼吸一口气，请逐步思考和推理接下来的每一个步骤，禁止跳过任何一个步骤：
+1. 读取用户需求和当前画布上下文，判断用户是从零生成流程，还是基于现有画布继续补充流程。
+2. 把用户需求拆解成有先后顺序的步骤节点，并为步骤节点添加【01】这样的两位序号。
+3. 把分支、判断、复杂关系写入对应步骤 body，禁止新增判断节点。
+4. 判断每个步骤是否需要提示词节点；如果需要，按实际智能体数量生成对应提示词节点，不设置数量上限。
+5. 为每个提示词节点写清楚 promptInstruction，方便后续提示词优化模型生成完整提示词卡片。
+6. 只为 step 到 prompt 的从属关系建立 edges，主流程顺序不需要输出复杂连线。
+7. 检查 JSON 是否能被严格解析，禁止输出 JSON 之外的任何文字。
+
+现在：请严格遵守<角色>和<规则>，执行<工作流程>1`
+
+const FLOWCHART_LEGACY_PROMPT_LIMIT_PATTERNS = [
+  /每个 step 节点最多连接\s*3\s*个 prompt 节点/,
+  /超过\s*3\s*个智能体/,
+  /最多生成\s*3\s*个最关键的提示词节点/,
+]
+
+const FLOWCHART_LEGACY_PROMPT_REPLACEMENTS: Array<[RegExp, string]> = [
+  [
+    /每个 step 节点最多连接\s*3\s*个 prompt 节点，可以没有 prompt 节点。/g,
+    '每个 step 节点可按实际需要连接多个 prompt 节点，可以没有 prompt 节点，不设置数量上限。',
+  ],
+  [
+    /如果一个步骤包含超过\s*3\s*个智能体，只选择最关键的\s*3\s*个生成 prompt 节点，其余智能体写入对应 step 的 body。/g,
+    '如果一个步骤包含多个智能体，必须为每个明确需要独立工作的智能体生成对应 prompt 节点，不要因为数量多而合并或省略。',
+  ],
+  [
+    /4\. 判断每个步骤是否需要提示词节点；如果需要，最多生成\s*3\s*个最关键的提示词节点。/g,
+    '4. 判断每个步骤是否需要提示词节点；如果需要，按实际智能体数量生成对应提示词节点，不设置数量上限。',
+  ],
+]
+
 export interface EnabledModelOption {
   id: string
   providerId: string
@@ -115,16 +200,35 @@ export function createDefaultModelSettings(
   })
 }
 
+export function createFlowchartModelSettings(
+  updates: Partial<DefaultModelSettings> = {},
+): DefaultModelSettings {
+  const at = nowIso()
+
+  return normalizeDefaultModelSettings({
+    id: FLOWCHART_MODEL_SETTINGS_ID,
+    assistantName: FLOWCHART_ASSISTANT_NAME,
+    prompt: FLOWCHART_ASSISTANT_PROMPT,
+    thinkingMode: 'off',
+    createdAt: at,
+    updatedAt: at,
+    ...updates,
+  })
+}
+
 export function normalizeDefaultModelSettings(
   settings: DefaultModelSettings,
 ): DefaultModelSettings {
+  const defaults = getDefaultModelProfile(settings.id)
+  const prompt = settings.prompt.trim()
+
   return {
     ...settings,
-    id: settings.id || DEFAULT_MODEL_SETTINGS_ID,
+    id: settings.id || defaults.id,
     providerId: settings.providerId?.trim() || undefined,
     modelId: settings.modelId?.trim() || undefined,
-    assistantName: settings.assistantName.trim() || DEFAULT_ASSISTANT_NAME,
-    prompt: settings.prompt.trim() || DEFAULT_ASSISTANT_PROMPT,
+    assistantName: settings.assistantName.trim() || defaults.assistantName,
+    prompt: normalizeDefaultPrompt(settings.id, prompt, defaults.prompt),
     thinkingMode: normalizeDefaultThinkingMode(settings.thinkingMode),
   }
 }
@@ -186,6 +290,17 @@ export function appendDefaultAssistantPrompt(
   return `${prompt}\n\n${compiledPrompt}`
 }
 
+export function upgradeLegacyFlowchartAssistantPrompt(prompt: string) {
+  if (!FLOWCHART_LEGACY_PROMPT_LIMIT_PATTERNS.some((pattern) => pattern.test(prompt))) {
+    return prompt
+  }
+
+  return FLOWCHART_LEGACY_PROMPT_REPLACEMENTS.reduce(
+    (nextPrompt, [pattern, replacement]) => nextPrompt.replace(pattern, replacement),
+    prompt,
+  )
+}
+
 function createModelOption(
   provider: ProviderConfig,
   model: ProviderModelConfig,
@@ -206,4 +321,25 @@ function normalizeDefaultThinkingMode(mode?: ThinkingMode): ThinkingMode {
   return mode && ['auto', 'off', 'light', 'on', 'deep'].includes(mode)
     ? mode
     : 'off'
+}
+
+function normalizeDefaultPrompt(id: string, prompt: string, fallbackPrompt: string) {
+  if (!prompt) return fallbackPrompt
+  if (id === FLOWCHART_MODEL_SETTINGS_ID)
+    return upgradeLegacyFlowchartAssistantPrompt(prompt)
+  return prompt
+}
+
+function getDefaultModelProfile(id?: string) {
+  return id === FLOWCHART_MODEL_SETTINGS_ID
+    ? {
+        id: FLOWCHART_MODEL_SETTINGS_ID,
+        assistantName: FLOWCHART_ASSISTANT_NAME,
+        prompt: FLOWCHART_ASSISTANT_PROMPT,
+      }
+    : {
+        id: DEFAULT_MODEL_SETTINGS_ID,
+        assistantName: DEFAULT_ASSISTANT_NAME,
+        prompt: DEFAULT_ASSISTANT_PROMPT,
+      }
 }

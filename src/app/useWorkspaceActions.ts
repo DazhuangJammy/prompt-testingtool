@@ -8,6 +8,7 @@ import {
   duplicateChatTopic,
   importChatTopicFile,
   importWorkspaceFile,
+  reorderCanvases,
 } from '@/features/workspace/application/workspaceService'
 import { workspaceRepository } from '@/features/workspace/infrastructure/workspaceRepository'
 import type { Canvas, PromptCard } from '@/shared/types'
@@ -104,6 +105,8 @@ export function useWorkspaceActions({
     exportWorkspace,
     importChatTopic,
     importWorkspace,
+    reorderCanvases: (draggedId: string, targetId: string) =>
+      reorderCanvases(canvases, draggedId, targetId),
     updateCanvas,
   }
 }

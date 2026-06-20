@@ -141,6 +141,50 @@ describe('PromptCardNode', () => {
     )
     expect(document.querySelector('.prompt-markdown-editor')).toBeNull()
   })
+
+  it('collapses generated prompt card headings by default', async () => {
+    host = document.createElement('div')
+    document.body.append(host)
+    root = createRoot(host)
+
+    await act(async () => {
+      root?.render(
+        <PromptCardNode
+          id="card-3"
+          type="promptCard"
+          selected={false}
+          dragging={false}
+          draggable={true}
+          selectable={true}
+          deletable={true}
+          zIndex={0}
+          isConnectable={true}
+          positionAbsoluteX={0}
+          positionAbsoluteY={0}
+          data={{
+            card: {
+              id: 'card-3',
+              canvasId: 'canvas',
+              defaultCollapsed: true,
+              title: '生成卡片',
+              position: { x: 0, y: 0 },
+              markdown: '# 角色\n\n- 展开后才看到\n\n# 规则\n\n- 规则内容',
+              sections: {},
+              createdAt: 'now',
+              updatedAt: 'now',
+            },
+            onChange: vi.fn(),
+            onSelect: vi.fn(),
+          }}
+        />,
+      )
+    })
+
+    expect(document.querySelectorAll('.prompt-outline-section.is-collapsed')).toHaveLength(2)
+    expect(document.body.textContent).toContain('角色')
+    expect(document.body.textContent).not.toContain('展开后才看到')
+    expect(document.body.textContent).not.toContain('规则内容')
+  })
 })
 
 void (undefined as unknown as PromptFlowNode)

@@ -69,6 +69,41 @@ describe('SettingsDialog', () => {
     expect(document.querySelectorAll('.shortcut-settings-row')).toHaveLength(7)
   })
 
+  it('shows both default model usages on the default model page', () => {
+    host = document.createElement('div')
+    document.body.append(host)
+    root = createRoot(host)
+
+    act(() => {
+      root?.render(
+        <SettingsDialog
+          open
+          canvasToolShortcuts={defaultCanvasToolShortcuts}
+          selectionMagnifier={defaultSelectionMagnifierSettings}
+          providers={[provider]}
+          onClose={vi.fn()}
+          onDelete={vi.fn()}
+          onReorderProviders={vi.fn()}
+          onResetCanvasToolShortcuts={vi.fn()}
+          onSelectionMagnifierChange={vi.fn()}
+          onSave={vi.fn()}
+          onSaveCanvasToolShortcut={vi.fn()}
+          onSaveDefaultModelSettings={vi.fn()}
+          onSelect={vi.fn()}
+        />,
+      )
+    })
+
+    act(() => {
+      Array.from(document.querySelectorAll<HTMLButtonElement>('nav button'))
+        .find((button) => button.textContent?.includes('默认模型'))
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(document.body.textContent).toContain('提示词优化模型')
+    expect(document.body.textContent).toContain('流程图模型')
+  })
+
   it('opens other settings for the selection magnifier', () => {
     host = document.createElement('div')
     document.body.append(host)

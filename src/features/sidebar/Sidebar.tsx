@@ -46,6 +46,7 @@ interface SidebarProps {
     draggedId: string,
     targetId: string,
   ) => Promise<void>
+  onReorderCanvases: (draggedId: string, targetId: string) => Promise<void>
   onDuplicateSession: (session: ChatSession) => Promise<void>
   onDelete: (id: string) => void
   onDeleteSession: (session: ChatSession) => void
@@ -76,6 +77,7 @@ export function Sidebar({
   onRename,
   onRenameSession,
   onReorderSessions,
+  onReorderCanvases,
   onDuplicateSession,
   onDelete,
   onDeleteSession,
@@ -93,6 +95,8 @@ export function Sidebar({
     () => new Set(),
   )
   const [menuCanvasId, setMenuCanvasId] = useState<string>()
+  const [draggingCanvasId, setDraggingCanvasId] = useState<string>()
+  const [dragOverCanvasId, setDragOverCanvasId] = useState<string>()
   const [draggingSessionId, setDraggingSessionId] = useState<string>()
   const [dragOverSessionId, setDragOverSessionId] = useState<string>()
   const [importDialogOpen, setImportDialogOpen] = useState(false)
@@ -160,6 +164,11 @@ export function Sidebar({
   const clearTopicDragState = () => {
     setDraggingSessionId(undefined)
     setDragOverSessionId(undefined)
+  }
+
+  const clearCanvasDragState = () => {
+    setDraggingCanvasId(undefined)
+    setDragOverCanvasId(undefined)
   }
 
   return (
@@ -241,7 +250,42 @@ export function Sidebar({
                     <div
                       className={`project-row ${
                         active && !hasActiveSession ? 'is-active' : ''
+                      } ${canvas.id === draggingCanvasId ? 'is-dragging' : ''} ${
+                        canvas.id === dragOverCanvasId &&
+                        canvas.id !== draggingCanvasId
+                          ? 'is-drag-over'
+                          : ''
                       }`}
+                      draggable
+                      onDragStart={(event) => {
+                        setDraggingCanvasId(canvas.id)
+                        event.dataTransfer.effectAllowed = 'move'
+                        event.dataTransfer.setData('text/canvas-id', canvas.id)
+                      }}
+                      onDragOver={(event) => {
+                        event.preventDefault()
+                        event.dataTransfer.dropEffect = 'move'
+                        setDragOverCanvasId(canvas.id)
+                      }}
+                      onDragLeave={() => {
+                        setDragOverCanvasId((id) =>
+                          id === canvas.id ? undefined : id,
+                        )
+                      }}
+                      onDragEnd={clearCanvasDragState}
+                      onDrop={(event) => {
+                        event.preventDefault()
+                        const draggedId = event.dataTransfer.getData('text/canvas-id')
+                        clearCanvasDragState()
+                        if (!draggedId || draggedId === canvas.id) return
+                        void onReorderCanvases(draggedId, canvas.id).catch(
+                          (error: unknown) => {
+                            setToastMessage(
+                              error instanceof Error ? error.message : '排序失败',
+                            )
+                          },
+                        )
+                      }}
                     >
                       <button
                         type="button"

@@ -107,8 +107,39 @@ describe('legacy topic scope repair', () => {
 
     expect(db.promptCards.where).not.toHaveBeenCalled()
 
+    vi.clearAllMocks()
     vi.mocked(db.promptCards.get).mockResolvedValueOnce(
       legacyCard('card', 'now', 'session'),
+    )
+    mockCanvasRecords({
+      promptCards: [legacyCard('card', 'now', 'session')],
+      shapeNodes: [legacyShape('shape', 'now')],
+      imageNodes: [],
+      strokes: [],
+      textNodes: [],
+      edges: [legacyEdge('edge', 'card', 'shape', 'now')],
+    })
+
+    await repairLegacyTopicScopeRecords({
+      canvasId: 'canvas',
+      promptCardId: 'card',
+      sessionId: 'session',
+    })
+
+    expect(db.promptCards.update).not.toHaveBeenCalledWith(
+      'card',
+      expect.any(Object),
+    )
+    expect(db.canvasShapeNodes.update).toHaveBeenCalledWith('shape', {
+      topicSessionId: 'session',
+    })
+    expect(db.canvasEdges.update).toHaveBeenCalledWith('edge', {
+      topicSessionId: 'session',
+    })
+
+    vi.clearAllMocks()
+    vi.mocked(db.promptCards.get).mockResolvedValueOnce(
+      legacyCard('card', 'now', 'other-session'),
     )
 
     await repairLegacyTopicScopeRecords({

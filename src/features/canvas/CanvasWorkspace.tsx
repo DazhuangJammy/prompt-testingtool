@@ -4,7 +4,6 @@ import {
   ConnectionMode,
   Controls,
   MiniMap,
-  Panel,
   ReactFlow,
   SelectionMode,
   ViewportPortal,
@@ -25,7 +24,7 @@ import {
 } from '@/features/canvas/application/canvasService'
 import { CanvasAlignmentGuides } from '@/features/canvas/components/CanvasAlignmentGuides'
 import { CanvasLayoutControls } from '@/features/canvas/components/CanvasLayoutControls'
-import { CanvasWorkspaceToolbar } from '@/features/canvas/components/CanvasWorkspaceToolbar'
+import { CanvasWorkspaceControls } from '@/features/canvas/components/CanvasWorkspaceControls'
 import { DraftStrokeLayer } from '@/features/canvas/components/DraftStrokeLayer'
 import { useCanvasAlignment } from '@/features/canvas/hooks/useCanvasAlignment'
 import { useCanvasClipboard } from '@/features/canvas/hooks/useCanvasClipboard'
@@ -34,10 +33,12 @@ import { useCanvasFlowState } from '@/features/canvas/hooks/useCanvasFlowState'
 import { useCanvasFrameStyle } from '@/features/canvas/hooks/useCanvasFrameStyle'
 import { useCanvasNodePersistence } from '@/features/canvas/hooks/useCanvasNodePersistence'
 import { useCanvasPaneClick } from '@/features/canvas/hooks/useCanvasPaneClick'
+import { useFlowchartGeneration } from '@/features/canvas/hooks/useFlowchartGeneration'
 import { useScopedCanvasRecords } from '@/features/canvas/hooks/useScopedCanvasRecords'
 import { useCanvasToolKeyboardShortcuts } from '@/features/canvas/hooks/useCanvasToolKeyboardShortcuts'
 import { useCanvasViewportPersistence } from '@/features/canvas/hooks/useCanvasViewportPersistence'
 import { useDraftStroke } from '@/features/canvas/hooks/useDraftStroke'
+import type { CanvasWorkspaceProps } from '@/features/canvas/CanvasWorkspace.types'
 import { canvasRepository } from '@/features/canvas/infrastructure/canvasRepository'
 import { createCanvasEdge } from '@/features/canvas/model/canvasElements'
 import { canvasNodeTypes, penColors } from '@/features/canvas/model/canvasWorkspaceRegistry'
@@ -58,26 +59,14 @@ import {
   defaultTextStyle,
   type CanvasTextStyle,
 } from '@/features/canvas/model/textStyle'
-import type { DefaultModelSettings, PromptCard, ProviderConfig } from '@/shared/types'
-import type { CanvasToolShortcuts } from '@/shared/model/canvasToolShortcuts'
-
-interface CanvasWorkspaceProps {
-  effectiveCanvasId?: string
-  activeSessionId?: string
-  activeSessionPromptCardId?: string
-  promptOptimizationProvider?: ProviderConfig
-  promptOptimizationSettings?: DefaultModelSettings
-  toolShortcuts: CanvasToolShortcuts
-  promptCards: PromptCard[]
-  onAddPrompt: (position?: PromptCard['position'], topicSessionId?: string) => void
-  onDeleteCard: (id: string) => void
-  onSelectCard: (id: string) => void
-}
 
 export function CanvasWorkspace({
   activeSessionId,
+  activeSessionCreatedAt,
   activeSessionPromptCardId,
   effectiveCanvasId,
+  flowchartProvider,
+  flowchartSettings,
   onAddPrompt,
   onDeleteCard,
   onSelectCard,
@@ -102,6 +91,7 @@ export function CanvasWorkspace({
     promptCardId: activeSessionPromptCardId,
     promptCards,
     sessionId: activeSessionId,
+    sessionCreatedAt: activeSessionCreatedAt,
   })
   const canvasFlowEdges = scopedRecords.canvasEdges
   const canvasImageNodes = scopedRecords.canvasImageNodes
@@ -396,6 +386,19 @@ export function CanvasWorkspace({
     textNodes: canvasTextNodes,
     topicSessionId: activeSessionId,
   })
+  const flowchartGeneration = useFlowchartGeneration({
+    canvasEdges: canvasFlowEdges,
+    canvasId: effectiveCanvasId,
+    flowchartProvider,
+    flowchartSettings,
+    onSelectionChange: updateSelection,
+    promptCards: scopedPromptCards,
+    promptOptimizationProvider,
+    promptOptimizationSettings,
+    reactFlow,
+    shapeNodes: canvasShapeNodes,
+    topicSessionId: activeSessionId,
+  })
   return (
     <div
       ref={shortcutScopeRef}
@@ -472,24 +475,23 @@ export function CanvasWorkspace({
           />
         </Controls>
         <MiniMap pannable position="bottom-right" zoomable />
-        <Panel position="bottom-center">
-          <CanvasWorkspaceToolbar
-            activeTool={activeTool}
-            canDelete={hasSelection}
-            canStyleFrame={canStyleFrame}
-            canStyleText={Boolean(selectedTextNode)}
-            frameStyle={activeFrameStyle}
-            penColor={penColor}
-            penColors={penColors}
-            textStyle={activeTextStyle}
-            toolShortcuts={toolShortcuts}
-            onDeleteSelected={deleteSelected}
-            onSelectFrameStyle={updateFrameStyle}
-            onSelectPenColor={setPenColor}
-            onSelectTextStyle={updateTextStyle}
-            onSelectTool={selectTool}
-          />
-        </Panel>
+        <CanvasWorkspaceControls
+          activeFrameStyle={activeFrameStyle}
+          activeTextStyle={activeTextStyle}
+          activeTool={activeTool}
+          canDelete={hasSelection}
+          canStyleFrame={canStyleFrame}
+          canStyleText={Boolean(selectedTextNode)}
+          flowchartGeneration={flowchartGeneration}
+          penColor={penColor}
+          penColors={penColors}
+          toolShortcuts={toolShortcuts}
+          onDeleteSelected={deleteSelected}
+          onSelectFrameStyle={updateFrameStyle}
+          onSelectPenColor={setPenColor}
+          onSelectTextStyle={updateTextStyle}
+          onSelectTool={selectTool}
+        />
       </ReactFlow>
     </div>
   )

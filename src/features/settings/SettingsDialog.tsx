@@ -18,6 +18,7 @@ import { normalizeProviderConfig } from './model/providerCatalog'
 interface SettingsDialogProps {
   open: boolean
   defaultModelSettings?: DefaultModelSettings
+  flowchartModelSettings?: DefaultModelSettings
   canvasToolShortcuts: CanvasToolShortcuts
   selectionMagnifier: SelectionMagnifierSettings
   providers: ProviderConfig[]
@@ -45,6 +46,7 @@ type SettingCategoryId = (typeof SETTING_CATEGORIES)[number]['id']
 export function SettingsDialog({
   open,
   defaultModelSettings,
+  flowchartModelSettings,
   canvasToolShortcuts,
   selectionMagnifier,
   providers,
@@ -139,6 +141,7 @@ export function SettingsDialog({
           ) : activeCategory === 'default-model' ? (
             <main className="settings-main-panel">
               <DefaultModelSettingsPanel
+                flowchartSettings={flowchartModelSettings}
                 providers={normalizedProviders}
                 settings={defaultModelSettings}
                 onSave={onSaveDefaultModelSettings}

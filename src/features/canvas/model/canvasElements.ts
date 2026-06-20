@@ -13,9 +13,9 @@ import { nowIso } from '@/shared/utils/time'
 const shapeDefaults = {
   decision: {
     body: '分支条件',
-    height: 120,
+    height: 150,
     title: '判断',
-    width: 180,
+    width: 220,
   },
   step: {
     body: '流程说明',

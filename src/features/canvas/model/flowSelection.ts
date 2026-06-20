@@ -26,6 +26,29 @@ export function toFlowSelectionIds(selection: {
   }
 }
 
+export function mergeSelectedFlowNodeIds(
+  selectedNodeIds: string[],
+  flowNodes: Array<{ id: string; selected?: boolean }>,
+) {
+  return [
+    ...new Set([
+      ...selectedNodeIds,
+      ...flowNodes.filter((node) => node.selected).map((node) => node.id),
+    ]),
+  ]
+}
+
+export function replaceSelectedFlowItems<T extends { id: string; selected?: boolean }>(
+  items: T[],
+  selectedIds: string[],
+): T[] {
+  const selected = new Set(selectedIds)
+  return items.map((item) => ({
+    ...item,
+    selected: selected.has(item.id),
+  })) as T[]
+}
+
 function areIdListsEqual(first: string[], second: string[]) {
   if (first.length !== second.length) return false
 

@@ -30,10 +30,10 @@ describe('canvas elements model', () => {
 
     expect(createCanvasShapeNode('canvas', 'decision', { x: 3, y: 4 })).toMatchObject({
       body: '分支条件',
-      height: 120,
+      height: 150,
       kind: 'decision',
       title: '判断',
-      width: 180,
+      width: 220,
     })
   })
 

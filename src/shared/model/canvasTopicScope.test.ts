@@ -101,4 +101,123 @@ describe('canvas topic scope', () => {
     expect(scoped.canvasShapeNodes.map((item) => item.id)).toEqual(['copy-shape'])
     expect(scoped.canvasEdges.map((item) => item.id)).toEqual(['copy-edge'])
   })
+
+  it('keeps legacy nodes visible when only the prompt card was already scoped', () => {
+    const scoped = filterCanvasRecordsForTopic({
+      sessionId: 'topic-a',
+      promptCardId: 'card-a',
+      promptCards: [
+        card('card-a', 'copy-time', 'topic-a'),
+        card('other-card', 'old-time'),
+      ],
+      canvasShapeNodes: [shape('shape-a', 'copy-time'), shape('old-shape', 'old-time')],
+      canvasImageNodes: [],
+      canvasStrokes: [],
+      canvasTextNodes: [],
+      canvasEdges: [
+        edge('edge-a', 'card-a', 'shape-a', 'copy-time'),
+        edge('old-edge', 'other-card', 'old-shape', 'old-time'),
+      ],
+    })
+
+    expect(scoped.promptCards.map((item) => item.id)).toEqual(['card-a'])
+    expect(scoped.canvasShapeNodes.map((item) => item.id)).toEqual(['shape-a'])
+    expect(scoped.canvasEdges.map((item) => item.id)).toEqual(['edge-a'])
+  })
+
+  it('keeps legacy topic records when a newly scoped card becomes selected', () => {
+    const scoped = filterCanvasRecordsForTopic({
+      sessionId: 'topic-a',
+      promptCardId: 'new-card',
+      promptCards: [
+        card('legacy-card', 'copy-time', 'topic-a'),
+        card('new-card', 'new-time', 'topic-a'),
+      ],
+      canvasShapeNodes: [shape('legacy-shape', 'copy-time')],
+      canvasImageNodes: [],
+      canvasStrokes: [],
+      canvasTextNodes: [],
+      canvasEdges: [
+        edge('legacy-edge', 'legacy-card', 'legacy-shape', 'copy-time'),
+      ],
+    })
+
+    expect(scoped.promptCards.map((item) => item.id)).toEqual([
+      'legacy-card',
+      'new-card',
+    ])
+    expect(scoped.canvasShapeNodes.map((item) => item.id)).toEqual([
+      'legacy-shape',
+    ])
+    expect(scoped.canvasEdges.map((item) => item.id)).toEqual(['legacy-edge'])
+  })
+
+  it('keeps unscoped legacy nodes visible after adding scoped nodes to a topic without a prompt card anchor', () => {
+    const scoped = filterCanvasRecordsForTopic({
+      sessionId: 'sop-topic',
+      sessionCreatedAt: '2026-01-01T00:00:00.000Z',
+      promptCards: [],
+      canvasShapeNodes: [
+        shape('legacy-step', '2026-01-01T00:00:01.000Z'),
+        shape('new-step', '2026-01-01T00:00:02.000Z', 'sop-topic'),
+      ],
+      canvasImageNodes: [],
+      canvasStrokes: [],
+      canvasTextNodes: [],
+      canvasEdges: [
+        edge(
+          'legacy-to-new',
+          'legacy-step',
+          'new-step',
+          '2026-01-01T00:00:02.000Z',
+          'sop-topic',
+        ),
+      ],
+    })
+
+    expect(scoped.canvasShapeNodes.map((item) => item.id)).toEqual([
+      'new-step',
+      'legacy-step',
+    ])
+    expect(scoped.canvasEdges.map((item) => item.id)).toEqual(['legacy-to-new'])
+  })
+
+  it('keeps a new blank topic empty instead of inheriting older unscoped canvas nodes', () => {
+    const scoped = filterCanvasRecordsForTopic({
+      sessionId: 'new-topic',
+      sessionCreatedAt: '2026-01-02T00:00:00.000Z',
+      promptCards: [],
+      canvasShapeNodes: [
+        shape('topic-one-step', '2026-01-01T00:00:00.000Z'),
+      ],
+      canvasImageNodes: [],
+      canvasStrokes: [],
+      canvasTextNodes: [],
+      canvasEdges: [],
+    })
+
+    expect(scoped.canvasShapeNodes).toEqual([])
+    expect(scoped.promptCards).toEqual([])
+  })
+
+  it('does not merge unrelated unscoped nodes when the topic is anchored by a prompt card', () => {
+    const scoped = filterCanvasRecordsForTopic({
+      sessionId: 'topic-a',
+      promptCardId: 'card-a',
+      promptCards: [card('card-a', 'card-time', 'topic-a')],
+      canvasShapeNodes: [
+        shape('new-step', 'new-time', 'topic-a'),
+        shape('unrelated-legacy-step', 'other-time'),
+      ],
+      canvasImageNodes: [],
+      canvasStrokes: [],
+      canvasTextNodes: [],
+      canvasEdges: [
+        edge('unrelated-edge', 'unrelated-legacy-step', 'new-step', 'other-time'),
+      ],
+    })
+
+    expect(scoped.canvasShapeNodes.map((item) => item.id)).toEqual(['new-step'])
+    expect(scoped.canvasEdges).toEqual([])
+  })
 })

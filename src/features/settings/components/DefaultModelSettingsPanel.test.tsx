@@ -77,6 +77,41 @@ describe('DefaultModelSettingsPanel', () => {
     expect(document.querySelector('.default-model-summary')).toBeNull()
   })
 
+  it('renders and saves the flowchart model independently', () => {
+    const saveMock = vi.fn()
+    host = document.createElement('div')
+    document.body.append(host)
+    root = createRoot(host)
+
+    act(() => {
+      root?.render(
+        <DefaultModelSettingsPanel providers={[provider]} onSave={saveMock} />,
+      )
+    })
+
+    expect(document.body.textContent).toContain('流程图模型')
+
+    act(() => {
+      document
+        .querySelector<HTMLButtonElement>('button[aria-label="设置流程图模型"]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    act(() => {
+      document
+        .querySelector<HTMLButtonElement>('.default-model-editor button[type="submit"]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(saveMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'flowchart-model',
+        assistantName: '流程图生成助手',
+        providerId: 'provider',
+        modelId: 'qwen-plus',
+      }),
+    )
+  })
+
   it('saves thinking mode for thinking-capable optimization models', async () => {
     const saveMock = vi.fn()
     host = document.createElement('div')

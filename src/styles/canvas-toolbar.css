@@ -1,0 +1,67 @@
+.canvas-toolbar {
+  align-items: center;
+  backdrop-filter: blur(16px);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--panel) 94%, transparent),
+      color-mix(in srgb, var(--surface) 90%, transparent)
+    );
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  display: flex;
+  gap: 8px;
+  padding: 7px;
+  position: relative;
+  z-index: 8;
+}
+
+.canvas-toolbar-group {
+  display: flex;
+  gap: 4px;
+}
+
+.canvas-color-group {
+  display: flex;
+  gap: 5px;
+}
+
+.canvas-color-button {
+  background: var(--swatch);
+  border: 1px solid color-mix(in srgb, var(--swatch) 46%, var(--line));
+  border-radius: 999px;
+  cursor: pointer;
+  height: 22px;
+  padding: 0;
+  width: 22px;
+}
+
+.canvas-color-button.is-active {
+  box-shadow:
+    0 0 0 2px var(--panel),
+    0 0 0 3px var(--text);
+}
+
+.canvas-background-button.is-transparent {
+  background:
+    linear-gradient(45deg, transparent 45%, var(--line-strong) 46% 54%, transparent 55%),
+    var(--panel);
+}
+
+.canvas-font-size-input {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--text);
+  font-size: 12px;
+  height: 28px;
+  padding: 0 4px;
+  width: 48px;
+}
+
+.canvas-toolbar-separator {
+  background: var(--line);
+  height: 22px;
+  width: 1px;
+}

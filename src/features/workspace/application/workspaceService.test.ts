@@ -9,6 +9,7 @@ import {
   duplicateChatTopic,
   importChatTopicFile,
   importWorkspaceFile,
+  reorderCanvases,
 } from './workspaceService'
 import type { Canvas, ChatSession, ExportPayload } from '@/shared/types'
 
@@ -22,6 +23,7 @@ vi.mock('@/features/workspace/infrastructure/workspaceRepository', () => ({
     importChatTopic: vi.fn(),
     importWorkspace: vi.fn(),
     listCanvasesByUpdatedAt: vi.fn(),
+    updateCanvasSortOrders: vi.fn(),
   },
 }))
 
@@ -135,6 +137,19 @@ describe('workspace service', () => {
   it('deletes canvas and returns the next active id', async () => {
     await expect(deleteCanvasAndPickNext('a', canvases)).resolves.toBe('b')
     expect(workspaceRepository.deleteCanvasCascade).toHaveBeenCalledWith('a')
+  })
+
+  it('reorders canvases only when dragged to another canvas', async () => {
+    await reorderCanvases(canvases, 'b', 'a')
+
+    expect(workspaceRepository.updateCanvasSortOrders).toHaveBeenCalledWith([
+      { id: 'b', sortOrder: 1 },
+      { id: 'a', sortOrder: 2 },
+    ])
+
+    vi.clearAllMocks()
+    await reorderCanvases(canvases, 'a', 'a')
+    expect(workspaceRepository.updateCanvasSortOrders).not.toHaveBeenCalled()
   })
 
   it('returns undefined after deleting the last canvas', async () => {

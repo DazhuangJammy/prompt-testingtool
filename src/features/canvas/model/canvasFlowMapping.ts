@@ -202,6 +202,7 @@ export function syncCanvasNodes(
   businessNodes: CanvasFlowNode[],
 ) {
   const currentById = new Map(currentNodes.map((node) => [node.id, node]))
+  const previewNodes = currentNodes.filter((node) => isPreviewFlowId(node.id))
 
   return businessNodes.map((businessNode) => {
     const currentNode = currentById.get(businessNode.id)
@@ -218,11 +219,12 @@ export function syncCanvasNodes(
       style: businessNode.style,
       type: businessNode.type,
     } as CanvasFlowNode
-  })
+  }).concat(previewNodes)
 }
 
 export function syncCanvasEdges(currentEdges: Edge[], businessEdges: Edge[]) {
   const currentById = new Map(currentEdges.map((edge) => [edge.id, edge]))
+  const previewEdges = currentEdges.filter((edge) => isPreviewFlowId(edge.id))
 
   return businessEdges.map((businessEdge) => {
     const currentEdge = currentById.get(businessEdge.id)
@@ -239,7 +241,7 @@ export function syncCanvasEdges(currentEdges: Edge[], businessEdges: Edge[]) {
       targetHandle: businessEdge.targetHandle,
       type: businessEdge.type,
     }
-  })
+  }).concat(previewEdges)
 }
 
 function hasBusinessPositionChanged(
@@ -250,4 +252,8 @@ function hasBusinessPositionChanged(
     currentNode.position.x !== businessNode.position.x ||
     currentNode.position.y !== businessNode.position.y
   )
+}
+
+function isPreviewFlowId(id: string) {
+  return id.startsWith('flow-preview')
 }

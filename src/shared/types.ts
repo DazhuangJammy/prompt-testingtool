@@ -5,6 +5,7 @@ export type ThemeMode = 'light' | 'dark'
 export interface Canvas {
   id: string
   title: string
+  sortOrder?: number
   createdAt: string
   updatedAt: string
 }
@@ -22,6 +23,7 @@ export interface PromptCard {
   position: { x: number; y: number }
   frameStyle?: CanvasNodeFrameStyle
   markdown?: string
+  defaultCollapsed?: boolean
   sections: Record<PromptSectionKey, PromptSection>
   createdAt: string
   updatedAt: string
@@ -230,7 +232,7 @@ export interface CompareRun {
 }
 
 export interface ExportPayload {
-  version: 1 | 2 | 3 | 4 | 5 | 6 | 7
+  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
   exportedAt: string
   canvases: Canvas[]
   promptCards: PromptCard[]
@@ -242,6 +244,7 @@ export interface ExportPayload {
   promptVersions: PromptVersion[]
   providerConfigs: ProviderConfig[]
   defaultModelSettings?: DefaultModelSettings
+  defaultModelSettingsList?: DefaultModelSettings[]
   chatSessions: ChatSession[]
   chatMessages: ChatMessage[]
   compareRuns: CompareRun[]

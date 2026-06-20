@@ -55,6 +55,7 @@ describe('prompt optimization service', () => {
       ],
       expect.any(Object),
       'auto',
+      undefined,
     )
   })
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ChatSession, PromptCard } from '@/shared/types'
-import { resolveActiveChatCard } from './activeChatCard'
+import { resolveActiveChatCard, resolveChatScopePromptCardId } from './activeChatCard'
 
 const makeCard = (id: string, title = id): PromptCard => ({
   id,
@@ -80,5 +80,34 @@ describe('active chat card', () => {
         sessionPromptCard: sessionCard,
       }),
     ).toBe(selectedLegacyCard)
+  })
+
+  it('does not use a selected card as the topic scope anchor when the session has no card binding', () => {
+    const selectedCard = makeCard('selected-card')
+    const session: ChatSession = {
+      id: 'session',
+      canvasId: 'canvas',
+      title: 'SOP 流程梳理',
+      createdAt: 'now',
+      updatedAt: 'now',
+    }
+
+    expect(resolveChatScopePromptCardId({ selectedCard, session })).toBeUndefined()
+  })
+
+  it('uses the session prompt card as the topic scope anchor when it exists', () => {
+    const selectedCard = makeCard('selected-card')
+    const session: ChatSession = {
+      id: 'session',
+      canvasId: 'canvas',
+      promptCardId: 'session-card',
+      title: '有主卡片的话题',
+      createdAt: 'now',
+      updatedAt: 'now',
+    }
+
+    expect(resolveChatScopePromptCardId({ selectedCard, session })).toBe(
+      'session-card',
+    )
   })
 })

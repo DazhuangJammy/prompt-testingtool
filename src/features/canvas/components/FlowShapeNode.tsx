@@ -5,14 +5,16 @@ import {
   type NodeProps,
   type ResizeParams,
 } from '@xyflow/react'
-import type { CSSProperties, FocusEvent, MouseEvent } from 'react'
+import type { CSSProperties, FocusEvent, MouseEvent, WheelEvent } from 'react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import {
   isFocusLeavingContainer,
   isTargetOutsideContainer,
 } from '@/features/canvas/components/editorFocus'
 import type { CanvasShapeFlowNode } from '@/features/canvas/model/flowTypes'
+import { normalizeFlowBody } from '@/features/canvas/model/generatedFlowchartLayout'
 import { resolveCanvasNodeFrameStyle } from '@/shared/model/nodeFrameStyle'
+import { MarkdownRenderer } from '@/shared/ui/MarkdownRenderer'
 import {
   getTextOffsetFromPoint,
   placeTextControlCaret,
@@ -39,8 +41,11 @@ function FlowShapeNode({ data }: NodeProps<CanvasShapeFlowNode>) {
 
   const saveDraft = useCallback(() => {
     const title = (titleRef.current?.value ?? titleDraft).trim() || node.title
-    const body = (bodyRef.current?.value ?? bodyDraft).trim()
-    onUpdate(node.id, { body, title })
+    const body = normalizeFlowBody((bodyRef.current?.value ?? bodyDraft).trim())
+    onUpdate(node.id, {
+      body,
+      title,
+    })
     setTitleDraft(title)
     setBodyDraft(body)
     setEditing(false)
@@ -113,6 +118,26 @@ function FlowShapeNode({ data }: NodeProps<CanvasShapeFlowNode>) {
     }
   }
 
+  const handleWheel = (event: WheelEvent<HTMLElement>) => {
+    if (!isSelected) return
+
+    const body = event.currentTarget.querySelector<HTMLElement>('.flow-shape-body')
+    if (!body) return
+
+    const canScrollY = body.scrollHeight > body.clientHeight
+    const canScrollX = body.scrollWidth > body.clientWidth
+    if (!canScrollY && !canScrollX) return
+
+    event.stopPropagation()
+
+    const target = event.target
+    if (target instanceof Node && body.contains(target)) return
+
+    event.preventDefault()
+    if (canScrollY) body.scrollTop += event.deltaY
+    if (canScrollX) body.scrollLeft += event.deltaX
+  }
+
   return (
     <section
       className={`flow-shape flow-shape-${node.kind} ${
@@ -123,6 +148,7 @@ function FlowShapeNode({ data }: NodeProps<CanvasShapeFlowNode>) {
       style={nodeStyle}
       onClick={() => onSelect(node.id)}
       onDoubleClick={startEditing}
+      onWheelCapture={handleWheel}
       onPointerEnter={() => setHovering(true)}
       onPointerLeave={() => setHovering(false)}
     >
@@ -193,7 +219,9 @@ function FlowShapeNode({ data }: NodeProps<CanvasShapeFlowNode>) {
           <div className="flow-shape-head">
             <span>{node.title}</span>
           </div>
-          <p className="flow-shape-body">{node.body}</p>
+          <div className="flow-shape-body markdown-preview nowheel">
+            <MarkdownRenderer>{node.body}</MarkdownRenderer>
+          </div>
         </div>
       )}
     </section>

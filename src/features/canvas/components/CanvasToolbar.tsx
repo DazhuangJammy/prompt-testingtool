@@ -4,6 +4,7 @@ import {
   Hand,
   MousePointer2,
   Plus,
+  Sparkles,
   Square,
   Trash2,
   Type,
@@ -33,7 +34,9 @@ interface CanvasToolbarProps {
   textColors: Array<{ label: string; value: string }>
   textFontSize: number
   toolShortcuts: CanvasToolShortcuts
+  flowchartGenerating: boolean
   onDeleteSelected: () => void
+  onOpenFlowchartGenerator: () => void
   onSelectFrameBorderColor: (color: string) => void
   onSelectPenColor: (color: string) => void
   onSelectTextBackgroundColor: (color: string) => void
@@ -64,7 +67,9 @@ export function CanvasToolbar({
   frameBorderColor,
   frameBorderColors,
   frameHighlighted,
+  flowchartGenerating,
   onDeleteSelected,
+  onOpenFlowchartGenerator,
   onSelectFrameBorderColor,
   onSelectPenColor,
   onSelectTextBackgroundColor,
@@ -95,6 +100,13 @@ export function CanvasToolbar({
             onClick={() => onSelectTool(item.tool)}
           />
         ))}
+        <IconButton
+          className="canvas-toolbar-action"
+          disabled={flowchartGenerating}
+          icon={<Sparkles />}
+          label={flowchartGenerating ? '正在生成流程图' : 'AI 生成流程图'}
+          onClick={onOpenFlowchartGenerator}
+        />
       </div>
       {activeTool === 'pen' && (
         <>

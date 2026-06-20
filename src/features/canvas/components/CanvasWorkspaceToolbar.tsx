@@ -18,7 +18,9 @@ interface CanvasWorkspaceToolbarProps {
   penColors: Array<{ label: string; value: string }>
   textStyle: CanvasTextStyle
   toolShortcuts: CanvasToolShortcuts
+  flowchartGenerating: boolean
   onDeleteSelected: () => void
+  onOpenFlowchartGenerator: () => void
   onSelectFrameStyle: (updates: Partial<CanvasFrameStyle>) => void
   onSelectPenColor: (color: string) => void
   onSelectTextStyle: (updates: Partial<CanvasTextStyle>) => void
@@ -31,7 +33,9 @@ export function CanvasWorkspaceToolbar({
   canStyleFrame,
   canStyleText,
   frameStyle,
+  flowchartGenerating,
   onDeleteSelected,
+  onOpenFlowchartGenerator,
   onSelectFrameStyle,
   onSelectPenColor,
   onSelectTextStyle,
@@ -50,6 +54,7 @@ export function CanvasWorkspaceToolbar({
       frameBorderColor={frameStyle.borderColor}
       frameBorderColors={frameBorderColors}
       frameHighlighted={frameStyle.highlighted}
+      flowchartGenerating={flowchartGenerating}
       penColor={penColor}
       penColors={penColors}
       textBackgroundColor={textStyle.backgroundColor}
@@ -59,6 +64,7 @@ export function CanvasWorkspaceToolbar({
       textFontSize={textStyle.fontSize}
       toolShortcuts={toolShortcuts}
       onDeleteSelected={onDeleteSelected}
+      onOpenFlowchartGenerator={onOpenFlowchartGenerator}
       onSelectFrameBorderColor={(borderColor) => onSelectFrameStyle({ borderColor })}
       onSelectPenColor={onSelectPenColor}
       onSelectTextBackgroundColor={(color) =>
