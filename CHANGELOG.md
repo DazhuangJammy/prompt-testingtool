@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.1.1
+
+### 新功能
+
+- 新增统一 Markdown 渲染器，支持 GitHub Flavored Markdown。
+- 聊天消息、对比回复、提示词卡片预览和 Markdown 预览弹窗统一使用新的 Markdown 渲染能力。
+
+### 修复
+
+- 修复表格、任务列表、删除线等 Markdown 内容在不同预览入口表现不一致的问题。
+- 优化 Markdown 内容样式，提高聊天区和提示词预览中的可读性。
+
 ## v0.1.0
 
 ### 新功能

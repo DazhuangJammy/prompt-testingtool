@@ -13,12 +13,12 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { ChevronDown, ChevronRight, Heading2 } from 'lucide-react'
 import { type CSSProperties } from 'react'
-import ReactMarkdown from 'react-markdown'
 import type {
   MarkdownOutline,
   MarkdownOutlineNode,
 } from '@/features/prompt-card/model/prompt'
 import { IconButton } from '@/shared/ui/IconButton'
+import { MarkdownRenderer } from '@/shared/ui/MarkdownRenderer'
 import { getTextOffsetFromPoint } from '@/shared/ui/textCaret'
 import {
   MarkdownNodeEditor,
@@ -88,7 +88,7 @@ export function MarkdownCardPreview({
           )
         }}
       >
-        <ReactMarkdown>{outline.preface}</ReactMarkdown>
+        <MarkdownRenderer>{outline.preface}</MarkdownRenderer>
       </article>
     )
   }
@@ -108,7 +108,7 @@ export function MarkdownCardPreview({
             )
           }}
         >
-          <ReactMarkdown>{outline.preface}</ReactMarkdown>
+          <MarkdownRenderer>{outline.preface}</MarkdownRenderer>
         </article>
       )}
       {outline.nodes.length ? (
@@ -150,7 +150,7 @@ export function MarkdownCardPreview({
             )
           }}
         >
-          <ReactMarkdown>{markdown || ' '}</ReactMarkdown>
+          <MarkdownRenderer>{markdown || ' '}</MarkdownRenderer>
         </article>
       )}
     </div>
@@ -283,7 +283,7 @@ function MarkdownOutlineSection({
             onEditNode(node, { focus: 'body', cursorOffset: offset })
           }}
         >
-          <ReactMarkdown>{node.ownBody}</ReactMarkdown>
+          <MarkdownRenderer>{node.ownBody}</MarkdownRenderer>
         </article>
       )}
       {!collapsed && node.children.length > 0 && (

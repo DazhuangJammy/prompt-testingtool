@@ -60,6 +60,19 @@ const assistantMessage: ChatMessage = {
   createdAt: '2026-06-10T10:03:00.000Z',
 }
 
+const tableMessage: ChatMessage = {
+  id: 'message-5',
+  sessionId: 'session-1',
+  role: 'assistant',
+  content: [
+    '| 角度编号 | 切入方向 |',
+    '| --- | --- |',
+    '| 1 | 社交破冰 |',
+  ].join('\n'),
+  status: 'complete',
+  createdAt: '2026-06-10T10:04:00.000Z',
+}
+
 function renderMessageList(messages: ChatMessage[]) {
   host = document.createElement('div')
   document.body.append(host)
@@ -199,5 +212,16 @@ describe('MessageList', () => {
 
     expect(writeTextMock).toHaveBeenCalledWith('可以导出')
     expect(document.body.textContent).toContain('复制成功')
+  })
+
+  it('renders GitHub-flavored Markdown tables in assistant messages', () => {
+    renderMessageList([tableMessage])
+
+    const table = document.querySelector('table')
+
+    expect(table).toBeTruthy()
+    expect(table?.querySelectorAll('th')).toHaveLength(2)
+    expect(table?.textContent).toContain('角度编号')
+    expect(table?.textContent).toContain('社交破冰')
   })
 })

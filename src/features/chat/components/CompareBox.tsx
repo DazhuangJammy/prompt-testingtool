@@ -1,7 +1,7 @@
 import { GitCompare } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
 import type { CompareRun, PromptCard } from '@/shared/types'
 import { IconButton } from '@/shared/ui/IconButton'
+import { MarkdownRenderer } from '@/shared/ui/MarkdownRenderer'
 
 interface CompareBoxProps {
   busy: boolean
@@ -77,10 +77,10 @@ export function CompareBox({
       {latestCompare && (
         <div className="compare-result">
           <article>
-            <ReactMarkdown>{latestCompare.oldOutput}</ReactMarkdown>
+            <MarkdownRenderer>{latestCompare.oldOutput}</MarkdownRenderer>
           </article>
           <article>
-            <ReactMarkdown>{latestCompare.newOutput}</ReactMarkdown>
+            <MarkdownRenderer>{latestCompare.newOutput}</MarkdownRenderer>
           </article>
         </div>
       )}

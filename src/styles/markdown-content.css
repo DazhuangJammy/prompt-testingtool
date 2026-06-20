@@ -94,6 +94,43 @@
   padding: 8px;
 }
 
+.markdown-preview table,
+.message table,
+.compare-result table {
+  border-collapse: collapse;
+  display: block;
+  margin: 8px 0 12px;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.markdown-preview th,
+.markdown-preview td,
+.message th,
+.message td,
+.compare-result th,
+.compare-result td {
+  border: 1px solid var(--line);
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.markdown-preview th,
+.message th,
+.compare-result th {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 650;
+}
+
+.markdown-preview td,
+.message td,
+.compare-result td {
+  background: color-mix(in srgb, var(--surface) 58%, transparent);
+}
+
 .message > :last-child,
 .compare-result article > :last-child,
 .markdown-preview > :last-child {

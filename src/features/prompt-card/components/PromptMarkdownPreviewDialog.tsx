@@ -1,8 +1,8 @@
 import { Copy, X } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { IconButton } from '@/shared/ui/IconButton'
+import { MarkdownRenderer } from '@/shared/ui/MarkdownRenderer'
 
 interface PromptMarkdownPreviewDialogProps {
   markdown: string
@@ -47,7 +47,7 @@ export function PromptMarkdownPreviewDialog({
           </div>
         </div>
         <article className="prompt-preview-body markdown-preview">
-          <ReactMarkdown>{markdown}</ReactMarkdown>
+          <MarkdownRenderer>{markdown}</MarkdownRenderer>
         </article>
       </section>
     </div>,

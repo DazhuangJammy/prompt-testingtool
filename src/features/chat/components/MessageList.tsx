@@ -10,13 +10,13 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import ReactMarkdown from 'react-markdown'
 import {
   formatGenerationDuration,
   formatMessageTime,
   formatThinkingSeconds,
   splitThinkingBlock,
 } from '@/shared/model/thinking'
+import { MarkdownRenderer } from '@/shared/ui/MarkdownRenderer'
 import { formatAttachmentSize } from '@/features/chat/model/attachments'
 import {
   splitSvgPreviewBlocks,
@@ -154,7 +154,7 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
                     )}
                   </button>
                   {!thinkingCollapsed && (
-                    <ReactMarkdown>{parsed.thinking}</ReactMarkdown>
+                    <MarkdownRenderer>{parsed.thinking}</MarkdownRenderer>
                   )}
                 </div>
               )}
@@ -282,7 +282,7 @@ function MessageContent({ content, onPreview }: MessageContentProps) {
         block.kind === 'svg' ? (
           <SvgPreviewCard block={block} key={block.id} onPreview={onPreview} />
         ) : (
-          <ReactMarkdown key={block.id}>{block.markdown}</ReactMarkdown>
+          <MarkdownRenderer key={block.id}>{block.markdown}</MarkdownRenderer>
         ),
       )}
     </>

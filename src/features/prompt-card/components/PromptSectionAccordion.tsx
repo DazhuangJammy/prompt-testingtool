@@ -1,5 +1,4 @@
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
 import type { SensorDescriptor, SensorOptions } from '@dnd-kit/core'
 import type {
   PromptSectionKey,
@@ -7,6 +6,7 @@ import type {
 } from '@/shared/types'
 import type { PromptSectionDefinition } from '@/features/prompt-card/model/sectionRegistry'
 import { renderWorkflowPreview } from '@/features/prompt-card/model/workflow'
+import { MarkdownRenderer } from '@/shared/ui/MarkdownRenderer'
 import { MarkdownTextarea } from './MarkdownTextarea'
 import { WorkflowEditor } from './WorkflowEditor'
 
@@ -71,7 +71,7 @@ export function PromptSectionAccordion({
           </div>
         ) : (
           <div className="markdown-preview nodrag nopan nowheel">
-            <ReactMarkdown>{preview}</ReactMarkdown>
+            <MarkdownRenderer>{preview}</MarkdownRenderer>
           </div>
         ))}
     </section>
