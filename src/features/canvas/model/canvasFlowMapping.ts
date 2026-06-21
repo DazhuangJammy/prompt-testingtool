@@ -204,13 +204,14 @@ export function syncCanvasNodes(
   const currentById = new Map(currentNodes.map((node) => [node.id, node]))
   const previewNodes = currentNodes.filter((node) => isPreviewFlowId(node.id))
 
-  return businessNodes.map((businessNode) => {
+  const syncedNodes = businessNodes.map((businessNode) => {
     const currentNode = currentById.get(businessNode.id)
     if (!currentNode) return businessNode
 
-    return {
+    const syncedNode = {
       ...currentNode,
       data: businessNode.data,
+      draggable: businessNode.draggable,
       dragHandle: businessNode.dragHandle,
       position: hasBusinessPositionChanged(currentNode, businessNode)
         ? businessNode.position
@@ -219,14 +220,22 @@ export function syncCanvasNodes(
       style: businessNode.style,
       type: businessNode.type,
     } as CanvasFlowNode
+
+    return isSyncedFlowNodeEqual(currentNode, syncedNode)
+      ? currentNode
+      : syncedNode
   }).concat(previewNodes)
+
+  return areSyncedFlowNodesEqual(currentNodes, syncedNodes)
+    ? currentNodes
+    : syncedNodes
 }
 
 export function syncCanvasEdges(currentEdges: Edge[], businessEdges: Edge[]) {
   const currentById = new Map(currentEdges.map((edge) => [edge.id, edge]))
   const previewEdges = currentEdges.filter((edge) => isPreviewFlowId(edge.id))
 
-  return businessEdges.map((businessEdge) => {
+  const syncedEdges = businessEdges.map((businessEdge) => {
     const currentEdge = currentById.get(businessEdge.id)
     if (!currentEdge) return businessEdge
 
@@ -242,6 +251,10 @@ export function syncCanvasEdges(currentEdges: Edge[], businessEdges: Edge[]) {
       type: businessEdge.type,
     }
   }).concat(previewEdges)
+
+  return areSyncedFlowEdgesEqual(currentEdges, syncedEdges)
+    ? currentEdges
+    : syncedEdges
 }
 
 function hasBusinessPositionChanged(
@@ -256,4 +269,99 @@ function hasBusinessPositionChanged(
 
 function isPreviewFlowId(id: string) {
   return id.startsWith('flow-preview')
+}
+
+function areSyncedFlowNodesEqual(
+  currentNodes: CanvasFlowNode[],
+  syncedNodes: CanvasFlowNode[],
+) {
+  return (
+    currentNodes.length === syncedNodes.length &&
+    currentNodes.every((node, index) => isSyncedFlowNodeEqual(node, syncedNodes[index]))
+  )
+}
+
+export function areCanvasFlowNodesEqual(
+  currentNodes: CanvasFlowNode[],
+  nextNodes: CanvasFlowNode[],
+) {
+  return areSyncedFlowNodesEqual(currentNodes, nextNodes)
+}
+
+function isSyncedFlowNodeEqual(
+  currentNode: CanvasFlowNode,
+  syncedNode: CanvasFlowNode,
+) {
+  return toComparableFlowNode(currentNode) === toComparableFlowNode(syncedNode)
+}
+
+function areSyncedFlowEdgesEqual(currentEdges: Edge[], syncedEdges: Edge[]) {
+  return (
+    currentEdges.length === syncedEdges.length &&
+    currentEdges.every((edge, index) => isSyncedFlowEdgeEqual(edge, syncedEdges[index]))
+  )
+}
+
+export function areCanvasFlowEdgesEqual(currentEdges: Edge[], nextEdges: Edge[]) {
+  return areSyncedFlowEdgesEqual(currentEdges, nextEdges)
+}
+
+function isSyncedFlowEdgeEqual(currentEdge: Edge, syncedEdge: Edge) {
+  return toComparableFlowEdge(currentEdge) === toComparableFlowEdge(syncedEdge)
+}
+
+function toComparableFlowNode(node: CanvasFlowNode) {
+  return JSON.stringify({
+    data: toComparableFlowNodeData(node),
+    dragHandle: node.dragHandle,
+    draggable: node.draggable,
+    dragging: node.dragging,
+    height: node.height,
+    hidden: node.hidden,
+    id: node.id,
+    measured: node.measured,
+    position: node.position,
+    resizing: node.resizing,
+    selected: node.selected,
+    style: node.style,
+    type: node.type,
+    width: node.width,
+  })
+}
+
+function toComparableFlowNodeData(node: CanvasFlowNode) {
+  if (node.type === 'promptCard') {
+    return {
+      card: node.data.card,
+      promptOptimizationProvider: node.data.promptOptimizationProvider,
+      promptOptimizationSettings: node.data.promptOptimizationSettings,
+      selectedCardId: node.data.selectedCardId,
+    }
+  }
+  if (node.type === 'freehandStroke') {
+    return {
+      bounds: node.data.bounds,
+      selectedNodeId: node.data.selectedNodeId,
+      stroke: node.data.stroke,
+      viewPoints: node.data.viewPoints,
+    }
+  }
+  return {
+    node: node.data.node,
+    selectedNodeId: node.data.selectedNodeId,
+  }
+}
+
+function toComparableFlowEdge(edge: Edge) {
+  return JSON.stringify({
+    id: edge.id,
+    markerEnd: edge.markerEnd,
+    reconnectable: edge.reconnectable,
+    selected: edge.selected,
+    source: edge.source,
+    sourceHandle: edge.sourceHandle,
+    target: edge.target,
+    targetHandle: edge.targetHandle,
+    type: edge.type,
+  })
 }

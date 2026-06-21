@@ -83,9 +83,20 @@ export async function createChatTopicExport(sessionId: string) {
 export async function duplicateChatTopic(
   session: ChatSession,
   siblingSessions: ChatSession[],
+  comparePaneCardIds: string[] = [],
 ) {
   const payload = await workspaceRepository.exportChatTopic(session.id)
   const at = nowIso()
+  const includedPromptCardIds = new Set(payload.promptCards.map((card) => card.id))
+  const extraPromptCardIds = uniqueStrings(comparePaneCardIds)
+    .filter((cardId) => cardId && !includedPromptCardIds.has(cardId))
+  const availablePromptCards = extraPromptCardIds.length && session.canvasId
+    ? await workspaceRepository.listPromptCardsByCanvas(session.canvasId)
+    : payload.promptCards
+  const extraPromptCards = collectExtraPromptCards(
+    extraPromptCardIds,
+    availablePromptCards,
+  )
   const nextSession: ChatSession = {
     ...payload.chatSession,
     title: createDuplicateChatSessionTitle(
@@ -97,7 +108,11 @@ export async function duplicateChatTopic(
     updatedAt: at,
   }
   const result = await workspaceRepository.importChatTopic(
-    { ...payload, chatSession: nextSession },
+    {
+      ...payload,
+      chatSession: nextSession,
+      promptCards: [...payload.promptCards, ...extraPromptCards],
+    },
     session.canvasId ?? payload.chatSession.canvasId,
   )
   return {
@@ -105,7 +120,22 @@ export async function duplicateChatTopic(
     id: result.sessionId,
     canvasId: result.canvasId,
     promptCardId: result.promptCardId,
+    promptCardIdMap: result.promptCardIdMap,
   }
+}
+
+function collectExtraPromptCards(
+  cardIds: string[],
+  availableCards: PromptCard[],
+) {
+  const cardById = new Map(availableCards.map((card) => [card.id, card]))
+  return cardIds
+    .map((cardId) => cardById.get(cardId))
+    .filter((card): card is PromptCard => Boolean(card))
+}
+
+function uniqueStrings(values: string[]) {
+  return Array.from(new Set(values))
 }
 
 export async function assignPromptCardToChatTopic(

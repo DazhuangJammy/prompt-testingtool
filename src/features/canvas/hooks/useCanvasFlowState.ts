@@ -7,6 +7,8 @@ import {
 } from '@xyflow/react'
 import { useCallback, useEffect, useState } from 'react'
 import {
+  areCanvasFlowEdgesEqual,
+  areCanvasFlowNodesEqual,
   syncCanvasEdges,
   syncCanvasNodes,
   type CanvasFlowNode,
@@ -41,11 +43,21 @@ export function useCanvasFlowState({
   }, [businessEdges])
 
   const handleNodeChanges = useCallback((changes: NodeChange<CanvasFlowNode>[]) => {
-    setFlowNodes((currentNodes) => applyNodeChanges(changes, currentNodes))
+    setFlowNodes((currentNodes) => {
+      const nextNodes = applyNodeChanges(changes, currentNodes)
+      return areCanvasFlowNodesEqual(currentNodes, nextNodes)
+        ? currentNodes
+        : nextNodes
+    })
   }, [])
 
   const handleEdgesChange = useCallback<OnEdgesChange<Edge>>((changes) => {
-    setFlowEdges((currentEdges) => applyEdgeChanges(changes, currentEdges))
+    setFlowEdges((currentEdges) => {
+      const nextEdges = applyEdgeChanges(changes, currentEdges)
+      return areCanvasFlowEdgesEqual(currentEdges, nextEdges)
+        ? currentEdges
+        : nextEdges
+    })
   }, [])
 
   return {

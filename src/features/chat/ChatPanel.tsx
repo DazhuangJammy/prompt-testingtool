@@ -11,7 +11,7 @@ import { IconButton } from '@/shared/ui/IconButton'
 import { ChatComposer } from './components/ChatComposer'
 import { MessageList } from './components/MessageList'
 import { PanelMeta } from './components/PanelMeta'
-import { getComparePanelWidth } from './model/comparePanes'
+import { getComparePanelWidth, type ComparePaneState } from './model/comparePanes'
 import { type ComparePaneView, useChatPanelState } from './useChatPanelState'
 
 interface ChatPanelProps {
@@ -20,6 +20,8 @@ interface ChatPanelProps {
   promptCards: PromptCard[]
   providers: ProviderConfig[]
   compareOpen: boolean
+  comparePaneCardIds: string[]
+  comparePanes: ComparePaneState[]
   collapsed: boolean
   onResizeStart: (event: PointerEvent) => void
   activeSessionId?: string
@@ -28,6 +30,10 @@ interface ChatPanelProps {
   onActiveSessionChange: (id?: string) => void
   onActiveCardChange?: (id: string) => void
   onCompareOpenChange: (open: boolean) => void
+  onComparePaneCardIdsChange: (cardIds: string[]) => void
+  onComparePanesChange: (
+    panes: ComparePaneState[] | ((current: ComparePaneState[]) => ComparePaneState[]),
+  ) => void
   onEnsureWidth: (width: number) => void
   width: number
 }
@@ -38,6 +44,8 @@ export function ChatPanel({
   promptCards,
   providers,
   compareOpen,
+  comparePaneCardIds,
+  comparePanes,
   collapsed,
   onResizeStart,
   activeSessionId,
@@ -46,6 +54,8 @@ export function ChatPanel({
   onActiveSessionChange,
   onActiveCardChange,
   onCompareOpenChange,
+  onComparePaneCardIdsChange,
+  onComparePanesChange,
   onEnsureWidth,
   width,
 }: ChatPanelProps) {
@@ -55,16 +65,24 @@ export function ChatPanel({
     promptCards,
     providers,
     compareOpen,
+    comparePaneCardIds,
+    comparePanes,
     activeSessionId,
     onActiveSessionChange,
     onCompareOpenChange,
+    onComparePaneCardIdsChange,
+    onComparePanesChange,
     onActiveCardChange,
   )
   const disabled = !provider || !card
   const compareDisabled = promptCards.length < 2
   const openCompare = () => {
-    if (!compareOpen) onEnsureWidth(getComparePanelWidth(state.comparePanes.length))
-    onCompareOpenChange(!compareOpen)
+    const nextOpen = !compareOpen
+    if (nextOpen) {
+      onEnsureWidth(getComparePanelWidth(state.comparePanes.length))
+      onComparePanesChange(state.comparePanes)
+    }
+    onCompareOpenChange(nextOpen)
   }
   const addComparePane = () => {
     onEnsureWidth(getComparePanelWidth(state.comparePanes.length + 1))

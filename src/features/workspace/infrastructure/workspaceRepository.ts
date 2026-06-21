@@ -447,11 +447,11 @@ export const workspaceRepository = {
         await db.canvases.update(canvasId, { updatedAt: at })
       },
     )
-
     return {
       canvasId,
       sessionId: nextSession.id,
       promptCardId: nextSession.promptCardId,
+      promptCardIdMap: Object.fromEntries(idMap.promptCards),
     }
   },
 

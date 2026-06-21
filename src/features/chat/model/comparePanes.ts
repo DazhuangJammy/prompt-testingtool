@@ -16,7 +16,7 @@ import { createId } from '@/shared/utils/identity'
 
 export const MIN_COMPARE_PANES = 2
 export const MIN_RETAINED_COMPARE_PANES = 1
-export const MAX_COMPARE_PANES = 6
+export const MAX_COMPARE_PANES = 10
 export const COMPARE_PANE_MIN_WIDTH = 380
 export const COMPARE_PANEL_GUTTER = 1
 

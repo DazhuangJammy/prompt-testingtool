@@ -64,6 +64,7 @@ describe('compare panes model', () => {
   })
 
   it('keeps pane count within bounds', () => {
+    expect(MAX_COMPARE_PANES).toBe(10)
     expect(ensureMinimumComparePanes([])).toHaveLength(2)
     expect(
       ensureMinimumComparePanes(
@@ -78,7 +79,7 @@ describe('compare panes model', () => {
     expect(getComparePanelWidth(1)).toBe(761)
     expect(getComparePanelWidth(2)).toBe(761)
     expect(getComparePanelWidth(3)).toBe(1142)
-    expect(getComparePanelWidth(MAX_COMPARE_PANES + 1)).toBe(2285)
+    expect(getComparePanelWidth(MAX_COMPARE_PANES + 1)).toBe(3809)
   })
 
   it('allows removing from two panes and asks compare mode to exit at one pane', () => {

@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import type { Edge, OnDelete } from '@xyflow/react'
 import {
   deleteCanvasEdge,
@@ -28,10 +28,26 @@ export function useCanvasDeletion({
   onSelectionClear,
   selectedFlowIds,
 }: UseCanvasDeletionOptions) {
+  const flowNodesRef = useRef(flowNodes)
+  const onDeleteCardRef = useRef(onDeleteCard)
+  const selectedFlowIdsRef = useRef(selectedFlowIds)
+
+  useEffect(() => {
+    flowNodesRef.current = flowNodes
+  }, [flowNodes])
+
+  useEffect(() => {
+    onDeleteCardRef.current = onDeleteCard
+  }, [onDeleteCard])
+
+  useEffect(() => {
+    selectedFlowIdsRef.current = selectedFlowIds
+  }, [selectedFlowIds])
+
   const deleteNode = useCallback(
     (node: CanvasFlowNode) => {
       if (node.type === 'promptCard') {
-        onDeleteCard(node.id)
+        onDeleteCardRef.current(node.id)
         return
       }
       if (node.type === 'freehandStroke') {
@@ -48,33 +64,37 @@ export function useCanvasDeletion({
       }
       void deleteShapeNodeRecord(node.id, canvasId)
     },
-    [canvasId, onDeleteCard],
+    [canvasId],
   )
 
   const deleteSelected = useCallback(() => {
-    selectedFlowIds.edges.forEach((id) => void deleteCanvasEdge(id, canvasId))
-    selectedFlowIds.nodes.forEach((id) => {
-      const node = flowNodes.find((item) => item.id === id)
+    const currentSelection = selectedFlowIdsRef.current
+    const currentFlowNodes = flowNodesRef.current
+
+    currentSelection.edges.forEach((id) => void deleteCanvasEdge(id, canvasId))
+    currentSelection.nodes.forEach((id) => {
+      const node = currentFlowNodes.find((item) => item.id === id)
       if (node) deleteNode(node)
     })
     onSelectionClear()
-  }, [canvasId, deleteNode, flowNodes, onSelectionClear, selectedFlowIds])
+  }, [canvasId, deleteNode, onSelectionClear])
 
   const handleDelete = useCallback<OnDelete<CanvasFlowNode, Edge>>(
     ({ edges, nodes }) => {
+      const currentSelection = selectedFlowIdsRef.current
       edges
         .filter((edge) =>
           shouldDeleteEdgeRecordOnFlowDelete({
             deletedNodeCount: nodes.length,
             edgeId: edge.id,
-            selectedEdgeIds: selectedFlowIds.edges,
+            selectedEdgeIds: currentSelection.edges,
           }),
         )
         .forEach((edge) => void deleteCanvasEdge(edge.id, canvasId))
       nodes.forEach(deleteNode)
       onSelectionClear()
     },
-    [canvasId, deleteNode, onSelectionClear, selectedFlowIds.edges],
+    [canvasId, deleteNode, onSelectionClear],
   )
 
   return { deleteSelected, handleDelete }

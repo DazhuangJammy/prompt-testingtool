@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   assignChatSessionPromptCard,
   clearChatSession,
@@ -8,6 +8,7 @@ import {
 } from '@/features/chat/application/chatService'
 import { chatRepository } from '@/features/chat/infrastructure/chatRepository'
 import { useChatMessageActions } from '@/features/chat/hooks/useChatMessageActions'
+import { useScopedComparePanes } from '@/features/chat/hooks/useScopedComparePanes'
 import { useChatTopics } from '@/features/chat/hooks/useChatTopics'
 import {
   getAttachmentCapability,
@@ -21,13 +22,11 @@ import {
   MAX_COMPARE_PANES,
   canRemoveComparePane,
   createComparePane,
-  createInitialComparePanes,
   getPaneThinkingMode,
   getProviderThinkingMode,
   pickCardForPane,
   removeComparePaneById,
   resolvePaneCard,
-  syncComparePanes,
   type ComparePaneId,
   type ComparePaneState,
   type ComparePaneView,
@@ -49,16 +48,19 @@ export function useChatPanelState(
   promptCards: PromptCard[],
   providers: ProviderConfig[],
   compareOpen = false,
+  comparePaneCardIds: string[] = [],
+  persistedComparePanes: ComparePaneState[] = [],
   activeSessionId?: string,
   onActiveSessionChange?: (id?: string) => void,
   onCompareOpenChange?: (open: boolean) => void,
+  onComparePaneCardIdsChange?: (cardIds: string[]) => void,
+  onComparePanesChange?: (
+    panes: ComparePaneState[] | ((current: ComparePaneState[]) => ComparePaneState[]),
+  ) => void,
   onActiveCardChange?: (id: string) => void,
 ) {
   const [input, setInput] = useState('')
   const [attachments, setAttachments] = useState<ChatAttachment[]>([])
-  const [comparePanes, setComparePanes] = useState<ComparePaneState[]>(() =>
-    createInitialComparePanes(),
-  )
   const [error, setError] = useState('')
   const chatActions = useChatMessageActions(setError)
   const [thinkingModesByProvider, setThinkingModesByProvider] = useState<
@@ -81,6 +83,17 @@ export function useChatPanelState(
   )
   const messages = useMessages(effectiveSessionId)
   const childSessions = useChildSessions(effectiveSessionId)
+  const { comparePanes, setComparePanes } = useScopedComparePanes({
+    activeCard: card,
+    activeSessionId: effectiveSessionId,
+    childSessions,
+    compareOpen,
+    comparePaneCardIds,
+    persistedComparePanes,
+    promptCards,
+    onComparePaneCardIdsChange,
+    onComparePanesChange,
+  })
 
   const paneSessionKey = comparePanes
     .map((pane) => `${pane.id}:${pane.sessionId ?? ''}`)
@@ -136,24 +149,6 @@ export function useChatPanelState(
       ),
     }
   })
-
-  useEffect(() => {
-    if (!card && !promptCards.length) return
-    const syncId = window.setTimeout(() => {
-      setComparePanes((current) =>
-        syncComparePanes(
-          current,
-          card,
-          promptCards,
-          compareOpen,
-          effectiveSessionId,
-          childSessions,
-        ),
-      )
-    }, 0)
-
-    return () => window.clearTimeout(syncId)
-  }, [card, childSessions, compareOpen, effectiveSessionId, promptCards])
 
   const sendMainMessage = async () => {
     const text = input.trim()

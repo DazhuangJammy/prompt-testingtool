@@ -247,6 +247,81 @@ describe('canvas flow mapping', () => {
     expect(syncedNode.selected).toBe(true)
   })
 
+  it('returns the current node array when synced nodes are unchanged', () => {
+    const [businessNode] = createCanvasFlowNodes({
+      promptCards: [card],
+      selectedNodeIds: [],
+      imageNodes: [],
+      shapeNodes: [],
+      strokes: [],
+      textNodes: [],
+      ...baseHandlers,
+    })
+    const currentNodes = [businessNode]
+
+    expect(syncCanvasNodes(currentNodes, [businessNode])).toBe(currentNodes)
+  })
+
+  it('returns the current node array when equivalent node data is recreated', () => {
+    const [businessNode] = createCanvasFlowNodes({
+      promptCards: [card],
+      selectedNodeIds: [],
+      imageNodes: [],
+      shapeNodes: [shape],
+      strokes: [],
+      textNodes: [],
+      ...baseHandlers,
+    })
+    const [sameBusinessNode] = createCanvasFlowNodes({
+      promptCards: [card],
+      selectedNodeIds: [],
+      imageNodes: [],
+      shapeNodes: [shape],
+      strokes: [],
+      textNodes: [],
+      onSavePromptCard: vi.fn(),
+      onSelectPrompt: vi.fn(),
+      onSelectImage: vi.fn(),
+      onSelectShape: vi.fn(),
+      onSelectText: vi.fn(),
+      onUpdateImage: vi.fn(),
+      onUpdateShape: vi.fn(),
+      onUpdateText: vi.fn(),
+    })
+    const currentNodes = [businessNode]
+
+    expect(syncCanvasNodes(currentNodes, [sameBusinessNode])).toBe(currentNodes)
+  })
+
+  it('syncs node data when business content changes', () => {
+    const [businessNode] = createCanvasFlowNodes({
+      promptCards: [card],
+      selectedNodeIds: [],
+      imageNodes: [],
+      shapeNodes: [],
+      strokes: [],
+      textNodes: [],
+      ...baseHandlers,
+    })
+    const changedCard = { ...card, title: 'Changed' }
+    const [changedBusinessNode] = createCanvasFlowNodes({
+      promptCards: [changedCard],
+      selectedNodeIds: [],
+      imageNodes: [],
+      shapeNodes: [],
+      strokes: [],
+      textNodes: [],
+      ...baseHandlers,
+    })
+    const currentNodes = [businessNode]
+    const syncedNodes = syncCanvasNodes(currentNodes, [changedBusinessNode])
+
+    expect(syncedNodes).not.toBe(currentNodes)
+    expect(syncedNodes[0].type).toBe('promptCard')
+    if (syncedNodes[0].type !== 'promptCard') throw new Error('Expected prompt node')
+    expect(syncedNodes[0].data.card.title).toBe('Changed')
+  })
+
   it('keeps flowchart preview nodes while syncing business data', () => {
     const [businessNode] = createCanvasFlowNodes({
       promptCards: [card],
@@ -290,6 +365,32 @@ describe('canvas flow mapping', () => {
     )
 
     expect(syncedEdge.selected).toBe(true)
+  })
+
+  it('returns the current edge array when synced edges only recreate marker objects', () => {
+    const [businessEdge] = createCanvasFlowEdges([
+      {
+        id: 'edge',
+        canvasId: 'canvas',
+        sourceId: 'a',
+        targetId: 'b',
+        createdAt: 'now',
+        updatedAt: 'now',
+      },
+    ])
+    const [sameBusinessEdge] = createCanvasFlowEdges([
+      {
+        id: 'edge',
+        canvasId: 'canvas',
+        sourceId: 'a',
+        targetId: 'b',
+        createdAt: 'now',
+        updatedAt: 'now',
+      },
+    ])
+    const currentEdges = [businessEdge]
+
+    expect(syncCanvasEdges(currentEdges, [sameBusinessEdge])).toBe(currentEdges)
   })
 
   it('keeps flowchart preview edges while syncing business data', () => {

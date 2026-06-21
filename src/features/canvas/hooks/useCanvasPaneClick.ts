@@ -1,4 +1,4 @@
-import { useCallback, type MouseEvent } from 'react'
+import { useCallback, useEffect, useRef, type MouseEvent } from 'react'
 import { canvasRepository } from '@/features/canvas/infrastructure/canvasRepository'
 import {
   createCanvasShapeNode,
@@ -33,19 +33,56 @@ export function useCanvasPaneClick({
   textStyle,
   topicSessionId,
 }: UseCanvasPaneClickOptions) {
+  const activeToolRef = useRef(activeTool)
+  const onActivateShortcutsRef = useRef(onActivateShortcuts)
+  const onAddPromptRef = useRef(onAddPrompt)
+  const onClearSelectionRef = useRef(onClearSelection)
+  const onSelectToolRef = useRef(onSelectTool)
+  const screenToFlowPositionRef = useRef(screenToFlowPosition)
+  const textStyleRef = useRef(textStyle)
+
+  useEffect(() => {
+    activeToolRef.current = activeTool
+  }, [activeTool])
+
+  useEffect(() => {
+    onActivateShortcutsRef.current = onActivateShortcuts
+  }, [onActivateShortcuts])
+
+  useEffect(() => {
+    onAddPromptRef.current = onAddPrompt
+  }, [onAddPrompt])
+
+  useEffect(() => {
+    onClearSelectionRef.current = onClearSelection
+  }, [onClearSelection])
+
+  useEffect(() => {
+    onSelectToolRef.current = onSelectTool
+  }, [onSelectTool])
+
+  useEffect(() => {
+    screenToFlowPositionRef.current = screenToFlowPosition
+  }, [screenToFlowPosition])
+
+  useEffect(() => {
+    textStyleRef.current = textStyle
+  }, [textStyle])
+
   return useCallback(
     (event: MouseEvent) => {
       if (!canvasId) return
       dispatchCanvasCommitActiveEdit()
-      onActivateShortcuts()
-      const position = screenToFlowPosition({
+      onActivateShortcutsRef.current()
+      const activeTool = activeToolRef.current
+      const position = screenToFlowPositionRef.current({
         x: event.clientX,
         y: event.clientY,
       })
 
       if (activeTool === 'prompt') {
-        onAddPrompt(position, topicSessionId)
-        onSelectTool('select')
+        onAddPromptRef.current(position, topicSessionId)
+        onSelectToolRef.current('select')
         return
       }
 
@@ -53,30 +90,20 @@ export function useCanvasPaneClick({
         void canvasRepository.saveShapeNode(
           createCanvasShapeNode(canvasId, activeTool, position, topicSessionId),
         )
-        onSelectTool('select')
+        onSelectToolRef.current('select')
         return
       }
 
       if (activeTool === 'text') {
         void canvasRepository.saveTextNode(
-          createCanvasTextNode(canvasId, position, textStyle, topicSessionId),
+          createCanvasTextNode(canvasId, position, textStyleRef.current, topicSessionId),
         )
-        onSelectTool('select')
+        onSelectToolRef.current('select')
         return
       }
 
-      if (activeTool === 'select') onClearSelection()
+      if (activeTool === 'select') onClearSelectionRef.current()
     },
-    [
-      activeTool,
-      canvasId,
-      onActivateShortcuts,
-      onAddPrompt,
-      onClearSelection,
-      onSelectTool,
-      screenToFlowPosition,
-      textStyle,
-      topicSessionId,
-    ],
+    [canvasId, topicSessionId],
   )
 }

@@ -18,10 +18,7 @@ import {
   useReactFlow,
 } from '@xyflow/react'
 import { useCallback, useMemo, useState } from 'react'
-import {
-  deleteCanvasEdge,
-  reconnectCanvasEdge,
-} from '@/features/canvas/application/canvasService'
+import { deleteCanvasEdge, reconnectCanvasEdge } from '@/features/canvas/application/canvasService'
 import { CanvasAlignmentGuides } from '@/features/canvas/components/CanvasAlignmentGuides'
 import { CanvasLayoutControls } from '@/features/canvas/components/CanvasLayoutControls'
 import { CanvasWorkspaceControls } from '@/features/canvas/components/CanvasWorkspaceControls'
@@ -42,11 +39,7 @@ import type { CanvasWorkspaceProps } from '@/features/canvas/CanvasWorkspace.typ
 import { canvasRepository } from '@/features/canvas/infrastructure/canvasRepository'
 import { createCanvasEdge } from '@/features/canvas/model/canvasElements'
 import { canvasNodeTypes, penColors } from '@/features/canvas/model/canvasWorkspaceRegistry'
-import {
-  createCanvasFlowEdges,
-  createCanvasFlowNodes,
-  type CanvasFlowNode,
-} from '@/features/canvas/model/canvasFlowMapping'
+import { createCanvasFlowEdges, createCanvasFlowNodes, type CanvasFlowNode } from '@/features/canvas/model/canvasFlowMapping'
 import type { CanvasTool } from '@/features/canvas/model/flowTypes'
 import {
   areFlowSelectionsEqual,
@@ -54,11 +47,13 @@ import {
   toFlowSelectionIds,
   type FlowSelectionIds,
 } from '@/features/canvas/model/flowSelection'
-import {
-  clampTextFontSize,
-  defaultTextStyle,
-  type CanvasTextStyle,
-} from '@/features/canvas/model/textStyle'
+import { clampTextFontSize, defaultTextStyle, type CanvasTextStyle } from '@/features/canvas/model/textStyle'
+
+const reactFlowConnectionLineStyle = { stroke: 'var(--accent)', strokeWidth: 2 }
+const reactFlowDeleteKeyCode = ['Delete', 'Backspace']
+const reactFlowProOptions = { hideAttribution: true }
+const createReactFlowScopeKey = (canvasId?: string, sessionId?: string) =>
+  `${canvasId ?? 'canvas'}:${sessionId ?? 'workspace'}`
 
 export function CanvasWorkspace({
   activeSessionId,
@@ -399,6 +394,7 @@ export function CanvasWorkspace({
     shapeNodes: canvasShapeNodes,
     topicSessionId: activeSessionId,
   })
+
   return (
     <div
       ref={shortcutScopeRef}
@@ -408,6 +404,7 @@ export function CanvasWorkspace({
       onMouseMove={updateCursorPosition}
     >
       <ReactFlow
+        key={createReactFlowScopeKey(effectiveCanvasId, activeSessionId)}
         nodes={flowNodes}
         edges={flowEdges}
         nodeTypes={canvasNodeTypes}
@@ -438,8 +435,8 @@ export function CanvasWorkspace({
         maxZoom={1.6}
         onMoveEnd={canvasViewport.handleMoveEnd}
         connectOnClick={false}
-        connectionLineStyle={{ stroke: 'var(--accent)', strokeWidth: 2 }}
-        deleteKeyCode={['Delete', 'Backspace']}
+        connectionLineStyle={reactFlowConnectionLineStyle}
+        deleteKeyCode={reactFlowDeleteKeyCode}
         connectionMode={ConnectionMode.Loose}
         edgesFocusable
         edgesReconnectable
@@ -447,7 +444,7 @@ export function CanvasWorkspace({
         nodesFocusable={false}
         panActivationKeyCode={null}
         panOnDrag={activeTool === 'pan'}
-        proOptions={{ hideAttribution: true }}
+        proOptions={reactFlowProOptions}
         selectionMode={SelectionMode.Partial}
         selectionOnDrag={activeTool === 'select'}
         zoomActivationKeyCode={null}

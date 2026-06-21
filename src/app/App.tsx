@@ -17,21 +17,6 @@ import {
   renameChatTopic,
   reorderChatTopics,
 } from '@/features/chat/application/chatService'
-import {
-  copyChatCompareOpen,
-  getChatCompareModeStorageKey,
-  normalizeChatCompareMode,
-  setChatCompareOpen,
-  type ChatCompareModeMap,
-} from '@/features/chat/model/chatCompareMode'
-import {
-  copyChatPanelWidth,
-  getChatPanelWidthStorageKey,
-  normalizeChatPanelWidths,
-  resolveChatPanelWidth,
-  setChatPanelWidth,
-  type ChatPanelWidthMap,
-} from '@/features/chat/model/chatPanelWidth'
 import { repairLegacyChatTopicScope } from '@/features/workspace/application/workspaceService'
 import { chatRepository } from '@/features/chat/infrastructure/chatRepository'
 import { CanvasWorkspace } from '@/features/canvas/CanvasWorkspace'
@@ -51,6 +36,7 @@ import {
 } from '@/features/settings/model/providerCatalog'
 import type { ChatSession } from '@/shared/types'
 import { resolveActiveChatCard, resolveChatScopePromptCardId } from './activeChatCard'
+import { useChatPanelSessionState } from './useChatPanelSessionState'
 import { resolveSidebarSessions } from './sidebarSessions'
 import { resolveActiveChatSessionId, useActiveChatTopic } from './useActiveChatTopic'
 import { useResizablePanels } from './useResizablePanels'
@@ -63,10 +49,6 @@ import { useWorkspaceData } from './useWorkspaceData'
 
 function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [compareOpenBySession, setCompareOpenBySession] =
-    useState<ChatCompareModeMap>(readStoredCompareMode)
-  const [chatWidthBySession, setChatWidthBySession] =
-    useState<ChatPanelWidthMap>(readStoredChatPanelWidths)
   const [activeChatTopic, setActiveChatTopic] = useActiveChatTopic()
   const [pendingActiveSession, setPendingActiveSession] = useState<
     { sessionId: string; sessionListKey: string } | undefined
@@ -141,20 +123,14 @@ function App() {
     session: activeChatSession,
     sessionPromptCard,
   })
-  const compareOpen = Boolean(
-    activeChatSessionId && compareOpenBySession[activeChatSessionId],
+  const chatPanelState = useChatPanelSessionState(
+    activeChatSessionId,
+    panels.chatCollapsed,
   )
-  const chatWidth = resolveChatPanelWidth(chatWidthBySession, activeChatSessionId)
-  const setActiveChatPanelWidth = (value: number | ((current: number) => number)) => {
-    setChatWidthBySession((current) => {
-      const nextWidth =
-        typeof value === 'function'
-          ? value(resolveChatPanelWidth(current, activeChatSessionId))
-          : value
-      return setChatPanelWidth(current, activeChatSessionId, nextWidth)
-    })
-  }
-  const resizablePanels = useResizablePanels(chatWidth, setActiveChatPanelWidth)
+  const resizablePanels = useResizablePanels(
+    chatPanelState.chatWidth,
+    chatPanelState.setChatWidth,
+  )
 
   useEffect(() => {
     void repairLegacyChatTopicScope(activeChatSessionId)
@@ -180,14 +156,6 @@ function App() {
     workspace.effectiveCanvasId,
   ])
 
-  useEffect(() => {
-    writeStoredCompareMode(compareOpenBySession)
-  }, [compareOpenBySession])
-
-  useEffect(() => {
-    writeStoredChatPanelWidths(chatWidthBySession)
-  }, [chatWidthBySession])
-
   const setActiveChatSessionId = (sessionId?: string) => {
     setPendingActiveSession(
       sessionId ? { sessionId, sessionListKey: sidebarSessionListKey } : undefined,
@@ -203,12 +171,6 @@ function App() {
       sessionId ? { sessionId, sessionListKey: sidebarSessionListKey } : undefined,
     )
     setActiveChatTopic({ canvasId, sessionId })
-  }
-
-  const setActiveChatSessionCompareOpen = (open: boolean) => {
-    setCompareOpenBySession((current) =>
-      setChatCompareOpen(current, activeChatSessionId, open),
-    )
   }
 
   const selectChatSession = (sessionId?: string) => {
@@ -266,13 +228,23 @@ function App() {
     const siblingSessions = sidebarSessions.filter(
       (item) => item.canvasId === session.canvasId,
     )
-    const copiedSession = await actions.duplicateChatTopic(session, siblingSessions)
-    const canvasId = copiedSession.canvasId ?? workspace.effectiveCanvasId
-    setCompareOpenBySession((current) =>
-      copyChatCompareOpen(current, session.id, copiedSession.id),
+    const sourceComparePaneCardIds = chatPanelState.getComparePaneCardIds(
+      session.id,
+      activeChatCard,
+      chatPromptCards,
     )
-    setChatWidthBySession((current) =>
-      copyChatPanelWidth(current, session.id, copiedSession.id, chatWidth),
+    const copiedSession = await actions.duplicateChatTopic(
+      session,
+      siblingSessions,
+      sourceComparePaneCardIds,
+    )
+    const canvasId = copiedSession.canvasId ?? workspace.effectiveCanvasId
+    chatPanelState.copySessionState(
+      session.id,
+      copiedSession.id,
+      chatPanelState.chatWidth,
+      copiedSession.promptCardIdMap,
+      sourceComparePaneCardIds,
     )
     if (canvasId) {
       copyStoredCanvasViewport({
@@ -372,17 +344,21 @@ function App() {
           provider={workspace.activeProvider}
           promptCards={chatPromptCards}
           providers={workspace.providers}
-          compareOpen={compareOpen}
-          collapsed={panels.chatCollapsed}
+          compareOpen={chatPanelState.compareOpen}
+          comparePaneCardIds={chatPanelState.comparePaneCardIds}
+          comparePanes={chatPanelState.comparePanes}
+          collapsed={chatPanelState.chatCollapsed}
           onResizeStart={resizablePanels.startChatResize}
           activeSessionId={activeChatSessionId}
-          onToggle={panels.toggleChat}
+          onToggle={() => chatPanelState.setChatCollapsed(!chatPanelState.chatCollapsed)}
           onSelectProvider={workspace.setActiveProviderId}
           onActiveSessionChange={setActiveChatSessionId}
           onActiveCardChange={workspace.setSelectedCardId}
-          onCompareOpenChange={setActiveChatSessionCompareOpen}
+          onCompareOpenChange={chatPanelState.setCompareOpen}
+          onComparePaneCardIdsChange={chatPanelState.setComparePaneCardIds}
+          onComparePanesChange={chatPanelState.setComparePanes}
           onEnsureWidth={resizablePanels.ensureChatWidth}
-          width={chatWidth}
+          width={chatPanelState.chatWidth}
         />
 
         {selectionMagnifier.selectionMagnifierSettings.enabled && (
@@ -431,48 +407,6 @@ function App() {
       </div>
     </ReactFlowProvider>
   )
-}
-
-function readStoredCompareMode() {
-  try {
-    return normalizeChatCompareMode(
-      JSON.parse(localStorage.getItem(getChatCompareModeStorageKey()) ?? '{}'),
-    )
-  } catch {
-    return {}
-  }
-}
-
-function writeStoredCompareMode(compareOpenBySession: ChatCompareModeMap) {
-  try {
-    localStorage.setItem(
-      getChatCompareModeStorageKey(),
-      JSON.stringify(compareOpenBySession),
-    )
-  } catch {
-    // Storage can be unavailable in restricted browser modes.
-  }
-}
-
-function readStoredChatPanelWidths() {
-  try {
-    return normalizeChatPanelWidths(
-      JSON.parse(localStorage.getItem(getChatPanelWidthStorageKey()) ?? '{}'),
-    )
-  } catch {
-    return {}
-  }
-}
-
-function writeStoredChatPanelWidths(chatWidthBySession: ChatPanelWidthMap) {
-  try {
-    localStorage.setItem(
-      getChatPanelWidthStorageKey(),
-      JSON.stringify(chatWidthBySession),
-    )
-  } catch {
-    // Storage can be unavailable in restricted browser modes.
-  }
 }
 
 export default App

@@ -232,110 +232,110 @@ describe('workspace repository chat topic transfer', () => {
   })
 
   it('imports chat topic package into a selected canvas with remapped ids', async () => {
-    await expect(
-      workspaceRepository.importChatTopic(
-        {
-          kind: 'prompt-canvas-chat-topic',
-          version: 1,
-          exportedAt: 'now',
-          chatSession: {
-            id: 'session',
+    const result = await workspaceRepository.importChatTopic(
+      {
+        kind: 'prompt-canvas-chat-topic',
+        version: 1,
+        exportedAt: 'now',
+        chatSession: {
+          id: 'session',
+          canvasId: 'old-canvas',
+          promptCardId: 'card',
+          title: '导入话题',
+          createdAt: 'old',
+          updatedAt: 'old',
+        },
+        chatMessages: [
+          {
+            id: 'message',
+            sessionId: 'session',
+            role: 'user',
+            content: '你好',
+            promptVersionId: 'version',
+            attachments: [
+              {
+                id: 'attachment',
+                name: '图.png',
+                mimeType: 'image/png',
+                size: 12,
+                kind: 'image',
+                dataUrl: 'data:image/png;base64,a',
+              },
+            ],
+            createdAt: 'old',
+          },
+          {
+            id: 'child-message',
+            sessionId: 'child-session',
+            role: 'assistant',
+            content: '对比回复',
+            promptVersionId: 'version',
+            createdAt: 'old',
+          },
+        ],
+        childChatSessions: [
+          {
+            id: 'child-session',
             canvasId: 'old-canvas',
+            comparePaneIndex: 1,
+            parentSessionId: 'session',
+            hidden: true,
             promptCardId: 'card',
-            title: '导入话题',
+            title: '隐藏对比',
             createdAt: 'old',
             updatedAt: 'old',
           },
-          chatMessages: [
-            {
-              id: 'message',
-              sessionId: 'session',
-              role: 'user',
-              content: '你好',
-              promptVersionId: 'version',
-              attachments: [
-                {
-                  id: 'attachment',
-                  name: '图.png',
-                  mimeType: 'image/png',
-                  size: 12,
-                  kind: 'image',
-                  dataUrl: 'data:image/png;base64,a',
-                },
-              ],
-              createdAt: 'old',
-            },
-            {
-              id: 'child-message',
-              sessionId: 'child-session',
-              role: 'assistant',
-              content: '对比回复',
-              promptVersionId: 'version',
-              createdAt: 'old',
-            },
-          ],
-          childChatSessions: [
-            {
-              id: 'child-session',
-              canvasId: 'old-canvas',
-              comparePaneIndex: 1,
-              parentSessionId: 'session',
-              hidden: true,
-              promptCardId: 'card',
-              title: '隐藏对比',
-              createdAt: 'old',
-              updatedAt: 'old',
-            },
-          ],
-          promptCards: [
-            {
-              id: 'card',
-              canvasId: 'old-canvas',
-              title: '卡片',
-              position: { x: 0, y: 0 },
-              sections: {},
-              createdAt: 'old',
-              updatedAt: 'old',
-            },
-          ],
-          canvasShapeNodes: [
-            {
-              id: 'shape',
-              canvasId: 'old-canvas',
-              kind: 'step',
-              title: '步骤',
-              body: '内容',
-              position: { x: 10, y: 20 },
-              width: 100,
-              height: 80,
-              createdAt: 'old',
-              updatedAt: 'old',
-            },
-          ],
-          canvasEdges: [
-            {
-              id: 'edge',
-              canvasId: 'old-canvas',
-              sourceId: 'card',
-              targetId: 'shape',
-              createdAt: 'old',
-              updatedAt: 'old',
-            },
-          ],
-          promptVersions: [
-            {
-              id: 'version',
-              promptCardId: 'card',
-              compiledMarkdown: 'md',
-              reason: 'chat-send',
-              createdAt: 'old',
-            },
-          ],
-          compareRuns: [],
-        },
-        'target-canvas',
-      ),
-    ).resolves.toMatchObject({
+        ],
+        promptCards: [
+          {
+            id: 'card',
+            canvasId: 'old-canvas',
+            title: '卡片',
+            position: { x: 0, y: 0 },
+            sections: {},
+            createdAt: 'old',
+            updatedAt: 'old',
+          },
+        ],
+        canvasShapeNodes: [
+          {
+            id: 'shape',
+            canvasId: 'old-canvas',
+            kind: 'step',
+            title: '步骤',
+            body: '内容',
+            position: { x: 10, y: 20 },
+            width: 100,
+            height: 80,
+            createdAt: 'old',
+            updatedAt: 'old',
+          },
+        ],
+        canvasEdges: [
+          {
+            id: 'edge',
+            canvasId: 'old-canvas',
+            sourceId: 'card',
+            targetId: 'shape',
+            createdAt: 'old',
+            updatedAt: 'old',
+          },
+        ],
+        promptVersions: [
+          {
+            id: 'version',
+            promptCardId: 'card',
+            compiledMarkdown: 'md',
+            reason: 'chat-send',
+            createdAt: 'old',
+          },
+        ],
+        compareRuns: [],
+      },
+      'target-canvas',
+    )
+
+    expect(result).toMatchObject({
       canvasId: 'target-canvas',
       promptCardId: expect.any(String),
     })
@@ -374,6 +374,7 @@ describe('workspace repository chat topic transfer', () => {
         topicSessionId: savedSession?.id,
       }),
     ])
+    expect(result.promptCardIdMap).toEqual({ card: savedSession?.promptCardId })
     expect(savedEdges).toEqual([
       expect.objectContaining({
         id: expect.not.stringMatching(/^edge$/),

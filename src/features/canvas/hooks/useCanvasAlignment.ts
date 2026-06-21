@@ -1,6 +1,8 @@
 import type { Edge, OnNodeDrag } from '@xyflow/react'
 import {
   useCallback,
+  useEffect,
+  useRef,
   useState,
   type Dispatch,
   type SetStateAction,
@@ -30,6 +32,21 @@ export function useCanvasAlignment({
   setFlowNodes,
 }: UseCanvasAlignmentOptions) {
   const [alignmentGuides, setAlignmentGuides] = useState<CanvasAlignmentGuide[]>([])
+  const flowNodesRef = useRef(flowNodes)
+  const getNodeRef = useRef(getNode)
+  const onPersistNodeRef = useRef(onPersistNode)
+
+  useEffect(() => {
+    flowNodesRef.current = flowNodes
+  }, [flowNodes])
+
+  useEffect(() => {
+    getNodeRef.current = getNode
+  }, [getNode])
+
+  useEffect(() => {
+    onPersistNodeRef.current = onPersistNode
+  }, [onPersistNode])
 
   const handleNodeDrag = useCallback<OnNodeDrag<CanvasFlowNode>>(
     (_, node, draggedNodes) => {
@@ -38,7 +55,7 @@ export function useCanvasAlignment({
         return
       }
 
-      const snapResult = snapCanvasNodeToNearbyNodes(node, flowNodes)
+      const snapResult = snapCanvasNodeToNearbyNodes(node, flowNodesRef.current)
       setAlignmentGuides(snapResult.guides)
 
       if (
@@ -56,15 +73,15 @@ export function useCanvasAlignment({
         ),
       )
     },
-    [flowNodes, setFlowNodes],
+    [setFlowNodes],
   )
 
   const handleNodeDragStop = useCallback<OnNodeDrag<CanvasFlowNode>>(
     (_, node) => {
-      onPersistNode(getNode(node.id) ?? node)
+      onPersistNodeRef.current(getNodeRef.current(node.id) ?? node)
       setAlignmentGuides([])
     },
-    [getNode, onPersistNode],
+    [],
   )
 
   const arrangeCanvas = useCallback(() => {
