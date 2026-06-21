@@ -24,6 +24,7 @@ export interface PromptCard {
   frameStyle?: CanvasNodeFrameStyle
   markdown?: string
   defaultCollapsed?: boolean
+  collapsedMarkdownHeadingIds?: string[]
   sections: Record<PromptSectionKey, PromptSection>
   createdAt: string
   updatedAt: string

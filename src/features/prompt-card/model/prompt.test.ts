@@ -17,6 +17,7 @@ import {
   parseMarkdownHeadingBlocks,
   parseMarkdownOutline,
   remapCollapsedMarkdownHeadingIds,
+  updatePromptCollapsedMarkdownHeadingIds,
   updatePromptMarkdown,
 } from './prompt'
 import { defaultWorkflowStepPrompt } from './sectionRegistry'
@@ -405,5 +406,17 @@ describe('prompt model', () => {
     expect(
       remapCollapsedMarkdownHeadingIds(previousOutline, nextOutline, collapsedIds),
     ).toEqual(new Set([nextOutline.nodes[1].id, nextOutline.nodes[2].id]))
+  })
+
+  it('normalizes collapsed markdown heading ids on prompt cards', () => {
+    const card = createPromptCard('canvas-1', 0)
+    const updated = updatePromptCollapsedMarkdownHeadingIds(card, [
+      '  0-1-角色  ',
+      '0-1-角色',
+      '',
+      '4-1-规则',
+    ])
+
+    expect(updated.collapsedMarkdownHeadingIds).toEqual(['0-1-角色', '4-1-规则'])
   })
 })

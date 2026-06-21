@@ -92,6 +92,20 @@ export const updatePromptMarkdown = (
   markdown: string,
 ): PromptCard => importMarkdownToPromptCard(card, markdown)
 
+export const hasPromptCardCollapsedMarkdownHeadingState = (card: PromptCard) =>
+  Array.isArray(card.collapsedMarkdownHeadingIds)
+
+export const getPromptCardCollapsedMarkdownHeadingIds = (card: PromptCard) =>
+  normalizeCollapsedMarkdownHeadingIds(card.collapsedMarkdownHeadingIds)
+
+export const updatePromptCollapsedMarkdownHeadingIds = (
+  card: PromptCard,
+  headingIds: Iterable<string>,
+): PromptCard => ({
+  ...card,
+  collapsedMarkdownHeadingIds: normalizeCollapsedMarkdownHeadingIds(headingIds),
+})
+
 export const parseMarkdownHeadingBlocks = (
   markdown: string,
   depth = 1,
@@ -377,6 +391,20 @@ function collectMarkdownHeadings(lines: string[]) {
 
 function normalizeLineEndings(markdown: string) {
   return markdown.replace(/\r\n?/g, '\n')
+}
+
+function normalizeCollapsedMarkdownHeadingIds(value: unknown): string[] {
+  if (!Array.isArray(value) && !isIterableStringCollection(value)) return []
+
+  return Array.from(new Set(Array.from(value).flatMap((item) => {
+    if (typeof item !== 'string') return []
+    const id = item.trim()
+    return id ? [id] : []
+  })))
+}
+
+function isIterableStringCollection(value: unknown): value is Iterable<string> {
+  return typeof value === 'object' && value !== null && Symbol.iterator in value
 }
 
 function normalizeImportHeading(heading: string) {

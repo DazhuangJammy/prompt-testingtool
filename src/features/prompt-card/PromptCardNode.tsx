@@ -25,6 +25,7 @@ import {
   normalizePromptCard,
   parseMarkdownOutline,
   remapCollapsedMarkdownHeadingIds,
+  updatePromptCollapsedMarkdownHeadingIds,
   updatePromptMarkdown,
 } from '@/features/prompt-card/model/prompt'
 import {
@@ -34,7 +35,7 @@ import {
 } from '@/features/prompt-card/model/textSelection'
 import { subscribeCanvasCommitActiveEdit } from '@/shared/model/canvasEditEvents'
 import { normalizeThinkingMode } from '@/shared/model/thinking'
-import { useDefaultCollapsedHeadings } from './hooks/useDefaultCollapsedHeadings'
+import { usePersistentCollapsedHeadings } from './hooks/usePersistentCollapsedHeadings'
 import {
   MarkdownCardPreview,
   type MarkdownNodeEditRequest,
@@ -78,7 +79,6 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
   const [editingNodeId, setEditingNodeId] = useState<string | undefined>()
   const [editingNodeFocus, setEditingNodeFocus] = useState<MarkdownNodeEditFocus>('body')
   const [editingNodeCursorOffset, setEditingNodeCursorOffset] = useState<number | undefined>()
-  const [collapsedHeadingIds, setCollapsedHeadingIds] = useState<Set<string>>(() => new Set())
   const [hovering, setHovering] = useState(false)
   const [titleDraft, setTitleDraft] = useState(card.title)
   const isSelected = selectedCardId === card.id
@@ -105,17 +105,35 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
     },
     [onChange],
   )
+  const {
+    collapsedHeadingIds,
+    setLocalCollapsedHeadingIds,
+    toggleHeadingCollapse,
+  } = usePersistentCollapsedHeadings({
+    card,
+    generating: generatingFlowPrompt,
+    nodes: outline.nodes,
+    onChange: updateCard,
+  })
 
   const updateCardWithMarkdown = useCallback(
     (nextMarkdown: string) => {
       const previousOutline = parseMarkdownOutline(compiledMarkdown)
       const nextOutline = parseMarkdownOutline(nextMarkdown)
-      setCollapsedHeadingIds((current) =>
-        remapCollapsedMarkdownHeadingIds(previousOutline, nextOutline, current),
+      const nextCollapsedHeadingIds = remapCollapsedMarkdownHeadingIds(
+        previousOutline,
+        nextOutline,
+        collapsedHeadingIds,
       )
-      updateCard(updatePromptMarkdown(card, nextMarkdown))
+      setLocalCollapsedHeadingIds(nextCollapsedHeadingIds)
+      updateCard(
+        updatePromptCollapsedMarkdownHeadingIds(
+          updatePromptMarkdown(card, nextMarkdown),
+          nextCollapsedHeadingIds,
+        ),
+      )
     },
-    [card, compiledMarkdown, setCollapsedHeadingIds, updateCard],
+    [card, collapsedHeadingIds, compiledMarkdown, setLocalCollapsedHeadingIds, updateCard],
   )
 
   const showToast = (state: Exclude<typeof toastState, 'idle'>) => {
@@ -337,18 +355,6 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
     updateCardWithMarkdown(nextMarkdown)
   }
 
-  const toggleHeadingCollapse = (id: string) => {
-    setCollapsedHeadingIds((current) => {
-      const next = new Set(current)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
-      return next
-    })
-  }
-
   useEffect(() => {
     if (!editingTitle) return
     titleInputRef.current?.focus()
@@ -375,14 +381,6 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
     if (!editingMarkdown) return
     return subscribeCanvasCommitActiveEdit(saveMarkdown)
   }, [editingMarkdown, saveMarkdown])
-
-  useDefaultCollapsedHeadings({
-    cardId: card.id,
-    defaultCollapsed: card.defaultCollapsed,
-    generating: generatingFlowPrompt,
-    nodes: outline.nodes,
-    setCollapsedHeadingIds,
-  })
 
   return (
     <section
