@@ -1,0 +1,397 @@
+.skills-sidebar .skill-topic-row > button:first-child {
+  padding-right: 68px;
+}
+
+.skill-topic-main {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.skill-topic-main svg {
+  color: var(--muted);
+  flex: 0 0 15px;
+  height: 15px;
+  width: 15px;
+}
+
+.skill-topic-main span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skills-topic-actions-menu {
+  width: 190px;
+}
+
+.skills-topic-actions-menu button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.skills-workspace .topbar-actions .icon-button {
+  height: 32px;
+  min-width: 32px;
+  width: 32px;
+}
+
+.topbar-status-pill {
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 8px;
+}
+
+.skills-flow-wrap {
+  min-height: 0;
+  position: relative;
+}
+
+.skill-graph-node {
+  background: color-mix(in srgb, var(--panel) 96%, var(--surface));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  box-sizing: border-box;
+  color: var(--text);
+  display: grid;
+  gap: 9px;
+  min-height: 132px;
+  padding: 12px;
+  width: 238px;
+}
+
+.skill-graph-node.is-selected {
+  border-color: var(--line-strong);
+}
+
+.skill-graph-node.is-test-failed {
+  border-color: var(--danger);
+}
+
+.skill-graph-node.is-rule {
+  border-style: dashed;
+}
+
+.skill-graph-node.is-inferred {
+  color: color-mix(in srgb, var(--text) 86%, var(--muted));
+}
+
+.skill-graph-node-head {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.skill-graph-node-head svg {
+  color: var(--muted);
+  flex: 0 0 16px;
+  height: 16px;
+  width: 16px;
+}
+
+.skill-graph-node-head span {
+  font-size: 13px;
+  font-weight: 680;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skill-graph-node-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.skill-graph-node-meta span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1;
+  padding: 4px 7px;
+}
+
+.skill-graph-node-meta span.is-danger {
+  border-color: color-mix(in srgb, var(--danger) 68%, var(--line));
+  color: var(--danger);
+}
+
+.skill-graph-node p {
+  color: color-mix(in srgb, var(--text) 76%, var(--muted));
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0;
+  max-height: 50px;
+  overflow: hidden;
+}
+
+.skill-graph-node small {
+  color: var(--faint);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skill-graph-legend {
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  display: flex;
+  gap: 10px;
+  left: 12px;
+  padding: 8px 9px;
+  position: absolute;
+  top: 12px;
+  z-index: 4;
+}
+
+.skill-graph-legend span {
+  align-items: center;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 12px;
+  gap: 6px;
+}
+
+.legend-line {
+  border-top: 2px solid var(--accent);
+  display: inline-block;
+  width: 22px;
+}
+
+.legend-line.is-rule {
+  border-color: var(--line-strong);
+}
+
+.legend-line.is-inferred {
+  border-color: var(--muted);
+  border-top-style: dashed;
+}
+
+.skill-canvas-empty {
+  align-items: center;
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  left: 50%;
+  max-width: min(360px, calc(100vw - 80px));
+  padding: 22px;
+  position: absolute;
+  text-align: center;
+  top: 48%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+}
+
+.skill-canvas-empty-icon {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  display: inline-flex;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+
+.skill-canvas-empty-icon svg {
+  height: 20px;
+  width: 20px;
+}
+
+.skill-canvas-empty h2 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.skill-canvas-empty p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.skill-canvas-empty button,
+.skill-path-body button,
+.skills-settings-panel button {
+  background: var(--text);
+  border: 1px solid var(--text);
+  border-radius: 8px;
+  color: var(--bg);
+  cursor: pointer;
+  font-weight: 650;
+  min-height: 36px;
+  padding: 0 14px;
+}
+
+.skill-canvas-empty button:hover,
+.skill-path-body button:hover:not(:disabled),
+.skills-settings-panel button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.skills-panel-meta {
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 10px;
+}
+
+.skills-panel-meta strong {
+  color: var(--text);
+  flex: 1 0 100%;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skills-panel-meta span,
+.skills-panel-meta small {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 4px 7px;
+}
+
+.skills-panel-meta p {
+  color: var(--muted);
+  flex: 1 0 100%;
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.skills-panel-meta .skills-file-changed {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 8px;
+}
+
+.skills-panel-meta .skills-test-failure-note {
+  border-color: color-mix(in srgb, var(--danger) 58%, var(--line));
+  color: var(--danger);
+}
+
+.skills-message-list {
+  gap: 9px;
+}
+
+.skill-path-dialog {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  box-shadow: var(--shadow);
+  max-height: min(720px, calc(100vh - 48px));
+  overflow: hidden;
+  width: min(680px, calc(100vw - 48px));
+}
+
+.skill-path-body {
+  display: grid;
+  gap: 16px;
+  max-height: calc(100vh - 110px);
+  overflow: auto;
+  padding: 18px;
+}
+
+.skill-directory-list {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: grid;
+  gap: 4px;
+  max-height: 260px;
+  overflow: auto;
+  padding: 8px;
+}
+
+.skill-path-actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: -8px;
+}
+
+.skill-path-actions button {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.skill-path-actions button:hover:not(:disabled) {
+  background: var(--panel-2);
+  border-color: var(--line-strong);
+}
+
+.skill-path-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.skill-directory-head {
+  display: grid;
+  gap: 3px;
+  padding: 4px 4px 8px;
+}
+
+.skill-directory-head span {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.skill-directory-head small,
+.skill-directory-list p {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.skill-directory-list button {
+  align-items: flex-start;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text);
+  display: grid;
+  gap: 3px;
+  justify-items: start;
+  min-height: 44px;
+  padding: 7px 8px;
+  text-align: left;
+}
+
+.skill-directory-list button:hover {
+  background: var(--panel-2);
+  border-color: var(--line);
+}
+
+.skill-directory-list button small {
+  color: var(--muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}

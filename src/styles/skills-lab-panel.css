@@ -1,0 +1,148 @@
+.skill-message-kind {
+  color: var(--faint);
+  font-size: 11px;
+  margin-bottom: 5px;
+}
+
+.skill-message-node-link {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  margin: 0 0 6px;
+  min-height: 26px;
+  padding: 0 8px;
+}
+
+.skill-message-node-link:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.message.is-terminal .message-bubble {
+  background: var(--panel-2);
+  border-color: var(--line);
+  max-width: min(640px, 100%);
+}
+
+.skill-terminal-output {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.skill-terminal-output.is-streaming {
+  color: color-mix(in srgb, var(--text) 76%, var(--muted));
+}
+
+.skills-message-empty {
+  align-self: center;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: auto;
+  max-width: 240px;
+  text-align: center;
+}
+
+.skills-composer {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.skills-mode-tabs {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  overflow: hidden;
+}
+
+.skills-mode-tabs button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  gap: 6px;
+  justify-content: center;
+  min-height: 34px;
+}
+
+.skills-mode-tabs button + button {
+  border-left: 1px solid var(--line);
+}
+
+.skills-mode-tabs button.is-active,
+.skills-mode-tabs button:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.skills-mode-tabs svg {
+  height: 14px;
+  width: 14px;
+}
+
+.skills-composer textarea,
+.skill-path-body textarea {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--text);
+  min-height: 86px;
+  padding: 10px;
+  resize: vertical;
+  width: 100%;
+}
+
+.skills-test-templates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.skills-test-templates button {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  min-height: 30px;
+  padding: 0 10px;
+}
+
+.skills-test-templates button:hover:not(:disabled) {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.skills-test-templates button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.skills-composer-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.skills-composer-actions span {
+  color: var(--faint);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

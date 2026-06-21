@@ -1,6 +1,10 @@
-import { Box, Keyboard, MoreHorizontal, Server, X } from 'lucide-react'
+import { Bot, Box, Keyboard, MoreHorizontal, Server, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import type { DefaultModelSettings, ProviderConfig } from '@/shared/types'
+import type {
+  DefaultModelSettings,
+  ProviderConfig,
+  SkillsLabSettings,
+} from '@/shared/types'
 import type {
   CanvasTool,
   CanvasToolShortcuts,
@@ -12,6 +16,7 @@ import { DefaultModelSettingsPanel } from './components/DefaultModelSettingsPane
 import { OtherSettingsPanel } from './components/OtherSettingsPanel'
 import { ProviderDetailPanel } from './components/ProviderDetailPanel'
 import { ProviderListPanel } from './components/ProviderListPanel'
+import { SkillsLabSettingsPanel } from './components/SkillsLabSettingsPanel'
 import { ShortcutSettingsPanel } from './components/ShortcutSettingsPanel'
 import { normalizeProviderConfig } from './model/providerCatalog'
 
@@ -21,6 +26,7 @@ interface SettingsDialogProps {
   flowchartModelSettings?: DefaultModelSettings
   canvasToolShortcuts: CanvasToolShortcuts
   selectionMagnifier: SelectionMagnifierSettings
+  skillsLabSettings?: SkillsLabSettings
   providers: ProviderConfig[]
   activeProviderId?: string
   onClose: () => void
@@ -28,6 +34,7 @@ interface SettingsDialogProps {
   onResetCanvasToolShortcuts: () => void
   onSaveCanvasToolShortcut: (tool: CanvasTool, key: string) => void
   onSaveDefaultModelSettings: (settings: DefaultModelSettings) => void
+  onSaveSkillsLabSettings: (settings: SkillsLabSettings) => void
   onReorderProviders: (providers: ProviderConfig[]) => void
   onSave: (provider: ProviderConfig) => void
   onDelete: (id: string) => void
@@ -37,6 +44,7 @@ interface SettingsDialogProps {
 const SETTING_CATEGORIES = [
   { id: 'models', label: '模型服务', icon: Server },
   { id: 'default-model', label: '默认模型', icon: Box },
+  { id: 'skills-lab', label: 'Skills 设置', icon: Bot },
   { id: 'shortcuts', label: '快捷键设置', icon: Keyboard },
   { id: 'other', label: '其他设置', icon: MoreHorizontal },
 ] as const
@@ -49,6 +57,7 @@ export function SettingsDialog({
   flowchartModelSettings,
   canvasToolShortcuts,
   selectionMagnifier,
+  skillsLabSettings,
   providers,
   activeProviderId,
   onClose,
@@ -56,6 +65,7 @@ export function SettingsDialog({
   onResetCanvasToolShortcuts,
   onSaveCanvasToolShortcut,
   onSaveDefaultModelSettings,
+  onSaveSkillsLabSettings,
   onReorderProviders,
   onSave,
   onDelete,
@@ -145,6 +155,13 @@ export function SettingsDialog({
                 providers={normalizedProviders}
                 settings={defaultModelSettings}
                 onSave={onSaveDefaultModelSettings}
+              />
+            </main>
+          ) : activeCategory === 'skills-lab' ? (
+            <main className="settings-main-panel skills-settings-page">
+              <SkillsLabSettingsPanel
+                settings={skillsLabSettings}
+                onSave={onSaveSkillsLabSettings}
               />
             </main>
           ) : activeCategory === 'shortcuts' ? (

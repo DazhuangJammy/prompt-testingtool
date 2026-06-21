@@ -1,29 +1,23 @@
 import {
-  Bot,
   ChevronDown,
   ChevronRight,
   Download,
   Folder,
   FolderOpen,
-  Moon,
-  PanelsTopLeft,
   MoreHorizontal,
   Pencil,
   FileInput,
-  PanelLeftClose,
-  PanelLeftOpen,
   Plus,
-  Settings,
-  Sun,
   Trash2,
 } from 'lucide-react'
 import type { CSSProperties } from 'react'
 import { useEffect, useState } from 'react'
 import { IconButton } from '@/shared/ui/IconButton'
-import type { Canvas, ChatSession, ThemeMode } from '@/shared/types'
+import type { Canvas, ChatSession, ThemeMode, WorkspaceMode } from '@/shared/types'
 import { AppVersionBadge } from './components/AppVersionBadge'
 import { TopicActionsMenu } from './components/TopicActionsMenu'
 import { TopicImportDialog } from './components/TopicImportDialog'
+import { WorkspaceRailNav } from './components/WorkspaceRailNav'
 import type { ChatSessionExportAction } from './sidebar.types'
 
 interface SidebarProps {
@@ -59,6 +53,8 @@ interface SidebarProps {
   onOpenSettings: () => void
   onResizeStart: (event: React.PointerEvent) => void
   width: number
+  mode: WorkspaceMode
+  onModeChange: (mode: WorkspaceMode) => void
 }
 
 export function Sidebar({
@@ -87,6 +83,8 @@ export function Sidebar({
   onOpenSettings,
   onResizeStart,
   width,
+  mode,
+  onModeChange,
 }: SidebarProps) {
   const effectiveSessionId = sessions.some((session) => session.id === activeSessionId)
     ? activeSessionId
@@ -176,28 +174,15 @@ export function Sidebar({
       className={`sidebar ${collapsed ? 'is-collapsed' : ''}`}
       style={{ '--panel-width': `${width}px` } as CSSProperties}
     >
-      <nav className="rail-nav" aria-label="功能区">
-        <IconButton icon={<PanelsTopLeft />} label="工作台" active />
-        <IconButton icon={<Bot />} label="智能体" disabled />
-        <IconButton
-          className="rail-theme"
-          icon={theme === 'dark' ? <Sun /> : <Moon />}
-          label="主题"
-          onClick={onToggleTheme}
-        />
-        <IconButton
-          className="rail-settings"
-          icon={<Settings />}
-          label="设置"
-          onClick={onOpenSettings}
-        />
-        <IconButton
-          className="rail-toggle"
-          icon={collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
-          label={collapsed ? '展开' : '收起'}
-          onClick={onToggle}
-        />
-      </nav>
+      <WorkspaceRailNav
+        collapsed={collapsed}
+        mode={mode}
+        theme={theme}
+        onModeChange={onModeChange}
+        onOpenSettings={onOpenSettings}
+        onToggle={onToggle}
+        onToggleTheme={onToggleTheme}
+      />
       <div className="sidebar-head">
         {!collapsed && (
           <div className="app-brand">

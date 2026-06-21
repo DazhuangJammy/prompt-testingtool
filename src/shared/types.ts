@@ -1,6 +1,7 @@
 export type PromptSectionKey = string
 
 export type ThemeMode = 'light' | 'dark'
+export type WorkspaceMode = 'prompt' | 'skills'
 
 export interface Canvas {
   id: string
@@ -166,6 +167,139 @@ export interface DefaultModelSettings {
   thinkingMode?: ThinkingMode
   createdAt: string
   updatedAt: string
+}
+
+export type SkillAgentTool = 'codex' | 'claude-code' | 'openclaw' | 'mock'
+export type SkillAgentPermissionMode = 'read-only' | 'allow-write'
+
+export interface SkillsLabSettings {
+  id: 'skills-lab'
+  defaultTool: SkillAgentTool
+  toolCommand: string
+  defaultSkillsDirectory: string
+  autoRunChecks: boolean
+  requireChangeConfirmation: boolean
+  permissionMode: SkillAgentPermissionMode
+  createdAt: string
+  updatedAt: string
+}
+
+export type SkillGraphNodeType =
+  | 'main'
+  | 'reference'
+  | 'asset'
+  | 'script'
+  | 'test'
+  | 'rule'
+  | 'folder'
+  | 'unknown'
+
+export type SkillGraphConfidence = 'explicit' | 'rule' | 'inferred'
+export type SkillGraphEdgeRelation =
+  | 'reads'
+  | 'uses'
+  | 'runs'
+  | 'triggers'
+  | 'generates'
+  | 'contains'
+  | 'tests'
+  | 'suggests'
+
+export interface SkillGraphNode {
+  id: string
+  type: SkillGraphNodeType
+  label: string
+  body?: string
+  file?: string
+  evidence?: string
+  confidence: SkillGraphConfidence
+}
+
+export interface SkillGraphEdge {
+  id: string
+  from: string
+  to: string
+  relation: SkillGraphEdgeRelation
+  label?: string
+  evidence?: string
+  confidence: SkillGraphConfidence
+}
+
+export interface SkillGraphIssue {
+  id: string
+  severity: 'info' | 'warning' | 'error'
+  title: string
+  detail: string
+  nodeId?: string
+}
+
+export interface SkillGraph {
+  skill: {
+    name: string
+    description: string
+    sourcePath: string
+    sourceFile?: string
+  }
+  summary: string
+  nodes: SkillGraphNode[]
+  edges: SkillGraphEdge[]
+  issues: SkillGraphIssue[]
+  testSuggestions: string[]
+  generatedAt: string
+}
+
+export interface SkillTopic {
+  id: string
+  title: string
+  skillPath?: string
+  agentSessionId?: string
+  graph?: SkillGraph
+  lastAnalysisAt?: string
+  lastFileSignature?: string
+  status?: 'idle' | 'analyzing' | 'error'
+  error?: string
+  sortOrder?: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SkillAnalysisSnapshot {
+  id: string
+  topicId: string
+  graph: SkillGraph
+  fileSignature?: string
+  createdAt: string
+}
+
+export interface SkillFileStatusItem {
+  path: string
+  size: number
+  mtimeMs: number
+}
+
+export interface SkillFileStatus {
+  fileSignature?: string
+  files: SkillFileStatusItem[]
+}
+
+export interface SkillFileChangeSummary {
+  added: string[]
+  modified: string[]
+  removed: string[]
+}
+
+export interface SkillLabMessage {
+  id: string
+  topicId: string
+  role: 'user' | 'assistant' | 'system'
+  kind: 'question' | 'suggestion' | 'test' | 'analysis'
+  content: string
+  format?: 'markdown' | 'terminal'
+  stream?: 'stdout' | 'stderr'
+  agentSessionId?: string
+  nodeId?: string
+  status?: 'streaming' | 'complete' | 'error'
+  createdAt: string
 }
 
 export interface ChatSession {

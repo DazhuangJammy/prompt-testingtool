@@ -53,6 +53,7 @@ describe('SettingsDialog', () => {
           onSave={vi.fn()}
           onSaveCanvasToolShortcut={vi.fn()}
           onSaveDefaultModelSettings={vi.fn()}
+          onSaveSkillsLabSettings={vi.fn()}
           onSelect={vi.fn()}
         />,
       )
@@ -89,6 +90,7 @@ describe('SettingsDialog', () => {
           onSave={vi.fn()}
           onSaveCanvasToolShortcut={vi.fn()}
           onSaveDefaultModelSettings={vi.fn()}
+          onSaveSkillsLabSettings={vi.fn()}
           onSelect={vi.fn()}
         />,
       )
@@ -124,6 +126,7 @@ describe('SettingsDialog', () => {
           onSave={vi.fn()}
           onSaveCanvasToolShortcut={vi.fn()}
           onSaveDefaultModelSettings={vi.fn()}
+          onSaveSkillsLabSettings={vi.fn()}
           onSelect={vi.fn()}
         />,
       )
@@ -147,5 +150,42 @@ describe('SettingsDialog', () => {
     expect(
       document.querySelector('input[aria-label="放大镜背景透明度"]'),
     ).toBeTruthy()
+  })
+
+  it('opens Skills Lab settings as a standalone settings page', () => {
+    host = document.createElement('div')
+    document.body.append(host)
+    root = createRoot(host)
+
+    act(() => {
+      root?.render(
+        <SettingsDialog
+          open
+          canvasToolShortcuts={defaultCanvasToolShortcuts}
+          selectionMagnifier={defaultSelectionMagnifierSettings}
+          providers={[provider]}
+          onClose={vi.fn()}
+          onDelete={vi.fn()}
+          onReorderProviders={vi.fn()}
+          onResetCanvasToolShortcuts={vi.fn()}
+          onSelectionMagnifierChange={vi.fn()}
+          onSave={vi.fn()}
+          onSaveCanvasToolShortcut={vi.fn()}
+          onSaveDefaultModelSettings={vi.fn()}
+          onSaveSkillsLabSettings={vi.fn()}
+          onSelect={vi.fn()}
+        />,
+      )
+    })
+
+    act(() => {
+      Array.from(document.querySelectorAll<HTMLButtonElement>('nav button'))
+        .find((button) => button.textContent?.includes('Skills 设置'))
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(document.querySelector('.skills-settings-page')).toBeTruthy()
+    expect(document.body.textContent).toContain('工具命令')
+    expect(document.body.textContent).toContain('默认 Skills 目录')
   })
 })

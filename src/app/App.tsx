@@ -24,17 +24,18 @@ import { useScopedCanvasRecords } from '@/features/canvas/hooks/useScopedCanvasR
 import { copyStoredCanvasViewport } from '@/features/canvas/model/canvasViewport'
 import { workspaceRepository } from '@/features/workspace/infrastructure/workspaceRepository'
 import { WorkspaceTopbar } from '@/features/canvas/WorkspaceTopbar'
-import { SelectionMagnifierOverlay } from '@/features/settings/components/SelectionMagnifierOverlay'
-import { SettingsDialog } from '@/features/settings/SettingsDialog'
 import { Sidebar } from '@/features/sidebar/Sidebar'
-import type { ChatSessionExportAction } from '@/features/sidebar/sidebar.types'
-import { defaultModelSettingsRepository } from '@/features/settings/infrastructure/defaultModelSettingsRepository'
-import { providerRepository } from '@/features/settings/infrastructure/providerRepository'
+import { SkillsLabShell } from '@/features/skills-lab/SkillsLabShell'
 import {
-  buildSelectableProviderId,
-  normalizeProviderConfig,
-} from '@/features/settings/model/providerCatalog'
+  bindSkillPath,
+  createSkillForTopic,
+  analyzeSkillTopic,
+} from '@/features/skills-lab/application/skillsLabService'
+import { skillsLabRepository } from '@/features/skills-lab/infrastructure/skillsLabRepository'
+import { useSkillsLabData } from '@/features/skills-lab/hooks/useSkillsLabData'
+import type { ChatSessionExportAction } from '@/features/sidebar/sidebar.types'
 import type { ChatSession } from '@/shared/types'
+import { AppOverlays } from './AppOverlays'
 import { resolveActiveChatCard, resolveChatScopePromptCardId } from './activeChatCard'
 import { useChatPanelSessionState } from './useChatPanelSessionState'
 import { resolveSidebarSessions } from './sidebarSessions'
@@ -44,11 +45,16 @@ import { useResponsivePanels } from './useResponsivePanels'
 import { useCanvasToolShortcutSettings } from './useCanvasToolShortcutSettings'
 import { useSelectionMagnifierSettings } from './useSelectionMagnifierSettings'
 import { useThemeMode } from './useThemeMode'
+import { useWorkspaceMode } from './useWorkspaceMode'
 import { useWorkspaceActions } from './useWorkspaceActions'
 import { useWorkspaceData } from './useWorkspaceData'
 
 function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [workspaceMode, setWorkspaceMode] = useWorkspaceMode()
+  const [skillPathDialogTopicId, setSkillPathDialogTopicId] = useState<string>()
+  const [createSkillDialogTopicId, setCreateSkillDialogTopicId] = useState<string>()
+  const [skillsBusy, setSkillsBusy] = useState(false)
   const [activeChatTopic, setActiveChatTopic] = useActiveChatTopic()
   const [pendingActiveSession, setPendingActiveSession] = useState<
     { sessionId: string; sessionListKey: string } | undefined
@@ -58,6 +64,7 @@ function App() {
   const selectionMagnifier = useSelectionMagnifierSettings()
   const { theme, toggleTheme } = useThemeMode()
   const workspace = useWorkspaceData()
+  const skillsLab = useSkillsLabData()
   const actions = useWorkspaceActions({
     canvases: workspace.canvases,
     effectiveCanvasId: workspace.effectiveCanvasId,
@@ -280,129 +287,174 @@ function App() {
     return downloadChatSessionWord(session, messages)
   }
 
+  const selectedSkillPathTopic = skillsLab.topics.find(
+    (topic) => topic.id === skillPathDialogTopicId,
+  )
+  const selectedCreateSkillTopic = skillsLab.topics.find(
+    (topic) => topic.id === createSkillDialogTopicId,
+  )
+
+  const bindSkillToTopic = async (topicId: string, skillPath: string) => {
+    await bindSkillPath(topicId, skillPath)
+    const topic = await skillsLabRepository.getTopic(topicId)
+    if (topic && skillsLab.settings) {
+      setSkillsBusy(true)
+      analyzeSkillTopic(topic, skillsLab.settings)
+        .finally(() => setSkillsBusy(false))
+    }
+  }
+
+  const createSkillForActiveTopic = (promptText: string) => {
+    if (!selectedCreateSkillTopic || !skillsLab.settings || skillsBusy) return
+    setSkillsBusy(true)
+    void createSkillForTopic(
+      selectedCreateSkillTopic,
+      skillsLab.settings,
+      promptText,
+    )
+      .then(async () => {
+        setCreateSkillDialogTopicId(undefined)
+        const topic = await skillsLabRepository.getTopic(selectedCreateSkillTopic.id)
+        if (topic && skillsLab.settings) {
+          await analyzeSkillTopic(topic, skillsLab.settings)
+        }
+      })
+      .finally(() => setSkillsBusy(false))
+  }
+
   return (
     <ReactFlowProvider>
       <div className="app-shell">
-        <Sidebar
-          canvases={workspace.canvases}
-          activeCanvasId={workspace.effectiveCanvasId}
-          activeSessionId={activeChatSessionId}
-          collapsed={panels.sidebarCollapsed}
-          theme={theme}
-          sessions={sidebarSessions}
-          onToggle={panels.toggleSidebar}
-          onToggleTheme={toggleTheme}
-          onSelect={workspace.setActiveCanvasId}
-          onSelectSession={selectChatSession}
-          onCreate={actions.createNextCanvas}
-          onCreateSession={createChatSession}
-          onRename={(id, title) => actions.updateCanvas(id, { title })}
-          onRenameSession={renameChatSession}
-          onReorderSessions={reorderChatSessions}
-          onReorderCanvases={actions.reorderCanvases}
-          onDuplicateSession={duplicateChatSession}
-          onDelete={actions.deleteCanvas}
-          onDeleteSession={deleteChatSession}
-          onExportSession={exportChatSession}
-          onExport={actions.exportChatTopic}
-          onImport={async (file, targetCanvasId) => {
-            const result = await actions.importChatTopic(file, targetCanvasId)
-            setActiveChatSessionForCanvas(result.canvasId, result.sessionId)
-            if (result.promptCardId) {
-              workspace.setSelectedCardId(result.promptCardId)
-            }
-          }}
-          onOpenSettings={() => setSettingsOpen(true)}
-          onResizeStart={resizablePanels.startSidebarResize}
-          width={resizablePanels.sidebarWidth}
-        />
-
-        <main className="workspace">
-          <WorkspaceTopbar
-            title={workspace.activeCanvas?.title ?? '工作台'}
-          />
-
-          <CanvasWorkspace
-            effectiveCanvasId={workspace.effectiveCanvasId}
+        {workspaceMode === 'prompt' ? (
+          <Sidebar
+            canvases={workspace.canvases}
+            activeCanvasId={workspace.effectiveCanvasId}
             activeSessionId={activeChatSessionId}
-            activeSessionCreatedAt={activeChatSession?.createdAt}
-            activeSessionPromptCardId={activeChatPromptCardId}
-            flowchartProvider={workspace.flowchartProvider}
-            flowchartSettings={workspace.flowchartModelSettings}
-            promptOptimizationProvider={workspace.defaultProvider}
-            promptOptimizationSettings={workspace.defaultModelSettings}
-            toolShortcuts={canvasToolShortcuts.shortcuts}
-            promptCards={workspace.promptCards}
-            onAddPrompt={actions.addPromptCard}
-            onDeleteCard={actions.deletePromptCard}
-            onSelectCard={workspace.setSelectedCardId}
+            collapsed={panels.sidebarCollapsed}
+            theme={theme}
+            sessions={sidebarSessions}
+            mode={workspaceMode}
+            onModeChange={setWorkspaceMode}
+            onToggle={panels.toggleSidebar}
+            onToggleTheme={toggleTheme}
+            onSelect={workspace.setActiveCanvasId}
+            onSelectSession={selectChatSession}
+            onCreate={actions.createNextCanvas}
+            onCreateSession={createChatSession}
+            onRename={(id, title) => actions.updateCanvas(id, { title })}
+            onRenameSession={renameChatSession}
+            onReorderSessions={reorderChatSessions}
+            onReorderCanvases={actions.reorderCanvases}
+            onDuplicateSession={duplicateChatSession}
+            onDelete={actions.deleteCanvas}
+            onDeleteSession={deleteChatSession}
+            onExportSession={exportChatSession}
+            onExport={actions.exportChatTopic}
+            onImport={async (file, targetCanvasId) => {
+              const result = await actions.importChatTopic(file, targetCanvasId)
+              setActiveChatSessionForCanvas(result.canvasId, result.sessionId)
+              if (result.promptCardId) {
+                workspace.setSelectedCardId(result.promptCardId)
+              }
+            }}
+            onOpenSettings={() => setSettingsOpen(true)}
+            onResizeStart={resizablePanels.startSidebarResize}
+            width={resizablePanels.sidebarWidth}
           />
-        </main>
-
-        <ChatPanel
-          card={activeChatCard}
-          provider={workspace.activeProvider}
-          promptCards={chatPromptCards}
-          providers={workspace.providers}
-          compareOpen={chatPanelState.compareOpen}
-          comparePaneCardIds={chatPanelState.comparePaneCardIds}
-          comparePanes={chatPanelState.comparePanes}
-          collapsed={chatPanelState.chatCollapsed}
-          onResizeStart={resizablePanels.startChatResize}
-          activeSessionId={activeChatSessionId}
-          onToggle={() => chatPanelState.setChatCollapsed(!chatPanelState.chatCollapsed)}
-          onSelectProvider={workspace.setActiveProviderId}
-          onActiveSessionChange={setActiveChatSessionId}
-          onActiveCardChange={workspace.setSelectedCardId}
-          onCompareOpenChange={chatPanelState.setCompareOpen}
-          onComparePaneCardIdsChange={chatPanelState.setComparePaneCardIds}
-          onComparePanesChange={chatPanelState.setComparePanes}
-          onEnsureWidth={resizablePanels.ensureChatWidth}
-          width={chatPanelState.chatWidth}
-        />
-
-        {selectionMagnifier.selectionMagnifierSettings.enabled && (
-          <SelectionMagnifierOverlay
-            settings={selectionMagnifier.selectionMagnifierSettings}
+        ) : (
+          <SkillsLabShell
+            activeTopic={skillsLab.activeTopic}
+            activeTopicId={skillsLab.activeTopicId}
+            busy={skillsBusy}
+            chatCollapsed={chatPanelState.chatCollapsed}
+            chatWidth={chatPanelState.chatWidth}
+            messages={skillsLab.messages}
+            mode={workspaceMode}
+            settings={skillsLab.settings}
+            sidebarCollapsed={panels.sidebarCollapsed}
+            sidebarWidth={resizablePanels.sidebarWidth}
+            theme={theme}
+            topics={skillsLab.topics}
+            onBusyChange={setSkillsBusy}
+            onCreateSkillDialog={setCreateSkillDialogTopicId}
+            onModeChange={setWorkspaceMode}
+            onOpenSettings={() => setSettingsOpen(true)}
+            onPathDialog={setSkillPathDialogTopicId}
+            onResizeChat={resizablePanels.startChatResize}
+            onResizeSidebar={resizablePanels.startSidebarResize}
+            onSelectTopic={skillsLab.setActiveTopicId}
+            onToggleChat={() =>
+              chatPanelState.setChatCollapsed(!chatPanelState.chatCollapsed)
+            }
+            onToggleSidebar={panels.toggleSidebar}
+            onToggleTheme={toggleTheme}
           />
         )}
 
-        <SettingsDialog
-          open={settingsOpen}
-          defaultModelSettings={workspace.defaultModelSettings}
-          flowchartModelSettings={workspace.flowchartModelSettings}
-          canvasToolShortcuts={canvasToolShortcuts.shortcuts}
-          selectionMagnifier={selectionMagnifier.selectionMagnifierSettings}
-          providers={workspace.providerConfigs}
-          activeProviderId={workspace.effectiveProviderConfigId}
-          onClose={() => setSettingsOpen(false)}
-          onSelectionMagnifierChange={
-            selectionMagnifier.updateSelectionMagnifierSettings
-          }
-          onResetCanvasToolShortcuts={canvasToolShortcuts.resetShortcuts}
-          onSelect={() => undefined}
-          onSaveCanvasToolShortcut={canvasToolShortcuts.setShortcut}
-          onSaveDefaultModelSettings={async (settings) => {
-            await defaultModelSettingsRepository.save(settings)
-          }}
-          onReorderProviders={async (providers) => {
-            await Promise.all(providers.map((provider) => providerRepository.save(provider)))
-          }}
-          onDelete={async (id) => {
-            await providerRepository.delete(id)
-            if (workspace.activeProvider?.sourceProviderId === id) {
-              workspace.setActiveProviderId(undefined)
+        {workspaceMode === 'prompt' && (
+          <main className="workspace">
+            <WorkspaceTopbar title={workspace.activeCanvas?.title ?? '工作台'} />
+
+            <CanvasWorkspace
+              effectiveCanvasId={workspace.effectiveCanvasId}
+              activeSessionId={activeChatSessionId}
+              activeSessionCreatedAt={activeChatSession?.createdAt}
+              activeSessionPromptCardId={activeChatPromptCardId}
+              flowchartProvider={workspace.flowchartProvider}
+              flowchartSettings={workspace.flowchartModelSettings}
+              promptOptimizationProvider={workspace.defaultProvider}
+              promptOptimizationSettings={workspace.defaultModelSettings}
+              toolShortcuts={canvasToolShortcuts.shortcuts}
+              promptCards={workspace.promptCards}
+              onAddPrompt={actions.addPromptCard}
+              onDeleteCard={actions.deletePromptCard}
+              onSelectCard={workspace.setSelectedCardId}
+            />
+          </main>
+        )}
+
+        {workspaceMode === 'prompt' && (
+          <ChatPanel
+            card={activeChatCard}
+            provider={workspace.activeProvider}
+            promptCards={chatPromptCards}
+            providers={workspace.providers}
+            compareOpen={chatPanelState.compareOpen}
+            comparePaneCardIds={chatPanelState.comparePaneCardIds}
+            comparePanes={chatPanelState.comparePanes}
+            collapsed={chatPanelState.chatCollapsed}
+            onResizeStart={resizablePanels.startChatResize}
+            activeSessionId={activeChatSessionId}
+            onToggle={() =>
+              chatPanelState.setChatCollapsed(!chatPanelState.chatCollapsed)
             }
+            onSelectProvider={workspace.setActiveProviderId}
+            onActiveSessionChange={setActiveChatSessionId}
+            onActiveCardChange={workspace.setSelectedCardId}
+            onCompareOpenChange={chatPanelState.setCompareOpen}
+            onComparePaneCardIdsChange={chatPanelState.setComparePaneCardIds}
+            onComparePanesChange={chatPanelState.setComparePanes}
+            onEnsureWidth={resizablePanels.ensureChatWidth}
+            width={chatPanelState.chatWidth}
+          />
+        )}
+
+        <AppOverlays
+          canvasToolShortcuts={canvasToolShortcuts}
+          createSkillBusy={skillsBusy}
+          createSkillTopic={selectedCreateSkillTopic}
+          selectionMagnifier={selectionMagnifier}
+          settingsOpen={settingsOpen}
+          skillPathTopic={selectedSkillPathTopic}
+          skillsLabSettings={skillsLab.settings}
+          workspace={workspace}
+          onBindSkillPath={(topicId, skillPath) => {
+            void bindSkillToTopic(topicId, skillPath)
           }}
-          onSave={async (provider) => {
-            const normalized = normalizeProviderConfig(provider)
-            await providerRepository.save(normalized)
-            if (normalized.enabled && normalized.model) {
-              workspace.setActiveProviderId(
-                buildSelectableProviderId(normalized.id, normalized.model),
-              )
-            }
-          }}
+          onCloseCreateSkill={() => setCreateSkillDialogTopicId(undefined)}
+          onCloseSettings={() => setSettingsOpen(false)}
+          onCloseSkillPath={() => setSkillPathDialogTopicId(undefined)}
+          onCreateSkill={createSkillForActiveTopic}
         />
       </div>
     </ReactFlowProvider>

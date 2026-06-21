@@ -16,8 +16,8 @@ try {
     run('pnpm', ['install'])
   }
   await stopProductionServer()
-  await ensurePortFree(webPort, 'Web')
-  await ensurePortFree(apiPort, 'API')
+  await freePort(webPort, 'Web')
+  await freePort(apiPort, 'API')
 
   const api = spawn('pnpm', ['dev:api'], {
     cwd: root,
@@ -116,10 +116,57 @@ async function stopProductionServer() {
   }
 }
 
-async function ensurePortFree(port, label) {
-  if (await isPortOpen(host, port)) {
-    throw new Error(`${label} port ${port} is already in use on ${host}.`)
+async function freePort(port, label) {
+  const pids = findListeningPids(port)
+  if (!pids.length) return
+
+  console.log(`${label} port ${port} is in use. Stopping old process: ${pids.join(', ')}`)
+  for (const pid of pids) {
+    stopProcess(pid, 'SIGTERM')
   }
+
+  const stopped = await waitForPortFree(port, 24, 125)
+  if (stopped) return
+
+  for (const pid of pids) {
+    stopProcess(pid, 'SIGKILL')
+  }
+  if (!(await waitForPortFree(port, 16, 125))) {
+    throw new Error(`Could not free ${label} port ${port} on ${host}.`)
+  }
+}
+
+function findListeningPids(port) {
+  if (process.platform === 'win32') return []
+  const result = spawnSync('lsof', ['-tiTCP:' + port, '-sTCP:LISTEN'], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
+  })
+  if (result.status !== 0 && !result.stdout) return []
+  return [...new Set(
+    result.stdout
+      .split('\n')
+      .map((line) => Number(line.trim()))
+      .filter((pid) => Number.isInteger(pid) && pid > 0 && pid !== process.pid),
+  )]
+}
+
+function stopProcess(pid, signal) {
+  try {
+    process.kill(pid, signal)
+  } catch (error) {
+    if (!(error instanceof Error) || !('code' in error) || error.code !== 'ESRCH') {
+      throw error
+    }
+  }
+}
+
+async function waitForPortFree(port, attempts, delayMs) {
+  for (let index = 0; index < attempts; index += 1) {
+    if (!(await isPortOpen(host, port))) return true
+    await new Promise((resolve) => setTimeout(resolve, delayMs))
+  }
+  return false
 }
 
 function isPortOpen(targetHost, targetPort) {

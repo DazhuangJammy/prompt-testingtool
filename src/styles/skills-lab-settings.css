@@ -1,0 +1,64 @@
+.skills-settings-panel {
+  display: grid;
+  gap: 20px;
+  padding: 22px 24px;
+}
+
+.settings-panel-head {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding-bottom: 18px;
+}
+
+.settings-panel-head h2 {
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.2;
+  margin: 0 0 6px;
+}
+
+.settings-panel-head p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.settings-save-status {
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--text);
+  flex: 0 0 auto;
+  font-size: 12px;
+  padding: 5px 8px;
+}
+
+.skills-settings-panel .settings-field > span {
+  align-items: center;
+  display: inline-flex;
+  gap: 7px;
+}
+
+.settings-toggle-list {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: grid;
+  gap: 0;
+  overflow: hidden;
+}
+
+.settings-toggle-list label {
+  align-items: center;
+  color: var(--text);
+  display: flex;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.settings-toggle-list label + label {
+  border-top: 1px solid var(--line);
+}

@@ -21,4 +21,7 @@
 @import './settings-shortcuts.css';
 @import './settings-other.css';
 @import './selection-magnifier.css';
+@import './skills-lab.css';
+@import './skills-lab-panel.css';
+@import './skills-lab-settings.css';
 @import './responsive.css';

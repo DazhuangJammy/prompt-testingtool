@@ -13,6 +13,10 @@ import type {
   PromptCard,
   PromptVersion,
   ProviderConfig,
+  SkillLabMessage,
+  SkillAnalysisSnapshot,
+  SkillsLabSettings,
+  SkillTopic,
 } from '@/shared/types'
 
 class PromptCanvasDatabase extends Dexie {
@@ -29,6 +33,10 @@ class PromptCanvasDatabase extends Dexie {
   chatSessions!: Table<ChatSession, string>
   chatMessages!: Table<ChatMessage, string>
   compareRuns!: Table<CompareRun, string>
+  skillTopics!: Table<SkillTopic, string>
+  skillLabMessages!: Table<SkillLabMessage, string>
+  skillAnalysisSnapshots!: Table<SkillAnalysisSnapshot, string>
+  skillsLabSettings!: Table<SkillsLabSettings, string>
 
   constructor() {
     super('prompt-canvas-tool')
@@ -134,6 +142,62 @@ class PromptCanvasDatabase extends Dexie {
       chatSessions: 'id, canvasId, promptCardId, parentSessionId, hidden, updatedAt',
       chatMessages: 'id, sessionId, createdAt, promptVersionId',
       compareRuns: 'id, promptCardId, createdAt',
+    })
+    this.version(8).stores({
+      canvases: 'id, updatedAt',
+      promptCards: 'id, canvasId, updatedAt',
+      canvasShapeNodes: 'id, canvasId, updatedAt',
+      canvasEdges: 'id, canvasId, sourceId, targetId, updatedAt',
+      canvasStrokes: 'id, canvasId, updatedAt',
+      canvasTextNodes: 'id, canvasId, updatedAt',
+      canvasImageNodes: 'id, canvasId, updatedAt',
+      promptVersions: 'id, promptCardId, createdAt',
+      providerConfigs: 'id, updatedAt',
+      defaultModelSettings: 'id, updatedAt',
+      chatSessions: 'id, canvasId, promptCardId, parentSessionId, hidden, updatedAt',
+      chatMessages: 'id, sessionId, createdAt, promptVersionId',
+      compareRuns: 'id, promptCardId, createdAt',
+      skillTopics: 'id, skillPath, updatedAt',
+      skillLabMessages: 'id, topicId, createdAt',
+      skillsLabSettings: 'id, updatedAt',
+    })
+    this.version(9).stores({
+      canvases: 'id, updatedAt',
+      promptCards: 'id, canvasId, updatedAt',
+      canvasShapeNodes: 'id, canvasId, updatedAt',
+      canvasEdges: 'id, canvasId, sourceId, targetId, updatedAt',
+      canvasStrokes: 'id, canvasId, updatedAt',
+      canvasTextNodes: 'id, canvasId, updatedAt',
+      canvasImageNodes: 'id, canvasId, updatedAt',
+      promptVersions: 'id, promptCardId, createdAt',
+      providerConfigs: 'id, updatedAt',
+      defaultModelSettings: 'id, updatedAt',
+      chatSessions: 'id, canvasId, promptCardId, parentSessionId, hidden, updatedAt',
+      chatMessages: 'id, sessionId, createdAt, promptVersionId',
+      compareRuns: 'id, promptCardId, createdAt',
+      skillTopics: 'id, skillPath, updatedAt',
+      skillLabMessages: 'id, topicId, createdAt',
+      skillAnalysisSnapshots: 'id, topicId, createdAt',
+      skillsLabSettings: 'id, updatedAt',
+    })
+    this.version(10).stores({
+      canvases: 'id, updatedAt',
+      promptCards: 'id, canvasId, updatedAt',
+      canvasShapeNodes: 'id, canvasId, updatedAt',
+      canvasEdges: 'id, canvasId, sourceId, targetId, updatedAt',
+      canvasStrokes: 'id, canvasId, updatedAt',
+      canvasTextNodes: 'id, canvasId, updatedAt',
+      canvasImageNodes: 'id, canvasId, updatedAt',
+      promptVersions: 'id, promptCardId, createdAt',
+      providerConfigs: 'id, updatedAt',
+      defaultModelSettings: 'id, updatedAt',
+      chatSessions: 'id, canvasId, promptCardId, parentSessionId, hidden, updatedAt',
+      chatMessages: 'id, sessionId, createdAt, promptVersionId',
+      compareRuns: 'id, promptCardId, createdAt',
+      skillTopics: 'id, skillPath, agentSessionId, updatedAt',
+      skillLabMessages: 'id, topicId, agentSessionId, createdAt',
+      skillAnalysisSnapshots: 'id, topicId, createdAt',
+      skillsLabSettings: 'id, updatedAt',
     })
   }
 }

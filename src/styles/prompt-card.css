@@ -75,7 +75,8 @@
   border-color: transparent;
   color: var(--text);
   flex: 1 1 auto;
-  font-weight: 520;
+  font-size: 13px;
+  font-weight: 560;
   height: 30px;
   min-width: 0;
   overflow: hidden;
@@ -339,7 +340,7 @@
   background: color-mix(in srgb, var(--surface) 78%, var(--panel));
   flex: 1;
   font-size: 14px;
-  line-height: 1.78;
+  line-height: 1.72;
   max-height: none;
   min-height: 360px;
   overflow: auto;
@@ -349,6 +350,8 @@
 .prompt-preview-body.markdown-preview h1 {
   border-bottom: 1px solid var(--line);
   font-size: 20px;
+  font-weight: 650;
+  line-height: 1.22;
   margin: 30px 0 14px;
   padding-bottom: 9px;
 }
@@ -356,6 +359,8 @@
 .prompt-preview-body.markdown-preview h2 {
   color: var(--text);
   font-size: 16px;
+  font-weight: 600;
+  line-height: 1.28;
   margin: 24px 0 10px;
 }
 
