@@ -128,6 +128,22 @@ describe('compare panes model', () => {
     })
   })
 
+  it('preserves existing pane sessions while child sessions are loading', () => {
+    const panes = [
+      createComparePane({
+        cardId: 'card-2',
+        parentSessionId: 'copy',
+        sessionId: 'copy-pane-0',
+      }),
+    ]
+
+    expect(syncComparePanes(panes, cards[0], cards, true, 'copy')[0]).toMatchObject({
+      cardId: 'card-2',
+      parentSessionId: 'copy',
+      sessionId: 'copy-pane-0',
+    })
+  })
+
   it('clears pane sessions when the parent chat topic changes', () => {
     const panes = [
       createComparePane({
@@ -302,6 +318,44 @@ describe('compare panes model', () => {
     expect(areComparePanesEqual([pane], [{ ...pane, input: 'next' }])).toBe(false)
     expect(
       areComparePanesEqual([pane], [{ ...pane, parentSessionId: 'next' }]),
+    ).toBe(false)
+  })
+
+  it('compares pane attachments by value', () => {
+    const pane = createComparePane({
+      attachments: [
+        {
+          id: 'attachment-1',
+          name: 'note.txt',
+          mimeType: 'text/plain',
+          size: 12,
+          kind: 'text',
+          text: 'hello',
+        },
+      ],
+    })
+
+    expect(
+      areComparePanesEqual(
+        [pane],
+        [
+          {
+            ...pane,
+            attachments: pane.attachments.map((attachment) => ({ ...attachment })),
+          },
+        ],
+      ),
+    ).toBe(true)
+    expect(
+      areComparePanesEqual(
+        [pane],
+        [
+          {
+            ...pane,
+            attachments: [{ ...pane.attachments[0], text: 'changed' }],
+          },
+        ],
+      ),
     ).toBe(false)
   })
 

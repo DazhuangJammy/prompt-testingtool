@@ -101,7 +101,9 @@ export function syncComparePanes(
               ? activeCardId
               : pickCardForPane(index, panes, promptCards, activeCardId))
 
-    const nextSessionId = childSession?.id
+    const nextSessionId = childSession?.id ?? (
+      sameParentSession ? pane.sessionId : undefined
+    )
 
     return nextCardId === pane.cardId &&
       sameParentSession &&
@@ -217,7 +219,7 @@ export function areComparePanesEqual(
       const nextPane = next[index]
       return (
         pane.id === nextPane.id &&
-        pane.attachments === nextPane.attachments &&
+        areAttachmentsEqual(pane.attachments, nextPane.attachments) &&
         pane.cardId === nextPane.cardId &&
         pane.input === nextPane.input &&
         pane.parentSessionId === nextPane.parentSessionId &&
@@ -225,6 +227,24 @@ export function areComparePanesEqual(
         pane.providerId === nextPane.providerId &&
         pane.sessionId === nextPane.sessionId &&
         pane.thinkingMode === nextPane.thinkingMode
+      )
+    })
+  )
+}
+
+function areAttachmentsEqual(left: ChatAttachment[], right: ChatAttachment[]) {
+  return (
+    left.length === right.length &&
+    left.every((attachment, index) => {
+      const nextAttachment = right[index]
+      return (
+        attachment.id === nextAttachment.id &&
+        attachment.name === nextAttachment.name &&
+        attachment.mimeType === nextAttachment.mimeType &&
+        attachment.size === nextAttachment.size &&
+        attachment.kind === nextAttachment.kind &&
+        attachment.dataUrl === nextAttachment.dataUrl &&
+        attachment.text === nextAttachment.text
       )
     })
   )

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type {
   Edge,
   OnMoveEnd,
@@ -33,16 +33,19 @@ export function useCanvasViewportPersistence({
   const [savedStorageKey, setSavedStorageKey] = useState<string | undefined>(
     () => (defaultViewport ? storageKey : undefined),
   )
+  const restoredStorageKeyRef = useRef<string | undefined>(undefined)
   const hasStoredViewport = Boolean(defaultViewport) || savedStorageKey === storageKey
 
   useEffect(() => {
-    if (!defaultViewport) return
+    if (!defaultViewport || !storageKey) return
+    if (restoredStorageKeyRef.current === storageKey) return
+    restoredStorageKeyRef.current = storageKey
 
     const frameId = window.requestAnimationFrame(() => {
       void reactFlow.setViewport(defaultViewport, { duration: 0 })
     })
     return () => window.cancelAnimationFrame(frameId)
-  }, [defaultViewport, reactFlow])
+  }, [defaultViewport, reactFlow, storageKey])
 
   const handleMoveEnd = useCallback<OnMoveEnd>(
     (_event, viewport) => {

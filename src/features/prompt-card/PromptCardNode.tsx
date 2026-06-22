@@ -392,8 +392,8 @@ function PromptCardNode({ data }: NodeProps<PromptFlowNode>) {
       style={nodeStyle}
       onClick={() => onSelect(card.id)}
       onPointerDownCapture={() => onSelect(card.id)}
-      onPointerEnter={() => setHovering(true)}
-      onPointerLeave={() => setHovering(false)}
+      onPointerEnter={() => setHovering((current) => (current ? current : true))}
+      onPointerLeave={() => setHovering((current) => (current ? false : current))}
     >
       <PromptCardConnectionHandles />
       <PromptNodeHeader

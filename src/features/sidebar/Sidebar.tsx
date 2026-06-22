@@ -18,6 +18,7 @@ import { AppVersionBadge } from './components/AppVersionBadge'
 import { TopicActionsMenu } from './components/TopicActionsMenu'
 import { TopicImportDialog } from './components/TopicImportDialog'
 import { WorkspaceRailNav } from './components/WorkspaceRailNav'
+import { usePersistentCollapsedCanvasIds } from './hooks/usePersistentCollapsedCanvasIds'
 import type { ChatSessionExportAction } from './sidebar.types'
 
 interface SidebarProps {
@@ -89,9 +90,7 @@ export function Sidebar({
   const effectiveSessionId = sessions.some((session) => session.id === activeSessionId)
     ? activeSessionId
     : undefined
-  const [collapsedCanvasIds, setCollapsedCanvasIds] = useState<Set<string>>(
-    () => new Set(),
-  )
+  const { collapsedCanvasIds, toggleCanvas } = usePersistentCollapsedCanvasIds()
   const [menuCanvasId, setMenuCanvasId] = useState<string>()
   const [draggingCanvasId, setDraggingCanvasId] = useState<string>()
   const [dragOverCanvasId, setDragOverCanvasId] = useState<string>()
@@ -137,15 +136,6 @@ export function Sidebar({
     } catch (error) {
       setToastMessage(error instanceof Error ? error.message : '导出失败')
     }
-  }
-
-  const toggleCanvas = (canvasId: string) => {
-    setCollapsedCanvasIds((current) => {
-      const next = new Set(current)
-      if (next.has(canvasId)) next.delete(canvasId)
-      else next.add(canvasId)
-      return next
-    })
   }
 
   const selectAndToggleCanvas = (canvasId: string) => {
