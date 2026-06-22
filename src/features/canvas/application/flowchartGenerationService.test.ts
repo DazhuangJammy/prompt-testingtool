@@ -6,6 +6,7 @@ import {
   buildFlowchartGenerationMessages,
   generateFlowchartCanvasElements,
   generateFlowchartCanvasElementsStream,
+  generatedPromptConcurrency,
   normalizeGeneratedFlowchart,
   parseFlowchartJson,
 } from './flowchartGenerationService'
@@ -369,6 +370,68 @@ describe('flowchart generation service', () => {
         },
       ],
     })
+  })
+
+  it('generates prompt card content with at most five concurrent optimization requests', async () => {
+    const promptCount = generatedPromptConcurrency + 1
+    mockFlowchartStream(
+      JSON.stringify({
+        nodes: [
+          { id: 'step-01', kind: 'step', title: '步骤', body: 'body' },
+          ...Array.from({ length: promptCount }, (_, index) => ({
+            id: `prompt-${index + 1}`,
+            kind: 'prompt',
+            title: `提示词 ${index + 1}`,
+            body: `第 ${index + 1} 张描述`,
+            promptInstruction: `生成第 ${index + 1} 张提示词`,
+          })),
+        ],
+        edges: Array.from({ length: promptCount }, (_, index) => ({
+          sourceId: index === 0 ? 'step-01' : `prompt-${index}`,
+          targetId: `prompt-${index + 1}`,
+        })),
+      }),
+    )
+    const releases: Array<() => void> = []
+    let running = 0
+    let maxRunning = 0
+    vi.mocked(optimizeFullPrompt).mockImplementation(async ({ instruction }) => {
+      running += 1
+      maxRunning = Math.max(maxRunning, running)
+      await new Promise<void>((resolve) => releases.push(resolve))
+      running -= 1
+      return `# ${instruction.match(/第 \d+ 张/)?.[0] ?? '提示词'}`
+    })
+
+    const generation = generateFlowchartCanvasElementsStream({
+      canvasId: 'canvas',
+      edges: [],
+      flowchartProvider: provider,
+      instruction: '生成流程',
+      origin: { x: 0, y: 0 },
+      promptCards: [],
+      promptOptimizationProvider: provider,
+      shapeNodes: [],
+    })
+
+    await vi.waitFor(() => {
+      expect(optimizeFullPrompt).toHaveBeenCalledTimes(generatedPromptConcurrency)
+    })
+    expect(maxRunning).toBe(generatedPromptConcurrency)
+
+    releases.shift()?.()
+    await vi.waitFor(() => {
+      expect(optimizeFullPrompt).toHaveBeenCalledTimes(promptCount)
+    })
+    expect(maxRunning).toBe(generatedPromptConcurrency)
+
+    releases.splice(0).forEach((release) => release())
+    const result = await generation
+
+    expect(result.promptCards.map((card) => card.title)).toEqual(
+      Array.from({ length: promptCount }, (_, index) => `提示词 ${index + 1}`),
+    )
+    expect(result.promptCards.at(-1)?.markdown).toContain('# 第 6 张')
   })
 
   it('requires the prompt optimization provider when prompt nodes are generated', async () => {

@@ -1,8 +1,4 @@
-import { optimizeFullPrompt } from '@/features/prompt-card/application/promptOptimizationService'
-import {
-  createPromptCard,
-  importMarkdownToPromptCard,
-} from '@/features/prompt-card/model/prompt'
+import { createPromptCard } from '@/features/prompt-card/model/prompt'
 import { requestCompletionStream } from '@/shared/api/ai'
 import { normalizeThinkingMode } from '@/shared/model/thinking'
 import type {
@@ -17,7 +13,6 @@ import { createId } from '@/shared/utils/identity'
 import { nowIso } from '@/shared/utils/time'
 import { createCanvasEdge } from '../model/canvasElements'
 import {
-  buildPromptNodeInstruction,
   createFlowchartPreviewSignature,
   parseFlowchartJson,
   parseFlowchartJsonPreview,
@@ -25,8 +20,13 @@ import {
   type GeneratedFlowchartNode,
 } from '../model/generatedFlowchart'
 import { layoutGeneratedFlowchart, measureGeneratedNode } from '../model/generatedFlowchartLayout'
+import {
+  createPromptLoadingMarkdown,
+  generateGeneratedPromptCards,
+} from './generatedPromptCards'
 
 export { normalizeGeneratedFlowchart, parseFlowchartJson } from '../model/generatedFlowchart'
+export { generatedPromptConcurrency } from './generatedPromptCards'
 
 export interface FlowchartCanvasElements {
   edges: CanvasEdge[]
@@ -216,8 +216,7 @@ async function materializeFlowchart({
   const layout = layoutGeneratedFlowchart(flowchart.nodes, flowchart.edges, origin)
   const nodeIdMap = new Map<string, string>()
   const shapeNodes: CanvasShapeNode[] = []
-  const promptCards: PromptCard[] = []
-  const pendingPromptCards: PromptCard[] = []
+  const promptNodes = flowchart.nodes.filter((item) => item.kind === 'prompt')
 
   flowchart.nodes.forEach((node) => {
     nodeIdMap.set(node.id, createId())
@@ -232,56 +231,28 @@ async function materializeFlowchart({
     }))
   })
 
-  for (const node of flowchart.nodes.filter((item) => item.kind === 'prompt')) {
-    if (!promptOptimizationProvider) {
-      throw new Error('请先在设置里配置提示词优化模型')
-    }
-
-    const card = createPromptCard(
-      canvasId,
-      promptCards.length,
-      layout.get(node.id)?.position ?? origin,
-      topicSessionId,
-    )
-    nodeIdMap.set(node.id, card.id)
-    const pendingCard = createGeneratedPromptCard(card, node, createPromptLoadingMarkdown(node))
-    pendingPromptCards.push(pendingCard)
-    onPromptPending?.({
-      edges: createGeneratedEdges({
-        canvasId,
-        flowchart,
-        nodeIdMap,
-        topicSessionId,
-      }),
-      promptCards: [...pendingPromptCards],
-      shapeNodes,
-    })
-    const markdown = await optimizeFullPrompt({
-      instruction: buildPromptNodeInstruction(node),
-      promptMarkdown: '',
-      provider: promptOptimizationProvider,
-      signal,
-      systemPrompt: promptOptimizationSettings?.prompt,
-      thinkingMode: normalizeThinkingMode(
-        promptOptimizationProvider,
-        promptOptimizationSettings?.thinkingMode ?? 'off',
-      ),
-    })
-
-    const generatedCard = createGeneratedPromptCard(card, node, markdown)
-    promptCards.push(generatedCard)
-    pendingPromptCards[pendingPromptCards.length - 1] = generatedCard
-    onPromptPending?.({
-      edges: createGeneratedEdges({
-        canvasId,
-        flowchart,
-        nodeIdMap,
-        topicSessionId,
-      }),
-      promptCards: [...pendingPromptCards],
-      shapeNodes,
-    })
-  }
+  const generatedPromptCards = await generateGeneratedPromptCards({
+    canvasId,
+    nodes: promptNodes,
+    onCardCreated: (node, card) => nodeIdMap.set(node.id, card.id),
+    onUpdate: (promptCards) => {
+      onPromptPending?.({
+        edges: createGeneratedEdges({
+          canvasId,
+          flowchart,
+          nodeIdMap,
+          topicSessionId,
+        }),
+        promptCards,
+        shapeNodes,
+      })
+    },
+    promptOptimizationProvider,
+    promptOptimizationSettings,
+    resolvePosition: (node) => layout.get(node.id)?.position ?? origin,
+    signal,
+    topicSessionId,
+  })
 
   return {
     edges: createGeneratedEdges({
@@ -290,7 +261,7 @@ async function materializeFlowchart({
       nodeIdMap,
       topicSessionId,
     }),
-    promptCards,
+    promptCards: generatedPromptCards,
     shapeNodes,
   }
 }
@@ -398,28 +369,6 @@ function resolveGeneratedEdgeHandles(
   return target?.kind === 'prompt' && (source?.kind === 'step' || source?.kind === 'prompt')
     ? { source: 'right', target: 'left' }
     : { source: 'bottom', target: 'top' }
-}
-
-function createGeneratedPromptCard(
-  card: PromptCard,
-  node: GeneratedFlowchartNode,
-  markdown: string,
-) {
-  return {
-    ...importMarkdownToPromptCard(card, markdown),
-    defaultCollapsed: true,
-    title: node.title,
-  }
-}
-
-function createPromptLoadingMarkdown(node: GeneratedFlowchartNode) {
-  return [
-    '# 生成中',
-    '',
-    '- 正在根据流程节点生成完整提示词卡片',
-    `- 节点：${node.title}`,
-    '- 完成后会自动替换为可编辑的 Markdown 提示词',
-  ].join('\n')
 }
 
 function createGeneratedShapeNode({
