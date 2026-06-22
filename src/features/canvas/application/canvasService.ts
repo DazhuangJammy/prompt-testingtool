@@ -18,6 +18,7 @@ import type {
   CanvasEdge,
   CanvasImageNode,
   CanvasPoint,
+  InputCard,
   CanvasShapeNode,
   CanvasStroke,
   CanvasTextNode,
@@ -64,6 +65,24 @@ export async function persistPromptNodePosition(
   }
 
   await canvasRepository.updatePromptCardPosition(id, position)
+  if (canvasId) await canvasRepository.touchCanvas(canvasId)
+}
+
+export async function persistInputCardPosition(
+  id: string,
+  position: XYPosition,
+  inputCards: InputCard[],
+  canvasId?: string,
+) {
+  const original = inputCards.find((card) => card.id === id)
+  if (
+    !original ||
+    (original.position.x === position.x && original.position.y === position.y)
+  ) {
+    return
+  }
+
+  await canvasRepository.updateInputCard(id, { position })
   if (canvasId) await canvasRepository.touchCanvas(canvasId)
 }
 
@@ -146,6 +165,11 @@ export async function persistCanvasStrokePosition(
 
 export async function deleteShapeNodeRecord(id: string, canvasId?: string) {
   await canvasRepository.deleteShapeNode(id)
+  if (canvasId) await canvasRepository.touchCanvas(canvasId)
+}
+
+export async function deleteInputCardRecord(id: string, canvasId?: string) {
+  await canvasRepository.deleteInputCard(id)
   if (canvasId) await canvasRepository.touchCanvas(canvasId)
 }
 

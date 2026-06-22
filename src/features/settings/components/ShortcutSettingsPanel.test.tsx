@@ -40,7 +40,7 @@ describe('ShortcutSettingsPanel', () => {
       'input[aria-label="拖动画布快捷键"]',
     )
     expect(panInput?.value).toBe('1')
-    expect(document.querySelectorAll('.shortcut-settings-row')).toHaveLength(7)
+    expect(document.querySelectorAll('.shortcut-settings-row')).toHaveLength(8)
 
     act(() => {
       panInput?.dispatchEvent(

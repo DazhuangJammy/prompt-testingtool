@@ -1,5 +1,10 @@
 import type { CanvasToolShortcuts } from '@/shared/model/canvasToolShortcuts'
-import type { DefaultModelSettings, PromptCard, ProviderConfig } from '@/shared/types'
+import type {
+  DefaultModelSettings,
+  InputCard,
+  PromptCard,
+  ProviderConfig,
+} from '@/shared/types'
 
 export interface CanvasWorkspaceProps {
   effectiveCanvasId?: string
@@ -12,7 +17,9 @@ export interface CanvasWorkspaceProps {
   promptOptimizationSettings?: DefaultModelSettings
   toolShortcuts: CanvasToolShortcuts
   promptCards: PromptCard[]
+  onAddInputCard: (position?: InputCard['position'], topicSessionId?: string) => void
   onAddPrompt: (position?: PromptCard['position'], topicSessionId?: string) => void
   onDeleteCard: (id: string) => void
+  onDeleteInputCard: (id: string) => void
   onSelectCard: (id: string) => void
 }

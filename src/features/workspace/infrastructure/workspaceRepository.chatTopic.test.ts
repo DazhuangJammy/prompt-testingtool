@@ -56,6 +56,10 @@ vi.mock('@/shared/storage/db', () => ({
       bulkPut: vi.fn(),
       where: vi.fn(() => chain([])),
     },
+    inputCards: {
+      bulkPut: vi.fn(),
+      where: vi.fn(() => chain([])),
+    },
     promptVersions: {
       bulkPut: vi.fn(),
       where: vi.fn(() => chain([])),

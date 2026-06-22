@@ -86,6 +86,14 @@ vi.mock('@/shared/storage/db', () => ({
       toArray: vi.fn(() => []),
       where: vi.fn(() => chain([])),
     },
+    inputCards: {
+      add: vi.fn(),
+      bulkPut: vi.fn(),
+      clear: vi.fn(),
+      delete: vi.fn(),
+      toArray: vi.fn(() => []),
+      where: vi.fn(() => chain([])),
+    },
     promptVersions: {
       bulkPut: vi.fn(),
       clear: vi.fn(),
@@ -198,7 +206,8 @@ describe('workspace repository', () => {
     }
 
     await expect(workspaceRepository.exportWorkspace()).resolves.toMatchObject({
-      version: 8,
+      version: 9,
+      inputCards: [],
       canvasShapeNodes: [],
       canvasImageNodes: [],
       canvasEdges: [],
@@ -301,7 +310,7 @@ describe('workspace repository', () => {
     ])
 
     await expect(
-      workspaceRepository.importWorkspace({ version: 9 } as never),
+      workspaceRepository.importWorkspace({ version: 10 } as never),
     ).rejects.toThrow('Unsupported file')
     await expect(workspaceRepository.listCanvasesByUpdatedAt()).resolves.toEqual([
       expect.objectContaining({ id: 'older' }),
@@ -329,10 +338,12 @@ describe('workspace repository', () => {
   it('lists prompt cards and providers', async () => {
     await workspaceRepository.listPromptCards()
     await workspaceRepository.listPromptCardsByCanvas('canvas')
+    await workspaceRepository.listInputCardsByCanvas('canvas')
     await workspaceRepository.listProvidersByUpdatedAt()
 
     expect(db.promptCards.toArray).toHaveBeenCalled()
     expect(db.promptCards.where).toHaveBeenCalledWith('canvasId')
+    expect(db.inputCards.where).toHaveBeenCalledWith('canvasId')
     expect(db.providerConfigs.toArray).not.toHaveBeenCalled()
     expect(db.providerConfigs.bulkPut).not.toHaveBeenCalledWith(undefined)
   })

@@ -21,6 +21,7 @@ import { repairLegacyChatTopicScope } from '@/features/workspace/application/wor
 import { chatRepository } from '@/features/chat/infrastructure/chatRepository'
 import { CanvasWorkspace } from '@/features/canvas/CanvasWorkspace'
 import { useScopedCanvasRecords } from '@/features/canvas/hooks/useScopedCanvasRecords'
+import { findPromptInputSources } from '@/features/input-card/model/inputCard'
 import { copyStoredCanvasViewport } from '@/features/canvas/model/canvasViewport'
 import { workspaceRepository } from '@/features/workspace/infrastructure/workspaceRepository'
 import { WorkspaceTopbar } from '@/features/canvas/WorkspaceTopbar'
@@ -68,6 +69,7 @@ function App() {
   const actions = useWorkspaceActions({
     canvases: workspace.canvases,
     effectiveCanvasId: workspace.effectiveCanvasId,
+    inputCards: workspace.inputCards,
     promptCards: workspace.promptCards,
     selectedCardId: workspace.effectiveSelectedCardId,
     setActiveCanvasId: workspace.setActiveCanvasId,
@@ -130,6 +132,19 @@ function App() {
     session: activeChatSession,
     sessionPromptCard,
   })
+  const activeChatInputSources = useMemo(
+    () =>
+      findPromptInputSources({
+        edges: scopedChatRecords.canvasEdges,
+        inputCards: scopedChatRecords.inputCards,
+        promptCard: activeChatCard,
+      }),
+    [
+      activeChatCard,
+      scopedChatRecords.canvasEdges,
+      scopedChatRecords.inputCards,
+    ],
+  )
   const chatPanelState = useChatPanelSessionState(
     activeChatSessionId,
     panels.chatCollapsed,
@@ -406,8 +421,10 @@ function App() {
               promptOptimizationSettings={workspace.defaultModelSettings}
               toolShortcuts={canvasToolShortcuts.shortcuts}
               promptCards={workspace.promptCards}
+              onAddInputCard={actions.addInputCard}
               onAddPrompt={actions.addPromptCard}
               onDeleteCard={actions.deletePromptCard}
+              onDeleteInputCard={actions.deleteInputCard}
               onSelectCard={workspace.setSelectedCardId}
             />
           </main>
@@ -419,6 +436,7 @@ function App() {
             provider={workspace.activeProvider}
             promptCards={chatPromptCards}
             providers={workspace.providers}
+            inputSources={activeChatInputSources}
             compareOpen={chatPanelState.compareOpen}
             comparePaneCardIds={chatPanelState.comparePaneCardIds}
             comparePanes={chatPanelState.comparePanes}

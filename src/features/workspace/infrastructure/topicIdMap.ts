@@ -3,7 +3,7 @@ import type { ChatTopicExportPayload, ExportPayload } from '@/shared/types'
 export function isSupportedWorkspacePayloadVersion(
   version: ExportPayload['version'] | number,
 ) {
-  return [1, 2, 3, 4, 5, 6, 7, 8].includes(version)
+  return [1, 2, 3, 4, 5, 6, 7, 8, 9].includes(version)
 }
 
 export function createTopicImportIdMap(payload: ChatTopicExportPayload) {
@@ -18,6 +18,9 @@ export function createTopicImportIdMap(payload: ChatTopicExportPayload) {
   )
   const nodes = new Map<string, string>([
     ...payload.promptCards.map((card) => [card.id, promptCards.get(card.id)!] as const),
+    ...(payload.inputCards ?? []).map(
+      (card) => [card.id, crypto.randomUUID()] as const,
+    ),
     ...(payload.canvasShapeNodes ?? []).map(
       (node) => [node.id, crypto.randomUUID()] as const,
     ),

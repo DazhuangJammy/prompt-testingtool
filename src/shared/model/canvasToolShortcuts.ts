@@ -2,6 +2,7 @@ export const CANVAS_TOOL_ORDER = [
   'pan',
   'select',
   'prompt',
+  'input',
   'step',
   'decision',
   'text',
@@ -17,6 +18,7 @@ export const canvasToolLabels: Record<CanvasTool, string> = {
   pan: '拖动画布',
   pen: '画笔',
   prompt: '提示词',
+  input: '输入卡片',
   select: '选择',
   step: '步骤',
   text: '文本',
@@ -24,6 +26,7 @@ export const canvasToolLabels: Record<CanvasTool, string> = {
 
 export const defaultCanvasToolShortcuts: CanvasToolShortcuts = {
   decision: '5',
+  input: '',
   pan: '1',
   pen: '7',
   prompt: '3',

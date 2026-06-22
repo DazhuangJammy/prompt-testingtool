@@ -22,6 +22,50 @@
   gap: 4px;
 }
 
+.canvas-card-tool-menu-shell {
+  position: relative;
+}
+
+.canvas-card-tool-menu {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  bottom: calc(100% + 8px);
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 2px;
+  min-width: 148px;
+  padding: 6px;
+  position: absolute;
+  z-index: 30;
+}
+
+.canvas-card-tool-menu button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  font-size: 12px;
+  gap: 8px;
+  height: 34px;
+  justify-content: flex-start;
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
+.canvas-card-tool-menu button:hover {
+  background: var(--panel-2);
+}
+
+.canvas-card-tool-menu svg {
+  color: var(--muted);
+  height: 16px;
+  width: 16px;
+}
+
 .canvas-color-group {
   display: flex;
   gap: 5px;

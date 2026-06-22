@@ -14,6 +14,7 @@ import { workspaceRepository } from '@/features/workspace/infrastructure/workspa
 import type {
   Canvas,
   DefaultModelSettings,
+  InputCard,
   PromptCard,
   ProviderConfig,
 } from '@/shared/types'
@@ -41,6 +42,14 @@ export function useWorkspaceData() {
       effectiveCanvasId
         ? workspaceRepository.listPromptCardsByCanvas(effectiveCanvasId)
         : Promise.resolve([] as PromptCard[]),
+    [effectiveCanvasId],
+    [],
+  )
+  const inputCards = useLiveQuery<InputCard[], InputCard[]>(
+    () =>
+      effectiveCanvasId
+        ? workspaceRepository.listInputCardsByCanvas(effectiveCanvasId)
+        : Promise.resolve([] as InputCard[]),
     [effectiveCanvasId],
     [],
   )
@@ -127,6 +136,7 @@ export function useWorkspaceData() {
       defaultProvider,
       flowchartModelSettings,
       flowchartProvider,
+      inputCards: inputCards ?? [],
       promptCards: promptCards ?? [],
       providerConfigs: providers ?? [],
       providers: selectableProviders,
@@ -143,6 +153,7 @@ export function useWorkspaceData() {
       defaultModelSettings,
       defaultProvider,
       promptCards,
+      inputCards,
       flowchartModelSettings,
       flowchartProvider,
       providers,

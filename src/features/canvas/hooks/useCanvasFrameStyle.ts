@@ -6,10 +6,16 @@ import {
   resolveCanvasNodeFrameStyle,
   type CanvasFrameStyle,
 } from '@/shared/model/nodeFrameStyle'
-import type { CanvasShapeNode, CanvasTextNode, PromptCard } from '@/shared/types'
+import type {
+  CanvasShapeNode,
+  CanvasTextNode,
+  InputCard,
+  PromptCard,
+} from '@/shared/types'
 
 interface UseCanvasFrameStyleOptions {
   canvasId?: string
+  inputCards: InputCard[]
   promptCards: PromptCard[]
   selectedNodeIds: string[]
   shapeNodes: CanvasShapeNode[]
@@ -18,11 +24,13 @@ interface UseCanvasFrameStyleOptions {
 
 type FrameTarget =
   | { kind: 'prompt'; node: PromptCard }
+  | { kind: 'input'; node: InputCard }
   | { kind: 'shape'; node: CanvasShapeNode }
   | { kind: 'text'; node: CanvasTextNode }
 
 export function useCanvasFrameStyle({
   canvasId,
+  inputCards,
   promptCards,
   selectedNodeIds,
   shapeNodes,
@@ -31,11 +39,12 @@ export function useCanvasFrameStyle({
   const target = useMemo(
     () => resolveSelectedFrameTarget({
       promptCards,
+      inputCards,
       selectedNodeIds,
       shapeNodes,
       textNodes,
     }),
-    [promptCards, selectedNodeIds, shapeNodes, textNodes],
+    [inputCards, promptCards, selectedNodeIds, shapeNodes, textNodes],
   )
   const activeFrameStyle = target
     ? resolveCanvasNodeFrameStyle(target.node.frameStyle)
@@ -49,6 +58,15 @@ export function useCanvasFrameStyle({
 
       if (target.kind === 'prompt') {
         void canvasRepository.savePromptCard({
+          ...target.node,
+          frameStyle,
+          updatedAt: new Date().toISOString(),
+        })
+        return
+      }
+
+      if (target.kind === 'input') {
+        void canvasRepository.saveInputCard({
           ...target.node,
           frameStyle,
           updatedAt: new Date().toISOString(),
@@ -77,6 +95,7 @@ export function useCanvasFrameStyle({
 
 function resolveSelectedFrameTarget({
   promptCards,
+  inputCards,
   selectedNodeIds,
   shapeNodes,
   textNodes,
@@ -91,5 +110,8 @@ function resolveSelectedFrameTarget({
   if (selectedShape) return { kind: 'shape', node: selectedShape }
 
   const selectedPrompt = promptCards.find((card) => card.id === selectedId)
-  return selectedPrompt ? { kind: 'prompt', node: selectedPrompt } : undefined
+  if (selectedPrompt) return { kind: 'prompt', node: selectedPrompt }
+
+  const selectedInputCard = inputCards.find((card) => card.id === selectedId)
+  return selectedInputCard ? { kind: 'input', node: selectedInputCard } : undefined
 }

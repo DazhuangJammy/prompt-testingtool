@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   assignChatSessionPromptCard,
   clearChatSession,
@@ -10,6 +10,7 @@ import { chatRepository } from '@/features/chat/infrastructure/chatRepository'
 import { useChatMessageActions } from '@/features/chat/hooks/useChatMessageActions'
 import { useScopedComparePanes } from '@/features/chat/hooks/useScopedComparePanes'
 import { useChatTopics } from '@/features/chat/hooks/useChatTopics'
+import type { InputSegment } from '@/features/input-card/model/inputCard'
 import {
   getAttachmentCapability,
   getUnsupportedAttachmentReason,
@@ -82,6 +83,7 @@ export function useChatPanelState(
     card?.id,
   )
   const messages = useMessages(effectiveSessionId)
+  const messagesRef = useRef(messages)
   const childSessions = useChildSessions(effectiveSessionId)
   const { comparePanes, setComparePanes } = useScopedComparePanes({
     activeCard: card,
@@ -116,6 +118,10 @@ export function useChatPanelState(
     [paneSessionKey],
     {},
   )
+
+  useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
 
   const thinkingCapability = getThinkingCapability(provider)
   const attachmentCapability = getAttachmentCapability(provider)
@@ -176,6 +182,48 @@ export function useChatPanelState(
       thinkingMode: effectiveThinkingMode,
       requestKey: 'main',
     })
+  }
+
+  const runInputSegments = async (segments: InputSegment[], startSegmentId?: string) => {
+    if (!card || !provider || chatActions.busy || !segments.length) return
+    const startIndex = Math.max(
+      0,
+      segments.findIndex((segment) => segment.id === startSegmentId),
+    )
+    const runnableSegments = segments
+      .slice(startIndex)
+      .filter((segment) => segment.content.trim())
+    if (!runnableSegments.length) {
+      setError('没有可发送的输入正文')
+      return
+    }
+
+    setInput('')
+    setAttachments([])
+    let currentSessionId = effectiveSessionId
+    for (const segment of runnableSegments) {
+      const result = await chatActions.sendMessageForPane({
+        attachments: [],
+        card,
+        history: messagesRef.current,
+        provider,
+        promptInjectionMode,
+        sessionId: currentSessionId,
+        setSessionId: (nextSessionId) => {
+          currentSessionId = nextSessionId
+          setMainSessionId(nextSessionId)
+        },
+        text: segment.content,
+        thinkingMode: effectiveThinkingMode,
+        requestKey: 'main',
+      })
+      if (result.sessionId) {
+        currentSessionId = result.sessionId
+        setMainSessionId(result.sessionId)
+        messagesRef.current = await chatRepository.listMessagesBySession(result.sessionId)
+      }
+      if (!result.completed) break
+    }
   }
 
   const sendCompareMessage = async (paneId: ComparePaneId) => {
@@ -381,6 +429,7 @@ export function useChatPanelState(
     canRemoveComparePane: canRemoveComparePane(comparePanes),
     clearCompareMessages,
     clearMainMessages,
+    comparePaneStates: comparePanes,
     comparePanes: paneViews,
     createMainTopic,
     deleteMainTopic,
@@ -395,6 +444,7 @@ export function useChatPanelState(
     removeComparePane,
     resendCompareMessage,
     resendMainMessage,
+    runInputSegments,
     renameMainTopic,
     sendCompareMessage,
     sendMainMessage,

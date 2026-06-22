@@ -1,11 +1,14 @@
 import { GitCompare } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { IconButton } from '@/shared/ui/IconButton'
 
 interface PanelMetaProps {
   activeProviderId?: string
   compareDisabled?: boolean
+  compareLabel?: string
   compareOpen?: boolean
   providers: Array<{ id: string; name: string; model: string }>
+  extraActions?: ReactNode
   onToggleCompare?: () => void
   onSelectProvider: (id: string) => void
 }
@@ -13,8 +16,10 @@ interface PanelMetaProps {
 export function PanelMeta({
   activeProviderId,
   compareDisabled = false,
+  compareLabel = '对比',
   compareOpen = false,
   providers,
+  extraActions,
   onToggleCompare,
   onSelectProvider,
 }: PanelMetaProps) {
@@ -36,11 +41,12 @@ export function PanelMeta({
         <IconButton
           active={compareOpen}
           icon={<GitCompare />}
-          label="对比"
+          label={compareLabel}
           disabled={compareDisabled}
           onClick={onToggleCompare}
         />
       )}
+      {extraActions}
     </div>
   )
 }

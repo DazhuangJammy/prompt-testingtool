@@ -3,6 +3,7 @@ import { useCallback } from 'react'
 import {
   persistCanvasStrokePosition,
   persistImageNodePosition,
+  persistInputCardPosition,
   persistPromptNodePosition,
   persistShapeNodePosition,
   persistTextNodePosition,
@@ -11,6 +12,7 @@ import { canvasRepository } from '@/features/canvas/infrastructure/canvasReposit
 import type { CanvasFlowNode } from '@/features/canvas/model/canvasFlowMapping'
 import type {
   CanvasImageNode,
+  InputCard,
   CanvasShapeNode,
   CanvasStroke,
   CanvasTextNode,
@@ -20,6 +22,7 @@ import type {
 interface UseCanvasNodePersistenceOptions {
   canvasId?: string
   imageNodes: CanvasImageNode[]
+  inputCards: InputCard[]
   promptCards: PromptCard[]
   shapeNodes: CanvasShapeNode[]
   strokes: CanvasStroke[]
@@ -29,6 +32,7 @@ interface UseCanvasNodePersistenceOptions {
 export function useCanvasNodePersistence({
   canvasId,
   imageNodes,
+  inputCards,
   promptCards,
   shapeNodes,
   strokes,
@@ -48,6 +52,10 @@ export function useCanvasNodePersistence({
         void persistPromptNodePosition(node.id, node.position, promptCards, canvasId)
         return
       }
+      if (node.type === 'inputCard') {
+        void persistInputCardPosition(node.id, node.position, inputCards, canvasId)
+        return
+      }
       if (node.type === 'freehandStroke') {
         void persistCanvasStrokePosition(node.id, node.position, strokes, canvasId)
         return
@@ -62,7 +70,7 @@ export function useCanvasNodePersistence({
       }
       void persistShapeNodePosition(node.id, node.position, shapeNodes, canvasId)
     },
-    [canvasId, imageNodes, promptCards, shapeNodes, strokes, textNodes],
+    [canvasId, imageNodes, inputCards, promptCards, shapeNodes, strokes, textNodes],
   )
 
   const onNodeDragStop = useCallback<OnNodeDrag<CanvasFlowNode>>(
@@ -97,6 +105,16 @@ export function useCanvasNodePersistence({
     [touchAfter],
   )
 
+  const updateInputCard = useCallback(
+    (
+      id: string,
+      updates: Partial<Pick<InputCard, 'frameStyle' | 'markdown' | 'position' | 'title'>>,
+    ) => {
+      void touchAfter(canvasRepository.updateInputCard(id, updates))
+    },
+    [touchAfter],
+  )
+
   const updateTextNode = useCallback(
     (
       id: string,
@@ -122,6 +140,7 @@ export function useCanvasNodePersistence({
     onNodeDragStop,
     persistNodePosition,
     updateImageNode,
+    updateInputCard,
     updateShapeNode,
     updateTextNode,
   }

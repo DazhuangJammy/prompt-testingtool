@@ -2,6 +2,7 @@ import {
   Brush,
   GitBranch,
   Hand,
+  ListOrdered,
   MousePointer2,
   Plus,
   Sparkles,
@@ -9,7 +10,7 @@ import {
   Trash2,
   Type,
 } from 'lucide-react'
-import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { CanvasFrameStyleControls } from '@/features/canvas/components/CanvasFrameStyleControls'
 import { IconButton } from '@/shared/ui/IconButton'
 import type { CanvasTool } from '@/features/canvas/model/flowTypes'
@@ -46,17 +47,22 @@ interface CanvasToolbarProps {
   onToggleFrameHighlight: () => void
 }
 
-const toolItems: Array<{
-  icon: ReactNode
-  tool: CanvasTool
-}> = [
-  { icon: <Hand />, tool: 'pan' },
-  { icon: <MousePointer2 />, tool: 'select' },
-  { icon: <Plus />, tool: 'prompt' },
-  { icon: <Square />, tool: 'step' },
-  { icon: <GitBranch />, tool: 'decision' },
-  { icon: <Type />, tool: 'text' },
-  { icon: <Brush />, tool: 'pen' },
+type ToolbarItem =
+  | {
+      icon: ReactNode
+      kind: 'tool'
+      tool: Exclude<CanvasTool, 'input' | 'prompt'>
+    }
+  | { kind: 'card-menu' }
+
+const toolbarItems: ToolbarItem[] = [
+  { icon: <Hand />, kind: 'tool', tool: 'pan' },
+  { icon: <MousePointer2 />, kind: 'tool', tool: 'select' },
+  { kind: 'card-menu' },
+  { icon: <Square />, kind: 'tool', tool: 'step' },
+  { icon: <GitBranch />, kind: 'tool', tool: 'decision' },
+  { icon: <Type />, kind: 'tool', tool: 'text' },
+  { icon: <Brush />, kind: 'tool', tool: 'pen' },
 ]
 
 export function CanvasToolbar({
@@ -87,19 +93,80 @@ export function CanvasToolbar({
   toolShortcuts,
 }: CanvasToolbarProps) {
   const showTextControls = activeTool === 'text' || canStyleText
+  const [cardMenuOpen, setCardMenuOpen] = useState(false)
+  const cardMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!cardMenuOpen) return
+
+    const closeMenu = (event: PointerEvent) => {
+      const target = event.target
+      if (target instanceof Node && cardMenuRef.current?.contains(target)) return
+      setCardMenuOpen(false)
+    }
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setCardMenuOpen(false)
+    }
+
+    document.addEventListener('pointerdown', closeMenu)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeMenu)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [cardMenuOpen])
 
   return (
     <div className="canvas-toolbar" aria-label="画布工具">
       <div className="canvas-toolbar-group">
-        {toolItems.map((item) => (
-          <IconButton
-            key={item.tool}
-            active={activeTool === item.tool}
-            icon={item.icon}
-            label={formatCanvasToolTooltip(item.tool, toolShortcuts)}
-            onClick={() => onSelectTool(item.tool)}
-          />
-        ))}
+        {toolbarItems.map((item) =>
+          item.kind === 'card-menu' ? (
+            <div
+              key={item.kind}
+              className="canvas-card-tool-menu-shell"
+              ref={cardMenuRef}
+            >
+              <IconButton
+                active={activeTool === 'prompt' || activeTool === 'input'}
+                icon={<Plus />}
+                label={formatCanvasToolTooltip('prompt', toolShortcuts)}
+                onClick={() => setCardMenuOpen((value) => !value)}
+              />
+              {cardMenuOpen && (
+                <div className="canvas-card-tool-menu">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectTool('input')
+                      setCardMenuOpen(false)
+                    }}
+                  >
+                    <ListOrdered />
+                    <span>输入卡片</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectTool('prompt')
+                      setCardMenuOpen(false)
+                    }}
+                  >
+                    <Plus />
+                    <span>提示词卡片</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <IconButton
+              key={item.tool}
+              active={activeTool === item.tool}
+              icon={item.icon}
+              label={formatCanvasToolTooltip(item.tool, toolShortcuts)}
+              onClick={() => onSelectTool(item.tool)}
+            />
+          ),
+        )}
         <IconButton
           className="canvas-toolbar-action"
           disabled={flowchartGenerating}

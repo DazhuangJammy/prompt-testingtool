@@ -1,5 +1,6 @@
 import {
   addPromptCardToCanvas,
+  addInputCardToCanvas,
   assignPromptCardToChatTopic,
   createChatTopicExport,
   createNextCanvas,
@@ -11,12 +12,13 @@ import {
   reorderCanvases,
 } from '@/features/workspace/application/workspaceService'
 import { workspaceRepository } from '@/features/workspace/infrastructure/workspaceRepository'
-import type { Canvas, PromptCard } from '@/shared/types'
+import type { Canvas, InputCard, PromptCard } from '@/shared/types'
 
 interface WorkspaceActionOptions {
   canvases: Canvas[]
   effectiveCanvasId?: string
   promptCards: PromptCard[]
+  inputCards: InputCard[]
   selectedCardId?: string
   setActiveCanvasId: (id?: string) => void
   setSelectedCardId: (id?: string) => void
@@ -26,6 +28,7 @@ export function useWorkspaceActions({
   canvases,
   effectiveCanvasId,
   promptCards,
+  inputCards,
   selectedCardId,
   setActiveCanvasId,
   setSelectedCardId,
@@ -45,6 +48,11 @@ export function useWorkspaceActions({
     if (selectedCardId === id) setSelectedCardId(undefined)
   }
 
+  const deleteInputCard = async (id: string) => {
+    const card = inputCards.find((item) => item.id === id)
+    await workspaceRepository.deleteInputCardNode(id, card?.canvasId ?? effectiveCanvasId)
+  }
+
   const deleteCanvas = async (id: string) => {
     setActiveCanvasId(await deleteCanvasAndPickNext(id, canvases))
   }
@@ -62,6 +70,16 @@ export function useWorkspaceActions({
     if (card) setSelectedCardId(card.id)
     return card
   }
+
+  const addInputCard = async (
+    position?: InputCard['position'],
+    topicSessionId?: string,
+  ) => addInputCardToCanvas(
+    effectiveCanvasId,
+    inputCards,
+    position,
+    topicSessionId,
+  )
 
   const downloadExportFile = (exportFile: { filename: string; text: string }) => {
     const blob = new Blob([exportFile.text], { type: 'application/json' })
@@ -96,9 +114,11 @@ export function useWorkspaceActions({
 
   return {
     addPromptCard,
+    addInputCard,
     assignPromptCardToChatTopic,
     createNextCanvas: createCanvas,
     deleteCanvas,
+    deleteInputCard,
     deletePromptCard,
     duplicateChatTopic,
     exportChatTopic,

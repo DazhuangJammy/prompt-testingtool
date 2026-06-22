@@ -13,6 +13,7 @@ import type {
   ChatTopicExportPayload,
   ChatSession,
   ExportPayload,
+  InputCard,
   PromptCard,
 } from '@/shared/types'
 import { nowIso } from '@/shared/utils/time'
@@ -44,6 +45,24 @@ export async function addPromptCardToCanvas(
   return workspaceRepository.createPromptCard(
     canvasId,
     scopedPromptCards.length,
+    position,
+    topicSessionId,
+  )
+}
+
+export async function addInputCardToCanvas(
+  canvasId: string | undefined,
+  inputCards: InputCard[],
+  position?: InputCard['position'],
+  topicSessionId?: string,
+) {
+  if (!canvasId) return undefined
+  const scopedInputCards = topicSessionId
+    ? inputCards.filter((card) => card.topicSessionId === topicSessionId)
+    : inputCards
+  return workspaceRepository.createInputCard(
+    canvasId,
+    scopedInputCards.length,
     position,
     topicSessionId,
   )

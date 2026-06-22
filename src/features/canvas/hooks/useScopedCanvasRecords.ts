@@ -19,6 +19,7 @@ export function useScopedCanvasRecords({
   const {
     canvasEdges,
     imageNodes,
+    inputCards,
     shapeNodes,
     strokes,
     textNodes,
@@ -29,6 +30,7 @@ export function useScopedCanvasRecords({
       filterCanvasRecordsForTopic({
         canvasEdges,
         canvasImageNodes: imageNodes,
+        inputCards,
         canvasShapeNodes: shapeNodes,
         canvasStrokes: strokes,
         canvasTextNodes: textNodes,
@@ -40,6 +42,7 @@ export function useScopedCanvasRecords({
     [
       canvasEdges,
       imageNodes,
+      inputCards,
       promptCardId,
       promptCards,
       sessionId,

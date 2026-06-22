@@ -405,24 +405,28 @@
 
 .flow-shape .react-flow__handle-top,
 .canvas-image-node .react-flow__handle-top,
+.input-card-node .react-flow__handle-top,
 .prompt-node .react-flow__handle-top {
   top: -8px;
 }
 
 .flow-shape .react-flow__handle-right,
 .canvas-image-node .react-flow__handle-right,
+.input-card-node .react-flow__handle-right,
 .prompt-node .react-flow__handle-right {
   right: -8px;
 }
 
 .flow-shape .react-flow__handle-bottom,
 .canvas-image-node .react-flow__handle-bottom,
+.input-card-node .react-flow__handle-bottom,
 .prompt-node .react-flow__handle-bottom {
   bottom: -8px;
 }
 
 .flow-shape .react-flow__handle-left,
 .canvas-image-node .react-flow__handle-left,
+.input-card-node .react-flow__handle-left,
 .prompt-node .react-flow__handle-left {
   left: -8px;
 }
@@ -435,6 +439,8 @@
 
 .prompt-node:hover .react-flow__handle,
 .prompt-node.is-hovered .react-flow__handle,
+.input-card-node:hover .react-flow__handle,
+.input-card-node.is-selected .react-flow__handle,
 .flow-shape:hover .react-flow__handle,
 .flow-shape.is-hovered .react-flow__handle,
 .flow-shape.is-selected .react-flow__handle,

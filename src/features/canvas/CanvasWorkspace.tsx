@@ -8,23 +8,20 @@ import {
   SelectionMode,
   ViewportPortal,
   type EdgeChange,
-  type Connection,
   type Edge,
-  type FinalConnectionState,
-  type OnConnect,
   type OnEdgesChange,
-  type OnReconnect,
   type OnSelectionChangeFunc,
   useReactFlow,
 } from '@xyflow/react'
 import { useCallback, useMemo, useState } from 'react'
-import { deleteCanvasEdge, reconnectCanvasEdge } from '@/features/canvas/application/canvasService'
 import { CanvasAlignmentGuides } from '@/features/canvas/components/CanvasAlignmentGuides'
 import { CanvasLayoutControls } from '@/features/canvas/components/CanvasLayoutControls'
 import { CanvasWorkspaceControls } from '@/features/canvas/components/CanvasWorkspaceControls'
 import { DraftStrokeLayer } from '@/features/canvas/components/DraftStrokeLayer'
 import { useCanvasAlignment } from '@/features/canvas/hooks/useCanvasAlignment'
+import { useCanvasBusinessNodes } from '@/features/canvas/hooks/useCanvasBusinessNodes'
 import { useCanvasClipboard } from '@/features/canvas/hooks/useCanvasClipboard'
+import { useCanvasConnectionHandlers } from '@/features/canvas/hooks/useCanvasConnectionHandlers'
 import { useCanvasDeletion } from '@/features/canvas/hooks/useCanvasDeletion'
 import { useCanvasFlowState } from '@/features/canvas/hooks/useCanvasFlowState'
 import { useCanvasFrameStyle } from '@/features/canvas/hooks/useCanvasFrameStyle'
@@ -33,13 +30,12 @@ import { useCanvasPaneClick } from '@/features/canvas/hooks/useCanvasPaneClick'
 import { useFlowchartGeneration } from '@/features/canvas/hooks/useFlowchartGeneration'
 import { useScopedCanvasRecords } from '@/features/canvas/hooks/useScopedCanvasRecords'
 import { useCanvasToolKeyboardShortcuts } from '@/features/canvas/hooks/useCanvasToolKeyboardShortcuts'
+import { useCanvasTextStyle } from '@/features/canvas/hooks/useCanvasTextStyle'
 import { useCanvasViewportPersistence } from '@/features/canvas/hooks/useCanvasViewportPersistence'
 import { useDraftStroke } from '@/features/canvas/hooks/useDraftStroke'
 import type { CanvasWorkspaceProps } from '@/features/canvas/CanvasWorkspace.types'
-import { canvasRepository } from '@/features/canvas/infrastructure/canvasRepository'
-import { createCanvasEdge } from '@/features/canvas/model/canvasElements'
 import { canvasNodeTypes, penColors } from '@/features/canvas/model/canvasWorkspaceRegistry'
-import { createCanvasFlowEdges, createCanvasFlowNodes, type CanvasFlowNode } from '@/features/canvas/model/canvasFlowMapping'
+import { createCanvasFlowEdges, type CanvasFlowNode } from '@/features/canvas/model/canvasFlowMapping'
 import type { CanvasTool } from '@/features/canvas/model/flowTypes'
 import {
   areFlowSelectionsEqual,
@@ -47,7 +43,6 @@ import {
   toFlowSelectionIds,
   type FlowSelectionIds,
 } from '@/features/canvas/model/flowSelection'
-import { clampTextFontSize, defaultTextStyle, type CanvasTextStyle } from '@/features/canvas/model/textStyle'
 
 const reactFlowConnectionLineStyle = { stroke: 'var(--accent)', strokeWidth: 2 }
 const reactFlowDeleteKeyCode = ['Delete', 'Backspace']
@@ -62,8 +57,10 @@ export function CanvasWorkspace({
   effectiveCanvasId,
   flowchartProvider,
   flowchartSettings,
+  onAddInputCard,
   onAddPrompt,
   onDeleteCard,
+  onDeleteInputCard,
   onSelectCard,
   promptOptimizationProvider,
   promptOptimizationSettings,
@@ -80,7 +77,6 @@ export function CanvasWorkspace({
   const [selectedFlowIds, setSelectedFlowIds] =
     useState<FlowSelectionIds>(emptyFlowSelection)
   const [penColor, setPenColor] = useState(penColors[0].value)
-  const [textStyle, setTextStyle] = useState<CanvasTextStyle>(defaultTextStyle)
   const scopedRecords = useScopedCanvasRecords({
     canvasId: effectiveCanvasId,
     promptCardId: activeSessionPromptCardId,
@@ -90,6 +86,7 @@ export function CanvasWorkspace({
   })
   const canvasFlowEdges = scopedRecords.canvasEdges
   const canvasImageNodes = scopedRecords.canvasImageNodes
+  const inputCards = scopedRecords.inputCards
   const canvasShapeNodes = scopedRecords.canvasShapeNodes
   const canvasStrokes = scopedRecords.canvasStrokes
   const canvasTextNodes = scopedRecords.canvasTextNodes
@@ -108,64 +105,39 @@ export function CanvasWorkspace({
   const nodePersistence = useCanvasNodePersistence({
     canvasId: effectiveCanvasId,
     imageNodes: canvasImageNodes,
+    inputCards,
     promptCards: scopedPromptCards,
     shapeNodes: canvasShapeNodes,
     strokes: canvasStrokes,
     textNodes: canvasTextNodes,
   })
+  const {
+    activeTextStyle,
+    canStyleText,
+    setTextStyle,
+    textStyle,
+    updateTextStyle,
+  } = useCanvasTextStyle({
+    canvasId: effectiveCanvasId,
+    selectedNodeIds: selectedFlowIds.nodes,
+    textNodes: canvasTextNodes,
+  })
 
-  const businessNodes = useMemo(
-    () =>
-      createCanvasFlowNodes({
-        promptCards: scopedPromptCards,
-        selectedNodeIds: selectedFlowIds.nodes,
-        imageNodes: canvasImageNodes,
-        shapeNodes: canvasShapeNodes,
-        strokes: canvasStrokes,
-        textNodes: canvasTextNodes,
-        onSavePromptCard: (nextCard) => {
-          void canvasRepository.savePromptCard(nextCard)
-        },
-        promptOptimizationProvider,
-        promptOptimizationSettings,
-        onSelectPrompt: (id) => {
-          onSelectCard(id)
-        },
-        onSelectShape: () => undefined,
-        onSelectImage: (id) => {
-          updateSelection({ edges: [], nodes: [id] })
-        },
-        onSelectText: (id) => {
-          updateSelection({ edges: [], nodes: [id] })
-          const selectedText = canvasTextNodes.find((node) => node.id === id)
-          if (selectedText) {
-            setTextStyle({
-              backgroundColor: selectedText.backgroundColor,
-              color: selectedText.color,
-              fontSize: selectedText.fontSize,
-            })
-          }
-        },
-        onUpdateImage: nodePersistence.updateImageNode,
-        onUpdateShape: nodePersistence.updateShapeNode,
-        onUpdateText: nodePersistence.updateTextNode,
-      }),
-    [
-      canvasShapeNodes,
-      canvasImageNodes,
-      canvasStrokes,
-      canvasTextNodes,
-      nodePersistence.updateImageNode,
-      nodePersistence.updateShapeNode,
-      nodePersistence.updateTextNode,
-      onSelectCard,
-      promptOptimizationProvider,
-      promptOptimizationSettings,
-      scopedPromptCards,
-      selectedFlowIds.nodes,
-      updateSelection,
-    ],
-  )
+  const businessNodes = useCanvasBusinessNodes({
+    imageNodes: canvasImageNodes,
+    inputCards,
+    nodePersistence,
+    onSelectCard,
+    promptCards: scopedPromptCards,
+    promptOptimizationProvider,
+    promptOptimizationSettings,
+    selectedNodeIds: selectedFlowIds.nodes,
+    setSelectedFlowIds,
+    setTextStyle,
+    shapeNodes: canvasShapeNodes,
+    strokes: canvasStrokes,
+    textNodes: canvasTextNodes,
+  })
   const businessEdges = useMemo(
     () => createCanvasFlowEdges(canvasFlowEdges),
     [canvasFlowEdges],
@@ -209,31 +181,6 @@ export function CanvasWorkspace({
     }
   }, [onSelectCard, updateSelection])
 
-  const handleConnect = useCallback<OnConnect>(
-    (connection: Connection) => {
-      if (
-        !effectiveCanvasId ||
-        !connection.source ||
-        !connection.target ||
-        connection.source === connection.target
-      ) {
-        return
-      }
-
-      void canvasRepository.saveEdge(
-        createCanvasEdge(
-          effectiveCanvasId,
-          connection.source,
-          connection.target,
-          connection.sourceHandle,
-          connection.targetHandle,
-          activeSessionId,
-        ),
-      )
-    },
-    [activeSessionId, effectiveCanvasId],
-  )
-
   const handleEdgesChange = useCallback<OnEdgesChange<Edge>>(
     (changes: EdgeChange<Edge>[]) => {
       updateFlowEdges(changes)
@@ -251,45 +198,12 @@ export function CanvasWorkspace({
     [updateFlowEdges],
   )
 
-  const handleReconnect = useCallback<OnReconnect<Edge>>(
-    (oldEdge, connection) => {
-      if (
-        !effectiveCanvasId ||
-        !connection.source ||
-        !connection.target ||
-        connection.source === connection.target
-      ) {
-        return
-      }
-
-      void reconnectCanvasEdge(
-        oldEdge.id,
-        {
-          sourceId: connection.source,
-          targetId: connection.target,
-          sourceHandle: connection.sourceHandle ?? undefined,
-          targetHandle: connection.targetHandle ?? undefined,
-        },
-        effectiveCanvasId,
-      )
-    },
-    [effectiveCanvasId],
-  )
-
-  const handleReconnectEnd = useCallback(
-    (
-      _event: MouseEvent | TouchEvent,
-      edge: Edge,
-      _handleType: unknown,
-      connectionState: FinalConnectionState,
-    ) => {
-      if (connectionState.toHandle && connectionState.isValid !== false) return
-
-      void deleteCanvasEdge(edge.id, effectiveCanvasId)
-      clearSelection()
-    },
-    [clearSelection, effectiveCanvasId],
-  )
+  const { handleConnect, handleReconnect, handleReconnectEnd } =
+    useCanvasConnectionHandlers({
+      canvasId: effectiveCanvasId,
+      onClearSelection: clearSelection,
+      topicSessionId: activeSessionId,
+    })
 
   const selectTool = useCallback((tool: CanvasTool) => {
     setActiveTool(tool)
@@ -310,6 +224,7 @@ export function CanvasWorkspace({
     canvasId: effectiveCanvasId,
     topicSessionId: activeSessionId,
     onActivateShortcuts: activateShortcutScope,
+    onAddInputCard,
     onAddPrompt,
     onClearSelection: clearSelection,
     onSelectTool: selectTool,
@@ -318,52 +233,20 @@ export function CanvasWorkspace({
   })
 
   const hasSelection = selectedFlowIds.edges.length > 0 || selectedFlowIds.nodes.length > 0
-  const selectedTextNode = canvasTextNodes.find((node) =>
-    selectedFlowIds.nodes.includes(node.id),
-  )
-  const activeTextStyle = selectedTextNode
-    ? {
-        backgroundColor: selectedTextNode.backgroundColor,
-        color: selectedTextNode.color,
-        fontSize: selectedTextNode.fontSize,
-      }
-    : textStyle
   const { activeFrameStyle, canStyleFrame, updateFrameStyle } = useCanvasFrameStyle({
     canvasId: effectiveCanvasId,
+    inputCards,
     promptCards: scopedPromptCards,
     selectedNodeIds: selectedFlowIds.nodes,
     shapeNodes: canvasShapeNodes,
     textNodes: canvasTextNodes,
   })
-  const updateTextStyle = useCallback(
-    (updates: Partial<CanvasTextStyle>) => {
-      const normalizedUpdates = {
-        ...updates,
-        ...(updates.fontSize === undefined
-          ? {}
-          : { fontSize: clampTextFontSize(updates.fontSize) }),
-      }
-      const nextStyle = {
-        ...textStyle,
-        ...normalizedUpdates,
-      }
-      setTextStyle(nextStyle)
-
-      if (selectedTextNode) {
-        void canvasRepository
-          .updateTextNode(selectedTextNode.id, normalizedUpdates)
-          .then(() =>
-            effectiveCanvasId ? canvasRepository.touchCanvas(effectiveCanvasId) : undefined,
-          )
-      }
-    },
-    [effectiveCanvasId, selectedTextNode, textStyle],
-  )
 
   const { deleteSelected, handleDelete } = useCanvasDeletion({
     canvasId: effectiveCanvasId,
     flowNodes,
     onDeleteCard,
+    onDeleteInputCard,
     onSelectionClear: clearSelection,
     selectedFlowIds,
   })
@@ -372,6 +255,7 @@ export function CanvasWorkspace({
     canvasId: effectiveCanvasId,
     onPasteSelection: (ids) => updateSelection({ edges: [], nodes: ids }),
     onSelectPrompt: onSelectCard,
+    inputCards,
     promptCards: scopedPromptCards,
     reactFlow,
     selectedFlowIds,
@@ -478,7 +362,7 @@ export function CanvasWorkspace({
           activeTool={activeTool}
           canDelete={hasSelection}
           canStyleFrame={canStyleFrame}
-          canStyleText={Boolean(selectedTextNode)}
+          canStyleText={canStyleText}
           flowchartGeneration={flowchartGeneration}
           penColor={penColor}
           penColors={penColors}

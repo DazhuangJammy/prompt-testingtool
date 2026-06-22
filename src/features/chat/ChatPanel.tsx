@@ -1,5 +1,6 @@
 import { Plus, X, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import type { CSSProperties, PointerEvent } from 'react'
+import { useMemo, useState } from 'react'
 import type {
   ChatAttachment,
   PromptCard,
@@ -9,8 +10,13 @@ import type {
 } from '@/shared/types'
 import { IconButton } from '@/shared/ui/IconButton'
 import { ChatComposer } from './components/ChatComposer'
+import { InputSourceRunner } from './components/InputSourceRunner'
 import { MessageList } from './components/MessageList'
 import { PanelMeta } from './components/PanelMeta'
+import {
+  resolvePromptInputSource,
+  type PromptInputSource,
+} from '@/features/input-card/model/inputCard'
 import { getComparePanelWidth, type ComparePaneState } from './model/comparePanes'
 import { type ComparePaneView, useChatPanelState } from './useChatPanelState'
 
@@ -19,6 +25,7 @@ interface ChatPanelProps {
   provider?: ProviderConfig
   promptCards: PromptCard[]
   providers: ProviderConfig[]
+  inputSources?: PromptInputSource[]
   compareOpen: boolean
   comparePaneCardIds: string[]
   comparePanes: ComparePaneState[]
@@ -43,6 +50,7 @@ export function ChatPanel({
   provider,
   promptCards,
   providers,
+  inputSources = [],
   compareOpen,
   comparePaneCardIds,
   comparePanes,
@@ -76,17 +84,31 @@ export function ChatPanel({
   )
   const disabled = !provider || !card
   const compareDisabled = promptCards.length < 2
+  const [selectedInputCardId, setSelectedInputCardId] = useState<string>()
+  const [selectedSegmentId, setSelectedSegmentId] = useState<string>()
+  const activeInputSource = useMemo(
+    () => resolvePromptInputSource(inputSources, selectedInputCardId),
+    [inputSources, selectedInputCardId],
+  )
+  const effectiveSegmentId = activeInputSource?.segments.some(
+    (segment) => segment.id === selectedSegmentId && segment.content.trim(),
+  )
+    ? selectedSegmentId
+    : activeInputSource?.segments.find((segment) => segment.content.trim())?.id
   const openCompare = () => {
     const nextOpen = !compareOpen
     if (nextOpen) {
       onEnsureWidth(getComparePanelWidth(state.comparePanes.length))
-      onComparePanesChange(state.comparePanes)
+      onComparePanesChange(state.comparePaneStates)
     }
     onCompareOpenChange(nextOpen)
   }
   const addComparePane = () => {
     onEnsureWidth(getComparePanelWidth(state.comparePanes.length + 1))
     state.addComparePane()
+  }
+  const closeCompare = () => {
+    onCompareOpenChange(false)
   }
 
   return (
@@ -138,6 +160,7 @@ export function ChatPanel({
                 providers={providers}
                 onCardChange={(id) => state.setComparePaneCard(pane.id, id)}
                 onClear={() => void state.clearCompareMessages(pane.id)}
+                onCloseCompare={index === 0 ? closeCompare : undefined}
                 onEdit={state.editMessage}
                 onRemove={() => state.removeComparePane(pane.id)}
                 onPromptInjectionModeChange={(mode) =>
@@ -165,6 +188,31 @@ export function ChatPanel({
               activeProviderId={provider?.id}
               compareDisabled={compareDisabled}
               compareOpen={compareOpen}
+              extraActions={
+                <InputSourceRunner
+                  busy={state.busy}
+                  selectedInputCardId={activeInputSource?.inputCard.id}
+                  selectedSegmentId={effectiveSegmentId}
+                  sources={inputSources}
+                  onInputCardChange={(id) => {
+                    setSelectedInputCardId(id)
+                    const nextSource = inputSources.find(
+                      (source) => source.inputCard.id === id,
+                    )
+                    setSelectedSegmentId(
+                      nextSource?.segments.find((segment) => segment.content.trim())?.id,
+                    )
+                  }}
+                  onRun={() => {
+                    if (!activeInputSource) return
+                    void state.runInputSegments(
+                      activeInputSource.segments,
+                      effectiveSegmentId,
+                    )
+                  }}
+                  onSegmentChange={setSelectedSegmentId}
+                />
+              }
               providers={providers}
               onToggleCompare={openCompare}
               onSelectProvider={onSelectProvider}
@@ -213,6 +261,7 @@ interface SplitPaneProps {
   providers: ProviderConfig[]
   onCardChange: (id: string) => void
   onClear: () => void
+  onCloseCompare?: () => void
   onEdit: ReturnType<typeof useChatPanelState>['editMessage']
   onRemove: () => void
   onPromptInjectionModeChange: (mode: PromptInjectionMode) => void
@@ -235,6 +284,7 @@ function SplitPane({
   providers,
   onCardChange,
   onClear,
+  onCloseCompare,
   onEdit,
   onRemove,
   onPromptInjectionModeChange,
@@ -250,7 +300,10 @@ function SplitPane({
     <section className="split-pane">
       <PanelMeta
         activeProviderId={pane.provider?.id}
+        compareLabel="取消对比"
+        compareOpen={Boolean(onCloseCompare)}
         providers={providers}
+        onToggleCompare={onCloseCompare}
         onSelectProvider={onProviderChange}
       />
       <MessageList messages={pane.messages} onEdit={onEdit} onResend={onResend} />

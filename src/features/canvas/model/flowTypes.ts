@@ -3,6 +3,7 @@ import type { CanvasTool as SharedCanvasTool } from '@/shared/model/canvasToolSh
 import type {
   CanvasPoint,
   CanvasImageNode,
+  InputCard,
   CanvasShapeNode,
   CanvasStroke,
   CanvasTextNode,
@@ -26,6 +27,15 @@ export interface CanvasShapeNodeData extends Record<string, unknown> {
 }
 
 export type CanvasShapeFlowNode = Node<CanvasShapeNodeData, 'flowShape'>
+
+export interface InputCardNodeData extends Record<string, unknown> {
+  card: InputCard
+  selectedCardId?: string
+  onSelect: (id: string) => void
+  onChange: (card: InputCard) => void
+}
+
+export type InputCardFlowNode = Node<InputCardNodeData, 'inputCard'>
 
 export interface CanvasTextNodeData extends Record<string, unknown> {
   node: CanvasTextNode

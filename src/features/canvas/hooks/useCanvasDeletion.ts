@@ -18,6 +18,7 @@ interface UseCanvasDeletionOptions {
     nodes: string[]
   }
   onDeleteCard: (id: string) => void
+  onDeleteInputCard: (id: string) => void
   onSelectionClear: () => void
 }
 
@@ -25,11 +26,13 @@ export function useCanvasDeletion({
   canvasId,
   flowNodes,
   onDeleteCard,
+  onDeleteInputCard,
   onSelectionClear,
   selectedFlowIds,
 }: UseCanvasDeletionOptions) {
   const flowNodesRef = useRef(flowNodes)
   const onDeleteCardRef = useRef(onDeleteCard)
+  const onDeleteInputCardRef = useRef(onDeleteInputCard)
   const selectedFlowIdsRef = useRef(selectedFlowIds)
 
   useEffect(() => {
@@ -39,6 +42,10 @@ export function useCanvasDeletion({
   useEffect(() => {
     onDeleteCardRef.current = onDeleteCard
   }, [onDeleteCard])
+
+  useEffect(() => {
+    onDeleteInputCardRef.current = onDeleteInputCard
+  }, [onDeleteInputCard])
 
   useEffect(() => {
     selectedFlowIdsRef.current = selectedFlowIds
@@ -52,6 +59,10 @@ export function useCanvasDeletion({
       }
       if (node.type === 'freehandStroke') {
         void deleteCanvasStroke(node.id, canvasId)
+        return
+      }
+      if (node.type === 'inputCard') {
+        onDeleteInputCardRef.current(node.id)
         return
       }
       if (node.type === 'freeText') {

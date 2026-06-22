@@ -7,6 +7,7 @@ import {
 import type {
   CanvasEdge,
   CanvasImageNode,
+  InputCard,
   CanvasShapeNode,
   CanvasStroke,
   CanvasTextNode,
@@ -37,6 +38,16 @@ const shape: CanvasShapeNode = {
   position: { x: 120, y: 80 },
   width: 200,
   height: 100,
+  createdAt: 'old',
+  updatedAt: 'old',
+}
+
+const inputCard: InputCard = {
+  id: 'input',
+  canvasId: 'canvas',
+  title: 'Input',
+  markdown: '# 第一轮\n\n正文',
+  position: { x: 10, y: 25 },
   createdAt: 'old',
   updatedAt: 'old',
 }
@@ -101,6 +112,53 @@ const externalEdge: CanvasEdge = {
 }
 
 describe('canvas clipboard', () => {
+  it('copies input cards and keeps their internal prompt edge', () => {
+    const edge: CanvasEdge = {
+      id: 'input-edge',
+      canvasId: 'canvas',
+      sourceId: 'input',
+      sourceHandle: 'right',
+      targetId: 'card',
+      targetHandle: 'left',
+      createdAt: 'old',
+      updatedAt: 'old',
+    }
+
+    const clipboard = createCanvasClipboard({
+      edges: [edge],
+      imageNodes: [],
+      inputCards: [inputCard],
+      promptCards: [card],
+      selectedNodeIds: ['input', 'card'],
+      shapeNodes: [],
+      strokes: [],
+      textNodes: [],
+    })
+
+    expect(clipboard?.inputCards).toEqual([inputCard])
+    expect(clipboard?.edges).toEqual([edge])
+
+    const ids = ['new-card', 'new-step', 'new-input', 'new-edge']
+    const pasted = createCanvasPastePayload({
+      anchor: { x: 100, y: 200 },
+      canvasId: 'next',
+      clipboard: clipboard!,
+      createNextId: () => ids.shift() ?? 'missing',
+      now: () => 'now',
+    })
+
+    expect(pasted.nodeIds).toEqual(['new-card', 'new-input'])
+    expect(pasted.payload.inputCards?.[0]).toMatchObject({
+      id: 'new-input',
+      markdown: inputCard.markdown,
+      title: 'Input 副本',
+    })
+    expect(pasted.payload.edges[0]).toMatchObject({
+      sourceId: 'new-input',
+      targetId: 'new-card',
+    })
+  })
+
   it('captures selected elements and only keeps internal edges', () => {
     const clipboard = createCanvasClipboard({
       edges: [internalEdge, externalEdge],
@@ -208,5 +266,27 @@ describe('canvas clipboard', () => {
     }) as CanvasClipboardSnapshot
 
     expect(clipboard.origin).toEqual({ x: 29, y: 39 })
+  })
+
+  it('pastes legacy clipboard snapshots without input cards', () => {
+    const result = createCanvasPastePayload({
+      anchor: { x: 100, y: 120 },
+      canvasId: 'next-canvas',
+      clipboard: {
+        edges: [],
+        imageNodes: [],
+        origin: { x: 20, y: 30 },
+        promptCards: [],
+        shapeNodes: [shape],
+        strokes: [],
+        textNodes: [textNode],
+      },
+      createNextId: () => crypto.randomUUID(),
+      now: () => 'now',
+    })
+
+    expect(result.payload.inputCards).toEqual([])
+    expect(result.payload.shapeNodes[0].position).toEqual({ x: 200, y: 170 })
+    expect(result.payload.textNodes[0].position).toEqual({ x: 140, y: 180 })
   })
 })

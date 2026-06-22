@@ -8,13 +8,14 @@ import { isShapeTool } from '@/features/canvas/model/canvasTools'
 import type { CanvasTool } from '@/features/canvas/model/flowTypes'
 import type { CanvasTextStyle } from '@/features/canvas/model/textStyle'
 import { dispatchCanvasCommitActiveEdit } from '@/shared/model/canvasEditEvents'
-import type { CanvasPoint, PromptCard } from '@/shared/types'
+import type { CanvasPoint, InputCard, PromptCard } from '@/shared/types'
 
 interface UseCanvasPaneClickOptions {
   activeTool: CanvasTool
   canvasId?: string
   topicSessionId?: string
   textStyle: CanvasTextStyle
+  onAddInputCard: (position?: InputCard['position'], topicSessionId?: string) => void
   onActivateShortcuts: () => void
   onAddPrompt: (position?: PromptCard['position'], topicSessionId?: string) => void
   onClearSelection: () => void
@@ -26,6 +27,7 @@ export function useCanvasPaneClick({
   activeTool,
   canvasId,
   onActivateShortcuts,
+  onAddInputCard,
   onAddPrompt,
   onClearSelection,
   onSelectTool,
@@ -35,6 +37,7 @@ export function useCanvasPaneClick({
 }: UseCanvasPaneClickOptions) {
   const activeToolRef = useRef(activeTool)
   const onActivateShortcutsRef = useRef(onActivateShortcuts)
+  const onAddInputCardRef = useRef(onAddInputCard)
   const onAddPromptRef = useRef(onAddPrompt)
   const onClearSelectionRef = useRef(onClearSelection)
   const onSelectToolRef = useRef(onSelectTool)
@@ -48,6 +51,10 @@ export function useCanvasPaneClick({
   useEffect(() => {
     onActivateShortcutsRef.current = onActivateShortcuts
   }, [onActivateShortcuts])
+
+  useEffect(() => {
+    onAddInputCardRef.current = onAddInputCard
+  }, [onAddInputCard])
 
   useEffect(() => {
     onAddPromptRef.current = onAddPrompt
@@ -82,6 +89,12 @@ export function useCanvasPaneClick({
 
       if (activeTool === 'prompt') {
         onAddPromptRef.current(position, topicSessionId)
+        onSelectToolRef.current('select')
+        return
+      }
+
+      if (activeTool === 'input') {
+        onAddInputCardRef.current(position, topicSessionId)
         onSelectToolRef.current('select')
         return
       }

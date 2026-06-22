@@ -7,6 +7,7 @@ import {
 } from './canvasFlowMapping'
 import type {
   CanvasImageNode,
+  InputCard,
   CanvasShapeNode,
   CanvasStroke,
   CanvasTextNode,
@@ -32,6 +33,16 @@ const shape: CanvasShapeNode = {
   position: { x: 3, y: 4 },
   width: 200,
   height: 100,
+  createdAt: 'now',
+  updatedAt: 'now',
+}
+
+const inputCard: InputCard = {
+  id: 'input',
+  canvasId: 'canvas',
+  title: 'Input',
+  markdown: '# 第一轮\n\n正文',
+  position: { x: 13, y: 14 },
   createdAt: 'now',
   updatedAt: 'now',
 }
@@ -76,7 +87,9 @@ const textNode: CanvasTextNode = {
 }
 
 const baseHandlers = {
+  onSaveInputCard: vi.fn(),
   onSavePromptCard: vi.fn(),
+  onSelectInputCard: vi.fn(),
   onSelectPrompt: vi.fn(),
   onSelectImage: vi.fn(),
   onSelectShape: vi.fn(),
@@ -113,6 +126,28 @@ describe('canvas flow mapping', () => {
     })
     expect(nodes[0].data.onCopy).toBeUndefined()
     expect(nodes[0].data.onDelete).toBeUndefined()
+  })
+
+  it('maps input cards to flow nodes', () => {
+    const nodes = createCanvasFlowNodes({
+      promptCards: [],
+      selectedNodeIds: ['input'],
+      imageNodes: [],
+      inputCards: [inputCard],
+      shapeNodes: [],
+      strokes: [],
+      textNodes: [],
+      ...baseHandlers,
+    })
+
+    expect(nodes[0]).toMatchObject({
+      dragHandle: '.input-card-drag-area',
+      id: 'input',
+      position: { x: 13, y: 14 },
+      selected: true,
+      type: 'inputCard',
+    })
+    expect(nodes[0].data.selectedCardId).toBe('input')
   })
 
   it('maps free text nodes without using shape cards', () => {

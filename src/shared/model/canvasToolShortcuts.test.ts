@@ -20,6 +20,7 @@ describe('canvas tool shortcuts', () => {
       pan: '1',
       select: '2',
       prompt: '3',
+      input: '',
       step: '4',
       decision: '5',
       text: '6',

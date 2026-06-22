@@ -193,6 +193,7 @@ async function saveGeneratedElements(
     canvasId,
     edges: elements.edges,
     imageNodes: [],
+    inputCards: [],
     promptCards: elements.promptCards,
     shapeNodes: elements.shapeNodes,
     strokes: [],
@@ -212,7 +213,10 @@ function renderPreviewNodes(
   const previewNodes = createCanvasFlowNodes({
     ...options,
     imageNodes: [],
+    inputCards: [],
     onSavePromptCard: () => undefined,
+    onSaveInputCard: () => undefined,
+    onSelectInputCard: () => undefined,
     onSelectImage: () => undefined,
     onSelectPrompt: () => undefined,
     onSelectShape: () => undefined,

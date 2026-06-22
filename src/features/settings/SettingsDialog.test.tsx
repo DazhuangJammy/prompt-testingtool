@@ -67,7 +67,7 @@ describe('SettingsDialog', () => {
 
     expect(document.querySelector('.shortcut-settings-page')).toBeTruthy()
     expect(document.querySelector('.default-model-card')).toBeNull()
-    expect(document.querySelectorAll('.shortcut-settings-row')).toHaveLength(7)
+    expect(document.querySelectorAll('.shortcut-settings-row')).toHaveLength(8)
   })
 
   it('shows both default model usages on the default model page', () => {

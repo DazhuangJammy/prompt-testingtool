@@ -37,6 +37,11 @@ interface ResendMessageAction extends MessageActionBase {
   message: ChatMessage
 }
 
+interface SendMessageResult {
+  completed: boolean
+  sessionId?: string
+}
+
 export function useChatMessageActions(setError: (error: string) => void) {
   const chatRequests = useActiveChatRequests()
 
@@ -54,7 +59,7 @@ export function useChatMessageActions(setError: (error: string) => void) {
     text,
     thinkingMode,
     requestKey,
-  }: SendMessageAction) => {
+  }: SendMessageAction): Promise<SendMessageResult> => {
     const controller = chatRequests.startRequest(requestKey)
     setError('')
 
@@ -82,8 +87,10 @@ export function useChatMessageActions(setError: (error: string) => void) {
         text,
         thinkingMode,
       })
+      return { completed: !controller.signal.aborted, sessionId: activeSessionId }
     } catch (event) {
       setError(event instanceof Error ? event.message : 'Request failed')
+      return { completed: false }
     } finally {
       chatRequests.finishRequest(requestKey, controller)
     }

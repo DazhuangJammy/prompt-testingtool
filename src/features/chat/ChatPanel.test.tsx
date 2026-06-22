@@ -351,6 +351,27 @@ describe('ChatPanel', () => {
     expect(getCardSelects()).toHaveLength(10)
   })
 
+  it('exits compare mode from the first pane without clearing compare state', async () => {
+    renderChatPanel()
+    clickButton('对比')
+    await flushPanelEffects()
+    addComparePanes(1)
+    const cardSelects = getCardSelects()
+    act(() => {
+      cardSelects[2].value = 'card-2'
+      cardSelects[2].dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    expect(document.querySelectorAll('button[aria-label="取消对比"]')).toHaveLength(1)
+    clickButton('取消对比')
+    expect(document.body.textContent).not.toContain('对比模式')
+    expect(getCardSelects()).toHaveLength(0)
+    clickButton('对比')
+    await flushPanelEffects()
+    expect(getCardSelects()).toHaveLength(3)
+    expect(getCardSelects()[2].value).toBe('card-2')
+    expect(document.body.textContent).toContain('保留记录 child-session-1')
+  })
+
   it('restores persisted compare pane count on mount', () => {
     const onComparePanesChange = vi.fn<
       (

@@ -3,6 +3,7 @@ import { canvasRepository } from '@/features/canvas/infrastructure/canvasReposit
 import type {
   CanvasEdge,
   CanvasImageNode,
+  InputCard,
   CanvasShapeNode,
   CanvasStroke,
   CanvasTextNode,
@@ -11,6 +12,7 @@ import type {
 const emptyShapeNodes: CanvasShapeNode[] = []
 const emptyCanvasEdges: CanvasEdge[] = []
 const emptyImageNodes: CanvasImageNode[] = []
+const emptyInputCards: InputCard[] = []
 const emptyStrokes: CanvasStroke[] = []
 const emptyTextNodes: CanvasTextNode[] = []
 
@@ -26,6 +28,14 @@ export function useCanvasElements(canvasId?: string) {
   const canvasEdges = useLiveQuery<CanvasEdge[], CanvasEdge[]>(
     () =>
       canvasId ? canvasRepository.listEdgesByCanvas(canvasId) : Promise.resolve([]),
+    [canvasId],
+    [],
+  )
+  const inputCards = useLiveQuery<InputCard[], InputCard[]>(
+    () =>
+      canvasId
+        ? canvasRepository.listInputCardsByCanvas(canvasId)
+        : Promise.resolve([]),
     [canvasId],
     [],
   )
@@ -57,6 +67,7 @@ export function useCanvasElements(canvasId?: string) {
   return {
     canvasEdges: canvasEdges ?? emptyCanvasEdges,
     imageNodes: imageNodes ?? emptyImageNodes,
+    inputCards: inputCards ?? emptyInputCards,
     shapeNodes: shapeNodes ?? emptyShapeNodes,
     strokes: strokes ?? emptyStrokes,
     textNodes: textNodes ?? emptyTextNodes,

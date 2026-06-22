@@ -108,7 +108,7 @@ describe('compare panes model', () => {
     expect(result.panes).toBe(panes)
   })
 
-  it('syncs panes to active cards when compare mode is closed', () => {
+  it('keeps pane state untouched when compare mode is closed', () => {
     const panes = [
       createComparePane({ cardId: 'missing', sessionId: 'old' }),
       createComparePane({ cardId: 'card-2' }),
@@ -116,16 +116,7 @@ describe('compare panes model', () => {
 
     const synced = syncComparePanes(panes, cards[0], cards, false, 'session-1')
 
-    expect(synced[0]).toMatchObject({
-      cardId: 'card-1',
-      parentSessionId: 'session-1',
-      sessionId: undefined,
-    })
-    expect(synced[1]).toMatchObject({
-      cardId: 'card-1',
-      parentSessionId: 'session-1',
-      sessionId: undefined,
-    })
+    expect(synced).toBe(panes)
   })
 
   it('preserves existing card selections while compare mode is open', () => {
@@ -176,11 +167,7 @@ describe('compare panes model', () => {
       },
     ])
 
-    expect(synced[0]).toMatchObject({
-      cardId: 'card-1',
-      parentSessionId: 'copy',
-      sessionId: undefined,
-    })
+    expect(synced).toBe(panes)
   })
 
   it('restores child compare sessions by pane index for the active topic', () => {

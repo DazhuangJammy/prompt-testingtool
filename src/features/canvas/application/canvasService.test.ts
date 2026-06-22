@@ -4,10 +4,12 @@ import {
   deleteCanvasEdge,
   deleteCanvasStroke,
   deleteImageNodeRecord,
+  deleteInputCardRecord,
   deleteShapeNodeRecord,
   deleteTextNodeRecord,
   persistCanvasStrokePosition,
   persistImageNodePosition,
+  persistInputCardPosition,
   persistPromptNodeChanges,
   persistPromptNodePosition,
   persistShapeNodePosition,
@@ -24,6 +26,7 @@ vi.mock('@/features/canvas/infrastructure/canvasRepository', () => ({
     deleteEdge: vi.fn(),
     deleteShapeNode: vi.fn(),
     deleteImageNode: vi.fn(),
+    deleteInputCard: vi.fn(),
     deleteStroke: vi.fn(),
     deleteTextNode: vi.fn(),
     touchCanvas: vi.fn(),
@@ -31,6 +34,7 @@ vi.mock('@/features/canvas/infrastructure/canvasRepository', () => ({
     savePastedElements: vi.fn(),
     updateStroke: vi.fn(),
     updateImageNode: vi.fn(),
+    updateInputCard: vi.fn(),
     updateShapeNode: vi.fn(),
     updateTextNode: vi.fn(),
     updatePromptCardPosition: vi.fn(),
@@ -199,6 +203,32 @@ describe('canvas service', () => {
     expect(canvasRepository.touchCanvas).toHaveBeenCalledWith('canvas-1')
   })
 
+  it('persists input card positions', async () => {
+    vi.clearAllMocks()
+
+    await persistInputCardPosition(
+      'input',
+      { x: 12, y: 18 },
+      [
+        {
+          id: 'input',
+          canvasId: 'canvas-1',
+          title: 'Input',
+          markdown: '# 第一轮\n\n正文',
+          position: { x: 0, y: 0 },
+          createdAt: 'now',
+          updatedAt: 'now',
+        },
+      ],
+      'canvas-1',
+    )
+
+    expect(canvasRepository.updateInputCard).toHaveBeenCalledWith('input', {
+      position: { x: 12, y: 18 },
+    })
+    expect(canvasRepository.touchCanvas).toHaveBeenCalledWith('canvas-1')
+  })
+
 
   it('persists moved stroke points from the final node position', async () => {
     vi.clearAllMocks()
@@ -283,6 +313,16 @@ describe('canvas service', () => {
 
     expect(canvasRepository.deleteEdgesForNode).not.toHaveBeenCalled()
     expect(canvasRepository.deleteImageNode).toHaveBeenCalledWith('image')
+    expect(canvasRepository.touchCanvas).toHaveBeenCalledWith('canvas-1')
+  })
+
+  it('deletes only input card records', async () => {
+    vi.clearAllMocks()
+
+    await deleteInputCardRecord('input', 'canvas-1')
+
+    expect(canvasRepository.deleteEdgesForNode).not.toHaveBeenCalled()
+    expect(canvasRepository.deleteInputCard).toHaveBeenCalledWith('input')
     expect(canvasRepository.touchCanvas).toHaveBeenCalledWith('canvas-1')
   })
 

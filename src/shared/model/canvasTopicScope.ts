@@ -1,6 +1,7 @@
 import type {
   CanvasEdge,
   CanvasImageNode,
+  InputCard,
   CanvasShapeNode,
   CanvasStroke,
   CanvasTextNode,
@@ -10,13 +11,16 @@ import type {
 export interface CanvasTopicRecords {
   canvasEdges: CanvasEdge[]
   canvasImageNodes: CanvasImageNode[]
+  inputCards: InputCard[]
   canvasShapeNodes: CanvasShapeNode[]
   canvasStrokes: CanvasStroke[]
   canvasTextNodes: CanvasTextNode[]
   promptCards: PromptCard[]
 }
 
-export interface CanvasTopicScopeOptions extends CanvasTopicRecords {
+export interface CanvasTopicScopeOptions
+  extends Omit<CanvasTopicRecords, 'inputCards'> {
+  inputCards?: InputCard[]
   promptCardId?: string
   sessionId?: string
   sessionCreatedAt?: string
@@ -27,6 +31,7 @@ type TopicScopedRecord = { createdAt: string; id: string; topicSessionId?: strin
 export function filterCanvasRecordsForTopic({
   canvasEdges,
   canvasImageNodes,
+  inputCards = [],
   canvasShapeNodes,
   canvasStrokes,
   canvasTextNodes,
@@ -39,6 +44,7 @@ export function filterCanvasRecordsForTopic({
     return filterRecordsByTopicSession({
       canvasEdges,
       canvasImageNodes,
+      inputCards,
       canvasShapeNodes,
       canvasStrokes,
       canvasTextNodes,
@@ -49,6 +55,7 @@ export function filterCanvasRecordsForTopic({
   const records = {
     canvasEdges,
     canvasImageNodes,
+    inputCards,
     canvasShapeNodes,
     canvasStrokes,
     canvasTextNodes,
@@ -100,6 +107,7 @@ export function filterCanvasRecordsForTopic({
 export function hasTopicRecords(records: CanvasTopicRecords) {
   return (
     records.promptCards.length > 0 ||
+    records.inputCards.length > 0 ||
     records.canvasShapeNodes.length > 0 ||
     records.canvasImageNodes.length > 0 ||
     records.canvasStrokes.length > 0 ||
@@ -113,6 +121,7 @@ function filterRecordsByTopicSession(
 ): CanvasTopicRecords {
   const promptCards = filterByTopic(records.promptCards, sessionId)
   const canvasImageNodes = filterByTopic(records.canvasImageNodes, sessionId)
+  const inputCards = filterByTopic(records.inputCards, sessionId)
   const canvasShapeNodes = filterByTopic(records.canvasShapeNodes, sessionId)
   const canvasStrokes = filterByTopic(records.canvasStrokes, sessionId)
   const canvasTextNodes = filterByTopic(records.canvasTextNodes, sessionId)
@@ -120,6 +129,7 @@ function filterRecordsByTopicSession(
   return {
     promptCards,
     canvasImageNodes,
+    inputCards,
     canvasShapeNodes,
     canvasStrokes,
     canvasTextNodes,
@@ -128,6 +138,7 @@ function filterRecordsByTopicSession(
       collectNodeIds({
         promptCards,
         canvasImageNodes,
+        inputCards,
         canvasShapeNodes,
         canvasStrokes,
         canvasTextNodes,
@@ -160,6 +171,11 @@ function filterLegacyBatchByPromptCardCreatedAt(
     createdAt,
     sessionId,
   )
+  const inputCards = filterLegacyByCreatedAt(
+    records.inputCards,
+    createdAt,
+    sessionId,
+  )
   const canvasShapeNodes = filterLegacyByCreatedAt(
     records.canvasShapeNodes,
     createdAt,
@@ -178,6 +194,7 @@ function filterLegacyBatchByPromptCardCreatedAt(
   const nodeIds = collectNodeIds({
     promptCards,
     canvasImageNodes,
+    inputCards,
     canvasShapeNodes,
     canvasStrokes,
     canvasTextNodes,
@@ -191,6 +208,7 @@ function filterLegacyBatchByPromptCardCreatedAt(
   if (promptCards.length <= 1 && !hasTopicRecords({
     promptCards: [],
     canvasImageNodes,
+    inputCards,
     canvasShapeNodes,
     canvasStrokes,
     canvasTextNodes,
@@ -202,6 +220,7 @@ function filterLegacyBatchByPromptCardCreatedAt(
   return {
     canvasEdges,
     canvasImageNodes,
+    inputCards,
     canvasShapeNodes,
     canvasStrokes,
     canvasTextNodes,
@@ -227,6 +246,7 @@ function filterLegacyConnectedRecords(
 
   const promptCards = filterUnscopedByIds(records.promptCards, reachableIds)
   const canvasImageNodes = filterUnscopedByIds(records.canvasImageNodes, reachableIds)
+  const inputCards = filterUnscopedByIds(records.inputCards, reachableIds)
   const canvasShapeNodes = filterUnscopedByIds(records.canvasShapeNodes, reachableIds)
   const canvasStrokes = filterUnscopedByIds(records.canvasStrokes, reachableIds)
   const canvasTextNodes = filterUnscopedByIds(records.canvasTextNodes, reachableIds)
@@ -234,6 +254,7 @@ function filterLegacyConnectedRecords(
   return {
     promptCards,
     canvasImageNodes,
+    inputCards,
     canvasShapeNodes,
     canvasStrokes,
     canvasTextNodes,
@@ -275,6 +296,10 @@ function mergeTopicRecords(
     canvasImageNodes: uniqueById([
       ...first.canvasImageNodes,
       ...second.canvasImageNodes,
+    ]),
+    inputCards: uniqueById([
+      ...first.inputCards,
+      ...second.inputCards,
     ]),
     canvasShapeNodes: uniqueById([
       ...first.canvasShapeNodes,
@@ -322,6 +347,7 @@ function filterUnscopedRecordsCreatedSince(
     records.canvasImageNodes,
     createdAt,
   )
+  const inputCards = filterUnscopedCreatedSince(records.inputCards, createdAt)
   const canvasShapeNodes = filterUnscopedCreatedSince(
     records.canvasShapeNodes,
     createdAt,
@@ -334,6 +360,7 @@ function filterUnscopedRecordsCreatedSince(
   const nodeIds = collectNodeIds({
     promptCards,
     canvasImageNodes,
+    inputCards,
     canvasShapeNodes,
     canvasStrokes,
     canvasTextNodes,
@@ -346,6 +373,7 @@ function filterUnscopedRecordsCreatedSince(
   const scoped = {
     canvasEdges,
     canvasImageNodes,
+    inputCards,
     canvasShapeNodes,
     canvasStrokes,
     canvasTextNodes,
@@ -411,6 +439,7 @@ function filterEdgesForNodes(edges: CanvasEdge[], nodeIds: Set<string>) {
 
 function collectNodeIds({
   canvasImageNodes,
+  inputCards,
   canvasShapeNodes,
   canvasStrokes,
   canvasTextNodes,
@@ -419,6 +448,7 @@ function collectNodeIds({
   return new Set([
     ...promptCards.map((card) => card.id),
     ...canvasImageNodes.map((node) => node.id),
+    ...inputCards.map((card) => card.id),
     ...canvasShapeNodes.map((node) => node.id),
     ...canvasStrokes.map((stroke) => stroke.id),
     ...canvasTextNodes.map((node) => node.id),

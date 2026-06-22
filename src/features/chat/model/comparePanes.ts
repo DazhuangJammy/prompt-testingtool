@@ -75,7 +75,13 @@ export function syncComparePanes(
   parentSessionId?: string,
   childSessions: ChatSession[] = [],
 ) {
-  const panes = ensureMinimumComparePanes(current)
+  const panes = compareOpen
+    ? ensureMinimumComparePanes(current)
+    : current.slice(0, MAX_COMPARE_PANES)
+  if (!compareOpen) {
+    return areComparePanesEqual(current, panes) ? current : panes
+  }
+
   const childSessionByIndex = new Map(
     selectActiveCompareChildSessions(childSessions)
       .map((session) => [session.comparePaneIndex, session]),

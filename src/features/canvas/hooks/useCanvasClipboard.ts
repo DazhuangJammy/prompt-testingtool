@@ -20,6 +20,7 @@ import type {
   CanvasEdge,
   CanvasImageNode,
   CanvasPoint,
+  InputCard,
   CanvasShapeNode,
   CanvasStroke,
   CanvasTextNode,
@@ -31,6 +32,7 @@ interface UseCanvasClipboardOptions {
   canvasId?: string
   topicSessionId?: string
   promptCards: PromptCard[]
+  inputCards: InputCard[]
   reactFlow: ReactFlowInstance<CanvasFlowNode, Edge>
   selectedFlowIds: {
     edges: string[]
@@ -55,6 +57,7 @@ export function useCanvasClipboard({
   shapeNodes,
   strokes,
   imageNodes,
+  inputCards,
   textNodes,
   topicSessionId,
 }: UseCanvasClipboardOptions) {
@@ -80,6 +83,7 @@ export function useCanvasClipboard({
     const nextClipboard = createCanvasClipboard({
       edges: canvasEdges,
       imageNodes,
+      inputCards,
       promptCards,
       selectedNodeIds,
       shapeNodes,
@@ -91,6 +95,7 @@ export function useCanvasClipboard({
   }, [
     canvasEdges,
     imageNodes,
+    inputCards,
     promptCards,
     reactFlow,
     selectedFlowIds.nodes,

@@ -2,6 +2,7 @@ import { db } from '@/shared/storage/db'
 import type {
   CanvasEdge,
   CanvasImageNode,
+  InputCard,
   CanvasShapeNode,
   CanvasStroke,
   CanvasTextNode,
@@ -20,6 +21,28 @@ export const canvasRepository = {
     position: PromptCard['position'],
   ) {
     await db.promptCards.update(id, { position, updatedAt: nowIso() })
+  },
+
+  async saveInputCard(card: InputCard) {
+    await db.inputCards.put(card)
+    await this.touchCanvas(card.canvasId)
+  },
+
+  async updateInputCard(
+    id: string,
+    updates: Partial<
+      Pick<InputCard, 'frameStyle' | 'markdown' | 'position' | 'title'>
+    >,
+  ) {
+    await db.inputCards.update(id, { ...updates, updatedAt: nowIso() })
+  },
+
+  async deleteInputCard(id: string) {
+    await db.inputCards.delete(id)
+  },
+
+  async listInputCardsByCanvas(canvasId: string) {
+    return db.inputCards.where('canvasId').equals(canvasId).sortBy('updatedAt')
   },
 
   async saveShapeNode(node: CanvasShapeNode) {
@@ -110,6 +133,7 @@ export const canvasRepository = {
     canvasId,
     edges,
     imageNodes,
+    inputCards = [],
     promptCards,
     shapeNodes,
     strokes,
@@ -118,6 +142,7 @@ export const canvasRepository = {
     canvasId: string
     edges: CanvasEdge[]
     imageNodes: CanvasImageNode[]
+    inputCards?: InputCard[]
     promptCards: PromptCard[]
     shapeNodes: CanvasShapeNode[]
     strokes: CanvasStroke[]
@@ -128,6 +153,7 @@ export const canvasRepository = {
       [
         db.canvases,
         db.promptCards,
+        db.inputCards,
         db.canvasShapeNodes,
         db.canvasEdges,
         db.canvasImageNodes,
@@ -137,6 +163,7 @@ export const canvasRepository = {
       async () => {
         await Promise.all([
           promptCards.length ? db.promptCards.bulkPut(promptCards) : undefined,
+          inputCards.length ? db.inputCards.bulkPut(inputCards) : undefined,
           shapeNodes.length ? db.canvasShapeNodes.bulkPut(shapeNodes) : undefined,
           imageNodes.length ? db.canvasImageNodes.bulkPut(imageNodes) : undefined,
           textNodes.length ? db.canvasTextNodes.bulkPut(textNodes) : undefined,

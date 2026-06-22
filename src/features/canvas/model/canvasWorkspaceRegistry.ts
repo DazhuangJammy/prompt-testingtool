@@ -3,6 +3,7 @@ import CanvasImageNode from '@/features/canvas/components/CanvasImageNode'
 import FlowShapeNode from '@/features/canvas/components/FlowShapeNode'
 import FreeTextNode from '@/features/canvas/components/FreeTextNode'
 import FreehandStrokeNode from '@/features/canvas/components/FreehandStrokeNode'
+import InputCardNode from '@/features/input-card/InputCardNode'
 import PromptCardNode from '@/features/prompt-card/PromptCardNode'
 
 export const canvasNodeTypes = {
@@ -10,6 +11,7 @@ export const canvasNodeTypes = {
   freeText: FreeTextNode,
   freehandStroke: FreehandStrokeNode,
   flowShape: FlowShapeNode,
+  inputCard: InputCardNode,
   promptCard: PromptCardNode,
 } satisfies NodeTypes
 

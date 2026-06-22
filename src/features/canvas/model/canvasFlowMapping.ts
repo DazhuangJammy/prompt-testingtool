@@ -5,6 +5,7 @@ import {
 } from '@/features/canvas/model/strokeGeometry'
 import type {
   CanvasImageFlowNode,
+  InputCardFlowNode,
   CanvasShapeFlowNode,
   CanvasStrokeFlowNode,
   CanvasTextFlowNode,
@@ -13,6 +14,7 @@ import type { PromptFlowNode } from '@/features/prompt-card/PromptCardNode.types
 import type {
   CanvasEdge,
   CanvasImageNode,
+  InputCard,
   CanvasShapeNode,
   CanvasStroke,
   CanvasTextNode,
@@ -23,6 +25,7 @@ import type {
 
 export type CanvasFlowNode =
   | PromptFlowNode
+  | InputCardFlowNode
   | CanvasImageFlowNode
   | CanvasShapeFlowNode
   | CanvasTextFlowNode
@@ -34,11 +37,14 @@ interface CreateCanvasNodesOptions {
   promptOptimizationSettings?: DefaultModelSettings
   selectedNodeIds: string[]
   imageNodes: CanvasImageNode[]
+  inputCards?: InputCard[]
   shapeNodes: CanvasShapeNode[]
   strokes: CanvasStroke[]
   textNodes: CanvasTextNode[]
   onSavePromptCard: (card: PromptCard) => void
+  onSaveInputCard?: (card: InputCard) => void
   onSelectPrompt: (id: string) => void
+  onSelectInputCard?: (id: string) => void
   onSelectShape: (id: string) => void
   onSelectImage: (id: string) => void
   onSelectText: (id: string) => void
@@ -74,7 +80,9 @@ interface CreateCanvasNodesOptions {
 
 export function createCanvasFlowNodes({
   onSavePromptCard,
+  onSaveInputCard = () => undefined,
   onSelectPrompt,
+  onSelectInputCard = () => undefined,
   onSelectImage,
   onSelectShape,
   onSelectText,
@@ -86,6 +94,7 @@ export function createCanvasFlowNodes({
   promptOptimizationSettings,
   selectedNodeIds,
   imageNodes,
+  inputCards = [],
   shapeNodes,
   strokes,
   textNodes,
@@ -124,6 +133,21 @@ export function createCanvasFlowNodes({
           selectedNodeId: selectedNodeIds.includes(node.id) ? node.id : undefined,
           onSelect: onSelectShape,
           onUpdate: onUpdateShape,
+        },
+      }),
+    ),
+    ...inputCards.map(
+      (card): InputCardFlowNode => ({
+        id: card.id,
+        dragHandle: '.input-card-drag-area',
+        selected: selectedNodeIds.includes(card.id),
+        type: 'inputCard',
+        position: card.position,
+        data: {
+          card,
+          selectedCardId: selectedNodeIds.includes(card.id) ? card.id : undefined,
+          onSelect: onSelectInputCard,
+          onChange: onSaveInputCard,
         },
       }),
     ),
@@ -335,6 +359,12 @@ function toComparableFlowNodeData(node: CanvasFlowNode) {
       card: node.data.card,
       promptOptimizationProvider: node.data.promptOptimizationProvider,
       promptOptimizationSettings: node.data.promptOptimizationSettings,
+      selectedCardId: node.data.selectedCardId,
+    }
+  }
+  if (node.type === 'inputCard') {
+    return {
+      card: node.data.card,
       selectedCardId: node.data.selectedCardId,
     }
   }

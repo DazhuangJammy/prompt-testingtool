@@ -31,6 +31,19 @@ export interface PromptCard {
   updatedAt: string
 }
 
+export interface InputCard {
+  id: string
+  canvasId: string
+  topicSessionId?: string
+  title: string
+  position: { x: number; y: number }
+  markdown: string
+  collapsedMarkdownHeadingIds?: string[]
+  frameStyle?: CanvasNodeFrameStyle
+  createdAt: string
+  updatedAt: string
+}
+
 export type CanvasShapeKind = 'step' | 'decision' | 'text'
 
 export interface CanvasPoint {
@@ -367,10 +380,11 @@ export interface CompareRun {
 }
 
 export interface ExportPayload {
-  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
+  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
   exportedAt: string
   canvases: Canvas[]
   promptCards: PromptCard[]
+  inputCards?: InputCard[]
   canvasShapeNodes?: CanvasShapeNode[]
   canvasEdges?: CanvasEdge[]
   canvasStrokes?: CanvasStroke[]
@@ -394,6 +408,7 @@ export interface ChatTopicExportPayload {
   childChatSessions?: ChatSession[]
   chatMessages: ChatMessage[]
   promptCards: PromptCard[]
+  inputCards?: InputCard[]
   canvasShapeNodes?: CanvasShapeNode[]
   canvasEdges?: CanvasEdge[]
   canvasStrokes?: CanvasStroke[]

@@ -46,6 +46,13 @@ vi.mock('@/shared/storage/db', () => ({
       update: vi.fn(),
       where: vi.fn(() => ({ equals: vi.fn(() => ({ sortBy: vi.fn(() => []) })) })),
     },
+    inputCards: {
+      bulkPut: vi.fn(),
+      delete: vi.fn(),
+      put: vi.fn(),
+      update: vi.fn(),
+      where: vi.fn(() => ({ equals: vi.fn(() => ({ sortBy: vi.fn(() => []) })) })),
+    },
     promptCards: { bulkPut: vi.fn(), put: vi.fn(), update: vi.fn() },
     transaction: vi.fn(async (_mode, _tables, callback) => callback()),
   },
@@ -76,6 +83,31 @@ describe('canvas repository', () => {
       position: { x: 1, y: 2 },
       updatedAt: expect.any(String),
     })
+  })
+
+  it('saves, updates, deletes and lists input cards', async () => {
+    const inputCard = {
+      id: 'input',
+      canvasId: 'canvas',
+      title: 'Input',
+      markdown: '# 第一轮\n\n正文',
+      position: { x: 1, y: 2 },
+      createdAt: 'now',
+      updatedAt: 'now',
+    }
+
+    await canvasRepository.saveInputCard(inputCard)
+    await canvasRepository.updateInputCard('input', { title: 'Next' })
+    await canvasRepository.deleteInputCard('input')
+    await canvasRepository.listInputCardsByCanvas('canvas')
+
+    expect(db.inputCards.put).toHaveBeenCalledWith(inputCard)
+    expect(db.inputCards.update).toHaveBeenCalledWith('input', {
+      title: 'Next',
+      updatedAt: expect.any(String),
+    })
+    expect(db.inputCards.delete).toHaveBeenCalledWith('input')
+    expect(db.inputCards.where).toHaveBeenCalledWith('canvasId')
   })
 
   it('touches canvas', async () => {
@@ -287,6 +319,17 @@ describe('canvas repository', () => {
           updatedAt: 'now',
         },
       ],
+      inputCards: [
+        {
+          id: 'input',
+          canvasId: 'canvas',
+          title: 'Input',
+          markdown: '# 第一轮\n\n正文',
+          position: { x: 1, y: 2 },
+          createdAt: 'now',
+          updatedAt: 'now',
+        },
+      ],
       promptCards: [card],
       shapeNodes: [
         {
@@ -333,6 +376,7 @@ describe('canvas repository', () => {
     expect(db.promptCards.bulkPut).toHaveBeenCalledWith([card])
     expect(db.canvasShapeNodes.bulkPut).toHaveBeenCalled()
     expect(db.canvasImageNodes.bulkPut).toHaveBeenCalled()
+    expect(db.inputCards.bulkPut).toHaveBeenCalled()
     expect(db.canvasTextNodes.bulkPut).toHaveBeenCalled()
     expect(db.canvasStrokes.bulkPut).toHaveBeenCalled()
     expect(db.canvasEdges.bulkPut).toHaveBeenCalled()
