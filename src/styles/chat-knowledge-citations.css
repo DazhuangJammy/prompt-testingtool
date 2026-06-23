@@ -255,3 +255,202 @@
   color: var(--accent);
   font-size: 12px;
 }
+
+.web-search-results {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin: 0 0 10px;
+  overflow: hidden;
+}
+
+.web-search-results-head {
+  align-items: center;
+  background: color-mix(in srgb, var(--surface) 70%, var(--panel-2));
+  border: 0;
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  min-height: 38px;
+  padding: 0 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.web-search-results-head:hover {
+  background: var(--surface);
+}
+
+.web-search-results-head svg {
+  color: var(--muted);
+}
+
+.web-search-results-head span {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.web-search-results-head small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.web-search-results-list {
+  border-top: 1px solid var(--line);
+  display: grid;
+}
+
+.web-search-results-list a {
+  align-items: center;
+  color: var(--text);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 22px minmax(0, 1fr);
+  min-height: 42px;
+  padding: 8px 12px;
+  text-decoration: none;
+}
+
+.web-search-results-list a + a {
+  border-top: 1px solid var(--line);
+}
+
+.web-search-results-list a:hover {
+  background: var(--panel-2);
+}
+
+.web-search-results-list a > span {
+  align-items: center;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  display: inline-flex;
+  font-size: 11px;
+  height: 22px;
+  justify-content: center;
+  width: 22px;
+}
+
+.web-search-results-list strong {
+  font-size: 13px;
+  font-weight: 650;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.web-search-results-list small {
+  color: var(--muted);
+  font-size: 12px;
+  grid-column: 2;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.web-search-citation-marker-wrap {
+  display: inline-flex;
+  line-height: 1;
+  margin: 0 1px;
+  position: relative;
+  vertical-align: super;
+}
+
+.web-search-citation-marker {
+  align-items: center;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 680;
+  height: 18px;
+  justify-content: center;
+  min-width: 18px;
+  padding: 0 5px;
+  text-decoration: none;
+}
+
+.web-search-citation-marker:hover,
+.web-search-citation-marker:focus-visible {
+  background: var(--panel-2);
+  border-color: var(--line-strong);
+}
+
+.web-search-citation-tooltip {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  bottom: calc(100% + 8px);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  display: grid;
+  gap: 8px;
+  left: 50%;
+  line-height: 1.5;
+  max-width: min(360px, calc(100vw - 40px));
+  min-width: min(300px, calc(100vw - 40px));
+  opacity: 0;
+  padding: 14px;
+  pointer-events: none;
+  position: absolute;
+  transform: translateX(-50%) translateY(4px);
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+  visibility: hidden;
+  z-index: 35;
+}
+
+.web-search-citation-marker-wrap:hover .web-search-citation-tooltip,
+.web-search-citation-marker-wrap:focus-within .web-search-citation-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  visibility: visible;
+}
+
+.web-search-citation-tooltip button {
+  display: none;
+}
+
+.web-search-citation-tooltip strong {
+  font-size: 14px;
+  font-weight: 680;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.web-search-citation-tooltip span {
+  color: var(--muted);
+  display: -webkit-box;
+  font-size: 13px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.web-search-citation-tooltip small {
+  align-items: center;
+  color: var(--accent);
+  display: inline-flex;
+  font-size: 12px;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.web-search-citation-tooltip small svg {
+  flex: 0 0 auto;
+  height: 13px;
+  width: 13px;
+}

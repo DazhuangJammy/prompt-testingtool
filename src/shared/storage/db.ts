@@ -22,6 +22,7 @@ import type {
   SkillAnalysisSnapshot,
   SkillsLabSettings,
   SkillTopic,
+  WebSearchSettings,
 } from '@/shared/types'
 
 class PromptCanvasDatabase extends Dexie {
@@ -47,6 +48,7 @@ class PromptCanvasDatabase extends Dexie {
   skillLabMessages!: Table<SkillLabMessage, string>
   skillAnalysisSnapshots!: Table<SkillAnalysisSnapshot, string>
   skillsLabSettings!: Table<SkillsLabSettings, string>
+  webSearchSettings!: Table<WebSearchSettings, string>
 
   constructor() {
     super('prompt-canvas-tool')
@@ -249,6 +251,31 @@ class PromptCanvasDatabase extends Dexie {
       skillLabMessages: 'id, topicId, agentSessionId, createdAt',
       skillAnalysisSnapshots: 'id, topicId, createdAt',
       skillsLabSettings: 'id, updatedAt',
+      knowledgeBases: 'id, providerType, updatedAt',
+      knowledgeItems: 'id, baseId, sourceType, status, updatedAt',
+      knowledgeChunks: 'id, baseId, itemId, [baseId+itemId], createdAt',
+    })
+    this.version(13).stores({
+      canvases: 'id, updatedAt',
+      promptCards: 'id, canvasId, updatedAt',
+      inputCards: 'id, canvasId, updatedAt',
+      canvasShapeNodes: 'id, canvasId, updatedAt',
+      canvasEdges: 'id, canvasId, sourceId, targetId, updatedAt',
+      canvasStrokes: 'id, canvasId, updatedAt',
+      canvasTextNodes: 'id, canvasId, updatedAt',
+      canvasImageNodes: 'id, canvasId, updatedAt',
+      promptVersions: 'id, promptCardId, createdAt',
+      providerConfigs: 'id, updatedAt',
+      defaultModelSettings: 'id, updatedAt',
+      chatSessions: 'id, canvasId, promptCardId, parentSessionId, hidden, updatedAt',
+      chatMessages: 'id, sessionId, createdAt, promptVersionId',
+      chatKnowledgeSelections: 'id, sessionId, updatedAt',
+      compareRuns: 'id, promptCardId, createdAt',
+      skillTopics: 'id, skillPath, agentSessionId, updatedAt',
+      skillLabMessages: 'id, topicId, agentSessionId, createdAt',
+      skillAnalysisSnapshots: 'id, topicId, createdAt',
+      skillsLabSettings: 'id, updatedAt',
+      webSearchSettings: 'id, updatedAt',
       knowledgeBases: 'id, providerType, updatedAt',
       knowledgeItems: 'id, baseId, sourceType, status, updatedAt',
       knowledgeChunks: 'id, baseId, itemId, [baseId+itemId], createdAt',

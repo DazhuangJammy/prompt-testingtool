@@ -208,6 +208,11 @@
   color: var(--text);
 }
 
+.web-search-pill {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  border-color: var(--line-strong);
+}
+
 .knowledge-pill button svg {
   height: 13px;
   width: 13px;
@@ -293,4 +298,67 @@
 
 .prompt-mode-menu button {
   grid-template-columns: 1fr auto;
+}
+
+.web-search-provider-menu {
+  min-width: min(360px, calc(100vw - 36px));
+}
+
+.web-search-provider-menu button {
+  grid-template-columns: minmax(160px, 1fr) auto;
+  min-height: 44px;
+}
+
+.web-search-provider-menu button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.web-search-provider-menu-main {
+  align-items: center;
+  display: inline-flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.web-search-provider-glyph {
+  align-items: center;
+  background: color-mix(in srgb, var(--line-strong) 18%, var(--surface));
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--muted);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 760;
+  height: 22px;
+  justify-content: center;
+  line-height: 1;
+  width: 22px;
+}
+
+.web-search-provider-menu button.is-active .web-search-provider-glyph {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.web-search-provider-menu-footer {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  display: flex;
+  font-size: 12px;
+  justify-content: space-between;
+  margin-top: 4px;
+  min-height: 34px;
+  padding: 6px 8px 0;
+}
+
+.web-search-provider-menu-footer span {
+  color: var(--muted);
+  font-weight: 520;
+}
+
+.web-search-provider-menu-disable {
+  margin-top: 2px;
 }

@@ -1,20 +1,69 @@
-import { Search } from 'lucide-react'
+import { Search, Type } from 'lucide-react'
+import {
+  APP_FONT_OPTIONS,
+  getAppFontOption,
+  type AppFontId,
+} from '@/shared/model/appFont'
 import type { SelectionMagnifierSettings } from '@/shared/model/selectionMagnifier'
 
 interface OtherSettingsPanelProps {
+  appFontId: AppFontId
   selectionMagnifier: SelectionMagnifierSettings
+  onAppFontChange: (fontId: AppFontId) => void
   onSelectionMagnifierChange: (settings: Partial<SelectionMagnifierSettings>) => void
 }
 
 export function OtherSettingsPanel({
+  appFontId,
+  onAppFontChange,
   onSelectionMagnifierChange,
   selectionMagnifier,
 }: OtherSettingsPanelProps) {
+  const selectedFont = getAppFontOption(appFontId)
+
   return (
     <section className="other-settings-card">
       <div className="other-settings-head">
         <h2>其他设置</h2>
         <span>针对画布和聊天区域的辅助功能</span>
+      </div>
+
+      <div className="other-settings-feature">
+        <div className="other-settings-feature-head">
+          <div className="other-settings-feature-title">
+            <Type size={18} />
+            <div>
+              <strong>字体设置</strong>
+              <span>选择全站文字使用的字体风格</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="app-font-settings-controls">
+          <label className="settings-field">
+            <span>全站字体</span>
+            <select
+              aria-label="全站字体"
+              value={appFontId}
+              onChange={(event) => onAppFontChange(event.target.value as AppFontId)}
+            >
+              {APP_FONT_OPTIONS.map((font) => (
+                <option key={font.id} value={font.id}>
+                  {font.label}
+                </option>
+              ))}
+            </select>
+            <small>{selectedFont.description}</small>
+          </label>
+
+          <div
+            className="app-font-preview"
+            style={{ fontFamily: selectedFont.fontFamily }}
+          >
+            <strong>高级字体预览</strong>
+            <span>提示词工具 · ChatGPT 风格 · 字体清晰耐看</span>
+          </div>
+        </div>
       </div>
 
       <div className="other-settings-feature">

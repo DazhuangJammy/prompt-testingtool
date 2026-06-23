@@ -103,10 +103,12 @@
 
 .flow-shape-body {
   background: transparent;
-  color: color-mix(in srgb, var(--text) 72%, var(--muted));
+  color: var(--text);
   flex: 1 1 auto;
-  font-size: 13px;
-  line-height: 1.56;
+  font-family: var(--serif);
+  font-size: var(--reading-font-size);
+  font-kerning: normal;
+  line-height: var(--reading-line-height);
   margin: 0;
   max-width: 100%;
   min-height: 0;
@@ -120,8 +122,8 @@
 
 .flow-shape-body.markdown-preview {
   background: transparent;
-  font-size: 13px;
-  line-height: 1.56;
+  font-size: var(--reading-font-size);
+  line-height: var(--reading-line-height);
   max-height: none;
   min-height: 0;
   padding: 0 2px 0 0;
@@ -130,7 +132,7 @@
 .flow-shape-body.markdown-preview p,
 .flow-shape-body.markdown-preview ul,
 .flow-shape-body.markdown-preview ol {
-  margin: 0 0 8px;
+  margin: 0 0 var(--reading-paragraph-gap);
 }
 
 .flow-shape-body.markdown-preview p {
@@ -143,7 +145,7 @@
 }
 
 .flow-shape-body.markdown-preview li + li {
-  margin-top: 4px;
+  margin-top: var(--reading-list-item-gap);
 }
 
 .flow-shape-decision .flow-shape-body {
@@ -194,10 +196,11 @@
 }
 
 .flow-shape-editor textarea {
-  color: color-mix(in srgb, var(--text) 72%, var(--muted));
+  color: var(--text);
   flex: 1;
-  font-size: 13px;
-  line-height: 1.56;
+  font-family: var(--serif);
+  font-size: var(--reading-font-size);
+  line-height: var(--reading-line-height);
   min-height: 0;
   overflow: auto;
   padding: 0;
@@ -233,7 +236,7 @@
   .flow-shape-step-content .flow-shape-body,
   .flow-shape-step .flow-shape-editor textarea {
     font-size: 16px;
-    line-height: 1.66;
+    line-height: var(--reading-line-height);
   }
 }
 
@@ -251,6 +254,6 @@
   .flow-shape-step-content .flow-shape-body,
   .flow-shape-step .flow-shape-editor textarea {
     font-size: 18px;
-    line-height: 1.7;
+    line-height: var(--reading-line-height);
   }
 }

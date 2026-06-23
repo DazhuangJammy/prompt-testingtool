@@ -31,9 +31,15 @@ import {
   KnowledgeCitationSummary,
 } from './KnowledgeCitations'
 import {
+  WebSearchAnswerContent,
+  WebSearchCitationSummary,
+} from './WebSearchCitations'
+import {
   appendMissingKnowledgeCitationMarks,
   createKnowledgeCitations,
 } from '@/features/chat/model/knowledgeCitations'
+
+const defaultThinkingCollapsed = true
 
 interface MessageListProps {
   messages: ChatMessage[]
@@ -49,10 +55,7 @@ interface ImagePreviewItem {
 export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
   const [editingId, setEditingId] = useState<string>()
   const [previewItem, setPreviewItem] = useState<ImagePreviewItem>()
-  const [collapsedThinkingIds, setCollapsedThinkingIds] = useState<Set<string>>(
-    () => new Set(),
-  )
-  const [autoCollapsedThinkingIds, setAutoCollapsedThinkingIds] = useState<Set<string>>(
+  const [expandedThinkingIds, setExpandedThinkingIds] = useState<Set<string>>(
     () => new Set(),
   )
   const [draft, setDraft] = useState('')
@@ -74,38 +77,6 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
       setExportError(error instanceof Error ? error.message : '复制失败')
     }
   }
-
-  useEffect(() => {
-    const ids = messages
-      .filter((message) => {
-        const parsed = splitThinkingBlock(message.content)
-        return (
-          message.role === 'assistant' &&
-          message.thinkingMode !== 'off' &&
-          message.status === 'complete' &&
-          parsed.thinking &&
-          !autoCollapsedThinkingIds.has(message.id)
-        )
-      })
-      .map((message) => message.id)
-
-    if (!ids.length) return
-
-    const timer = window.setTimeout(() => {
-      setCollapsedThinkingIds((current) => {
-        const next = new Set(current)
-        ids.forEach((id) => next.add(id))
-        return next
-      })
-      setAutoCollapsedThinkingIds((current) => {
-        const next = new Set(current)
-        ids.forEach((id) => next.add(id))
-        return next
-      })
-    }, 0)
-
-    return () => window.clearTimeout(timer)
-  }, [autoCollapsedThinkingIds, messages])
 
   useEffect(() => {
     if (!previewItem) return
@@ -137,7 +108,8 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
               ? '空回复'
               : '')
           const showBubble = isEditing || Boolean(answerText) || attachments.length > 0
-          const thinkingCollapsed = collapsedThinkingIds.has(message.id)
+          const thinkingCollapsed =
+            defaultThinkingCollapsed && !expandedThinkingIds.has(message.id)
 
           return (
             <article className={`message is-${message.role}`} key={message.id}>
@@ -147,7 +119,7 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
                     type="button"
                     className="thinking-head"
                     onClick={() =>
-                      setCollapsedThinkingIds((current) => {
+                      setExpandedThinkingIds((current) => {
                         const next = new Set(current)
                         if (next.has(message.id)) next.delete(message.id)
                         else next.add(message.id)
@@ -185,6 +157,11 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
                           knowledgeReferences={
                             message.role === 'assistant'
                               ? message.knowledgeReferences ?? []
+                              : []
+                          }
+                          webSearchReferences={
+                            message.role === 'assistant'
+                              ? message.webSearchReferences ?? []
                               : []
                           }
                           onPreview={setPreviewItem}
@@ -283,16 +260,20 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
 interface MessageContentProps {
   content: string
   knowledgeReferences: ChatMessage['knowledgeReferences']
+  webSearchReferences: ChatMessage['webSearchReferences']
   onPreview: (item: ImagePreviewItem) => void
 }
 
 function MessageContent({
   content,
   knowledgeReferences = [],
+  webSearchReferences = [],
   onPreview,
 }: MessageContentProps) {
   const citations = createKnowledgeCitations(knowledgeReferences)
-  const displayContent = appendMissingKnowledgeCitationMarks(content, citations)
+  const displayContent = webSearchReferences.length
+    ? content
+    : appendMissingKnowledgeCitationMarks(content, citations)
   const blocks = splitSvgPreviewBlocks(displayContent)
   if (!blocks.length) return null
 
@@ -301,9 +282,21 @@ function MessageContent({
       {knowledgeReferences.length > 0 && (
         <KnowledgeCitationSummary references={knowledgeReferences} />
       )}
+      {webSearchReferences.length > 0 && (
+        <WebSearchCitationSummary references={webSearchReferences} />
+      )}
       {blocks.map((block) =>
         block.kind === 'svg' ? (
           <SvgPreviewCard block={block} key={block.id} onPreview={onPreview} />
+        ) : webSearchReferences.length > 0 ? (
+          <WebSearchAnswerContent
+            content={block.markdown}
+            key={block.id}
+            references={webSearchReferences}
+            renderContent={(markdown) => (
+              <MarkdownRenderer>{markdown}</MarkdownRenderer>
+            )}
+          />
         ) : (
           <KnowledgeAnswerContent
             content={block.markdown}

@@ -19,6 +19,7 @@ import {
   exportChatTopic,
   importChatTopic,
 } from './chatTopicTransfer'
+import { normalizeWebSearchSettings } from '@/features/web-search/model/webSearchSettings'
 
 export const workspaceRepository = {
   async createCanvas(title?: string) {
@@ -139,7 +140,7 @@ export const workspaceRepository = {
     const defaultModelSettings = await db.defaultModelSettings.toArray()
 
     return {
-      version: 10,
+      version: 11,
       exportedAt: nowIso(),
       canvases: await db.canvases.toArray(),
       promptCards: await db.promptCards.toArray(),
@@ -162,6 +163,7 @@ export const workspaceRepository = {
       knowledgeItems: await db.knowledgeItems.toArray(),
       knowledgeChunks: await db.knowledgeChunks.toArray(),
       chatKnowledgeSelections: await db.chatKnowledgeSelections.toArray(),
+      webSearchSettings: await db.webSearchSettings.get('web-search'),
     }
   },
 
@@ -190,6 +192,7 @@ export const workspaceRepository = {
         db.knowledgeBases,
         db.knowledgeItems,
         db.knowledgeChunks,
+        db.webSearchSettings,
       ],
       async () => {
         await Promise.all([
@@ -211,6 +214,7 @@ export const workspaceRepository = {
           db.knowledgeBases.clear(),
           db.knowledgeItems.clear(),
           db.knowledgeChunks.clear(),
+          db.webSearchSettings.clear(),
         ])
 
         await Promise.all([
@@ -232,6 +236,9 @@ export const workspaceRepository = {
           db.knowledgeBases.bulkPut(payload.knowledgeBases ?? []),
           db.knowledgeItems.bulkPut(payload.knowledgeItems ?? []),
           db.knowledgeChunks.bulkPut(payload.knowledgeChunks ?? []),
+          payload.webSearchSettings
+            ? db.webSearchSettings.put(normalizeWebSearchSettings(payload.webSearchSettings))
+            : Promise.resolve(),
         ])
       },
     )

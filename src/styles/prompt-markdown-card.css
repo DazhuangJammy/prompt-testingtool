@@ -14,10 +14,10 @@
 
 .prompt-markdown-editor textarea {
   background: var(--surface);
-  font-family: var(--mono);
-  font-size: 12px;
+  font-family: var(--serif);
+  font-size: var(--reading-font-size);
   height: 420px;
-  line-height: 1.58;
+  line-height: var(--reading-line-height);
   padding: 12px;
   width: 100%;
 }
@@ -165,8 +165,10 @@
 .prompt-outline-body.markdown-preview {
   background: transparent;
   cursor: text;
-  font-size: 13px;
-  line-height: 1.66;
+  font-family: var(--serif);
+  font-size: var(--reading-font-size);
+  font-kerning: normal;
+  line-height: var(--reading-line-height);
   max-height: none;
   min-height: 0;
   padding: 11px 13px 13px;
@@ -211,9 +213,9 @@
 }
 
 .prompt-node-local-editor textarea {
-  font-family: var(--font);
-  font-size: 13px;
-  line-height: 1.66;
+  font-family: var(--serif);
+  font-size: var(--reading-font-size);
+  line-height: var(--reading-line-height);
   padding: 10px 12px 12px;
 }
 

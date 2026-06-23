@@ -87,13 +87,14 @@
   border: 1px solid var(--node-frame-color, transparent);
   border-radius: 6px;
   color: var(--free-text-color);
+  font-family: var(--serif);
   font-size: var(--free-text-size);
-  font-weight: 500;
+  font-weight: 450;
   font-kerning: normal;
-  line-height: 1.35;
-  min-height: 28px;
+  line-height: var(--reading-line-height);
+  min-height: 34px;
   min-width: 80px;
-  padding: 3px 5px;
+  padding: 4px 6px;
   position: relative;
   white-space: pre-wrap;
 }

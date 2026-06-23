@@ -8,6 +8,7 @@ import type {
   PromptCard,
   ProviderConfig,
   ThinkingMode,
+  WebSearchReference,
 } from '@/shared/types'
 import { createId } from '@/shared/utils/identity'
 import { nowIso } from '@/shared/utils/time'
@@ -112,12 +113,16 @@ export async function sendChatMessage({
   attachments = [],
   knowledgeContext = '',
   knowledgeReferences = [],
+  webSearchContext = '',
+  webSearchReferences = [],
   text,
   thinkingMode,
 }: {
   attachments?: ChatAttachment[]
   knowledgeContext?: string
   knowledgeReferences?: ChatKnowledgeReference[]
+  webSearchContext?: string
+  webSearchReferences?: WebSearchReference[]
   card: PromptCard
   defaultAssistantPrompt?: string
   history: ChatMessage[]
@@ -139,6 +144,7 @@ export async function sendChatMessage({
     content: text,
     attachments,
     knowledgeReferences,
+    webSearchReferences,
     promptVersionId: version.id,
     createdAt: nowIso(),
   }
@@ -150,6 +156,7 @@ export async function sendChatMessage({
     role: 'assistant',
     content: '',
     knowledgeReferences,
+    webSearchReferences,
     promptVersionId: version.id,
     thinkingMode,
     status: 'streaming',
@@ -172,6 +179,7 @@ export async function sendChatMessage({
       promptInjectionMode,
       userMessage.attachments,
       knowledgeContext,
+      webSearchContext,
     ),
     provider,
     setAssistantText: (value) => {
@@ -202,6 +210,8 @@ async function requestAssistantReply({
   attachments = [],
   knowledgeContext = '',
   knowledgeReferences = [],
+  webSearchContext = '',
+  webSearchReferences = [],
   card,
   defaultAssistantPrompt,
   history,
@@ -215,6 +225,8 @@ async function requestAssistantReply({
   attachments?: ChatAttachment[]
   knowledgeContext?: string
   knowledgeReferences?: ChatKnowledgeReference[]
+  webSearchContext?: string
+  webSearchReferences?: WebSearchReference[]
   card: PromptCard
   defaultAssistantPrompt?: string
   history: ChatMessage[]
@@ -234,6 +246,7 @@ async function requestAssistantReply({
     role: 'assistant',
     content: '',
     knowledgeReferences,
+    webSearchReferences,
     promptVersionId: version.id,
     thinkingMode,
     status: 'streaming',
@@ -255,6 +268,7 @@ async function requestAssistantReply({
       promptInjectionMode,
       attachments,
       knowledgeContext,
+      webSearchContext,
     ),
     provider,
     setAssistantText: (value) => {
@@ -386,6 +400,8 @@ export async function resendChatMessage({
   history,
   knowledgeContext = '',
   knowledgeReferences,
+  webSearchContext = '',
+  webSearchReferences,
   message,
   provider,
   promptInjectionMode,
@@ -399,6 +415,8 @@ export async function resendChatMessage({
   history: ChatMessage[]
   knowledgeContext?: string
   knowledgeReferences?: ChatKnowledgeReference[]
+  webSearchContext?: string
+  webSearchReferences?: WebSearchReference[]
   message: ChatMessage
   provider: ProviderConfig
   promptInjectionMode: PromptInjectionMode
@@ -416,6 +434,8 @@ export async function resendChatMessage({
     history: history.filter((item) => item.createdAt < message.createdAt),
     knowledgeContext,
     knowledgeReferences: knowledgeReferences ?? message.knowledgeReferences ?? [],
+    webSearchContext,
+    webSearchReferences: webSearchReferences ?? message.webSearchReferences ?? [],
     provider,
     promptInjectionMode,
     sessionId,

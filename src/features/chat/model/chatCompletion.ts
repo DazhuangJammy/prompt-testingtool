@@ -38,10 +38,11 @@ export const buildChatMessages = (
   injectionMode: PromptInjectionMode = 'system',
   nextAttachments: ChatAttachment[] = [],
   knowledgeContext = '',
+  webSearchContext = '',
 ): CompletionMessage[] => [
   {
     role: injectionMode === 'system' ? 'system' : 'user',
-    content: [prompt, knowledgeContext].filter(Boolean).join('\n\n'),
+    content: [prompt, knowledgeContext, webSearchContext].filter(Boolean).join('\n\n'),
   },
   ...history
     .filter((message) => message.role !== 'system')

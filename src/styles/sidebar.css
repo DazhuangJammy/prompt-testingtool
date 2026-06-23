@@ -140,9 +140,7 @@
   position: relative;
 }
 
-.project-row.is-dragging { opacity: 0.54; }
-
-.project-row:active { cursor: grabbing; }
+.project-row.is-dragging { opacity: 0.54; } .project-row:active { cursor: grabbing; }
 
 .project-row.is-drag-over .project-main {
   background: var(--panel-2);
@@ -183,11 +181,17 @@
   align-items: center;
   color: var(--muted);
   display: inline-flex;
-  flex: 0 0 16px;
-  height: 16px;
+  height: 16px; width: 16px;
   justify-content: center;
-  width: 16px;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 68px;
+  top: 50%;
+  transform: translateY(-50%);
 }
+
+.project-row:hover .project-chevron, .project-row:focus-within .project-chevron { opacity: 1; }
 
 .project-row.is-active .project-main,
 .project-row:hover .project-main,
@@ -196,6 +200,7 @@
   border-color: var(--line);
   color: var(--text);
 }
+.project-row:hover .project-main, .project-row:focus-within .project-main { padding-right: 92px; }
 
 .project-row-actions {
   align-items: center;
@@ -213,11 +218,6 @@
 .project-row:focus-within .project-row-actions {
   opacity: 1;
   pointer-events: auto;
-}
-
-.project-row:hover .project-main,
-.project-row:focus-within .project-main {
-  padding-right: 68px;
 }
 
 .project-row-actions .icon-button {
@@ -239,10 +239,9 @@
   gap: 2px;
   min-width: 168px;
   padding: 6px;
-  position: absolute;
-  right: 0;
-  top: 32px;
-  z-index: 80;
+  position: fixed;
+  width: 168px;
+  z-index: 10001;
 }
 
 .project-menu button {

@@ -5,6 +5,7 @@ import type {
   KnowledgeChunk,
   KnowledgeItem,
 } from './knowledge.types'
+import type { WebSearchReference, WebSearchSettings } from './webSearch.types'
 
 export type PromptSectionKey = string
 export type {
@@ -19,6 +20,18 @@ export type {
   KnowledgeSearchResult,
   KnowledgeSourceType,
 } from './knowledge.types'
+export type {
+  WebSearchCapability,
+  WebSearchCompressionConfig,
+  WebSearchCompressionMethod,
+  WebSearchProviderConfig,
+  WebSearchProviderId,
+  WebSearchProviderType,
+  WebSearchReference,
+  WebSearchResponse,
+  WebSearchResult,
+  WebSearchSettings,
+} from './webSearch.types'
 
 export type ThemeMode = 'light' | 'dark'
 export type WorkspaceMode = 'prompt' | 'knowledge' | 'skills'
@@ -366,6 +379,7 @@ export interface ChatMessage {
   content: string
   attachments?: ChatAttachment[]
   knowledgeReferences?: ChatKnowledgeReference[]
+  webSearchReferences?: WebSearchReference[]
   promptVersionId?: string
   thinkingMode?: ThinkingMode
   thinkingDurationMs?: number
@@ -411,7 +425,7 @@ export interface CompareRun {
 }
 
 export interface ExportPayload {
-  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
+  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11
   exportedAt: string
   canvases: Canvas[]
   promptCards: PromptCard[]
@@ -432,6 +446,7 @@ export interface ExportPayload {
   knowledgeItems?: KnowledgeItem[]
   knowledgeChunks?: KnowledgeChunk[]
   chatKnowledgeSelections?: ChatKnowledgeSelection[]
+  webSearchSettings?: WebSearchSettings
 }
 
 export interface ChatTopicExportPayload {

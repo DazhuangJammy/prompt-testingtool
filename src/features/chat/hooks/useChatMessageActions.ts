@@ -12,6 +12,7 @@ import type {
   PromptInjectionMode,
   ProviderConfig,
   ThinkingMode,
+  WebSearchReference,
 } from '@/shared/types'
 import type { ActiveRequest } from '../model/comparePanes'
 
@@ -22,6 +23,8 @@ interface MessageActionBase {
   history: ChatMessage[]
   knowledgeContext?: string
   knowledgeReferences?: ChatKnowledgeReference[]
+  webSearchContext?: string
+  webSearchReferences?: WebSearchReference[]
   parentSessionId?: string
   provider: ProviderConfig
   promptInjectionMode: PromptInjectionMode
@@ -56,6 +59,8 @@ export function useChatMessageActions(setError: (error: string) => void) {
     history,
     knowledgeContext,
     knowledgeReferences,
+    webSearchContext,
+    webSearchReferences,
     parentSessionId,
     provider,
     promptInjectionMode,
@@ -87,6 +92,8 @@ export function useChatMessageActions(setError: (error: string) => void) {
         history,
         knowledgeContext,
         knowledgeReferences,
+        webSearchContext,
+        webSearchReferences,
         provider,
         promptInjectionMode,
         sessionId: activeSessionId,
@@ -110,6 +117,8 @@ export function useChatMessageActions(setError: (error: string) => void) {
     history,
     knowledgeContext,
     knowledgeReferences,
+    webSearchContext,
+    webSearchReferences,
     parentSessionId,
     message,
     provider,
@@ -141,6 +150,8 @@ export function useChatMessageActions(setError: (error: string) => void) {
         history,
         knowledgeContext,
         knowledgeReferences,
+        webSearchContext,
+        webSearchReferences,
         message,
         provider,
         promptInjectionMode,

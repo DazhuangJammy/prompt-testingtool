@@ -18,8 +18,10 @@
 @import './chat-composer.css';
 @import './knowledge.css';
 @import './settings.css';
+@import './settings-web-search.css';
 @import './settings-states.css';
 @import './settings-provider-models.css';
+@import './settings-provider-model-picker.css';
 @import './settings-model-dialog.css';
 @import './settings-default-model.css';
 @import './settings-shortcuts.css';

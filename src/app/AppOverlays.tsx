@@ -4,17 +4,20 @@ import { SettingsDialog } from '@/features/settings/SettingsDialog'
 import { SelectionMagnifierOverlay } from '@/features/settings/components/SelectionMagnifierOverlay'
 import { defaultModelSettingsRepository } from '@/features/settings/infrastructure/defaultModelSettingsRepository'
 import { providerRepository } from '@/features/settings/infrastructure/providerRepository'
+import { webSearchSettingsRepository } from '@/features/web-search/infrastructure/webSearchSettingsRepository'
 import {
   buildSelectableProviderId,
   normalizeProviderConfig,
 } from '@/features/settings/model/providerCatalog'
 import { skillsLabRepository } from '@/features/skills-lab/infrastructure/skillsLabRepository'
 import type { SkillsLabSettings, SkillTopic } from '@/shared/types'
+import type { useAppFontSettings } from './useAppFontSettings'
 import type { useCanvasToolShortcutSettings } from './useCanvasToolShortcutSettings'
 import type { useSelectionMagnifierSettings } from './useSelectionMagnifierSettings'
 import type { useWorkspaceData } from './useWorkspaceData'
 
 interface AppOverlaysProps {
+  appFont: ReturnType<typeof useAppFontSettings>
   canvasToolShortcuts: ReturnType<typeof useCanvasToolShortcutSettings>
   createSkillBusy: boolean
   createSkillTopic?: SkillTopic
@@ -23,7 +26,6 @@ interface AppOverlaysProps {
   onCloseSettings: () => void
   onCloseSkillPath: () => void
   onCreateSkill: (prompt: string) => void
-  onOpenProvider?: (id?: string) => void
   selectionMagnifier: ReturnType<typeof useSelectionMagnifierSettings>
   settingsOpen: boolean
   skillPathTopic?: SkillTopic
@@ -32,6 +34,7 @@ interface AppOverlaysProps {
 }
 
 export function AppOverlays({
+  appFont,
   canvasToolShortcuts,
   createSkillBusy,
   createSkillTopic,
@@ -56,14 +59,17 @@ export function AppOverlays({
 
       <SettingsDialog
         open={settingsOpen}
+        appFontId={appFont.appFontId}
         defaultModelSettings={workspace.defaultModelSettings}
         flowchartModelSettings={workspace.flowchartModelSettings}
         canvasToolShortcuts={canvasToolShortcuts.shortcuts}
         selectionMagnifier={selectionMagnifier.selectionMagnifierSettings}
         skillsLabSettings={skillsLabSettings}
+        webSearchSettings={workspace.webSearchSettings}
         providers={workspace.providerConfigs}
         activeProviderId={workspace.effectiveProviderConfigId}
         onClose={onCloseSettings}
+        onAppFontChange={appFont.updateAppFontId}
         onSelectionMagnifierChange={selectionMagnifier.updateSelectionMagnifierSettings}
         onResetCanvasToolShortcuts={canvasToolShortcuts.resetShortcuts}
         onSelect={() => undefined}
@@ -73,6 +79,9 @@ export function AppOverlays({
         }}
         onSaveSkillsLabSettings={async (settings) => {
           await skillsLabRepository.saveSettings(settings)
+        }}
+        onSaveWebSearchSettings={async (settings) => {
+          await webSearchSettingsRepository.save(settings)
         }}
         onReorderProviders={async (providers) => {
           await Promise.all(providers.map((provider) => providerRepository.save(provider)))

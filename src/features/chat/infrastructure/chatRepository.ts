@@ -89,7 +89,12 @@ export const chatRepository = {
   async updateAssistantMessage(
     id: string,
     updates: Pick<ChatMessage, 'content'> &
-      Partial<Pick<ChatMessage, 'knowledgeReferences' | 'status' | 'thinkingDurationMs'>>,
+      Partial<
+        Pick<
+          ChatMessage,
+          'knowledgeReferences' | 'webSearchReferences' | 'status' | 'thinkingDurationMs'
+        >
+      >,
   ) {
     await db.chatMessages.update(id, updates)
   },

@@ -2,6 +2,7 @@ import {
   ArrowUp,
   Eraser,
   FileText,
+  Globe,
   Image,
   Lightbulb,
   MessageSquare,
@@ -26,8 +27,12 @@ import type {
   KnowledgeBase,
   PromptInjectionMode,
   ThinkingMode,
+  WebSearchProviderId,
+  WebSearchSettings,
 } from '@/shared/types'
 import { IconButton } from '@/shared/ui/IconButton'
+import { resolvePreferredWebSearchProvider } from '@/features/web-search/model/webSearchSettings'
+import { WebSearchProviderMenu } from './WebSearchProviderMenu'
 
 interface ChatComposerProps {
   attachmentCapability: ChatAttachmentCapability
@@ -43,6 +48,9 @@ interface ChatComposerProps {
   thinkingMode: ThinkingMode
   knowledgeBases?: KnowledgeBase[]
   selectedKnowledgeBaseIds?: string[]
+  webSearchEnabled?: boolean
+  webSearchProviderId?: WebSearchProviderId
+  webSearchSettings?: WebSearchSettings
   onAttachmentsChange: (attachments: ChatAttachment[]) => void
   onChange: (value: string) => void
   onClearMessages: () => void
@@ -50,6 +58,8 @@ interface ChatComposerProps {
   onPromptInjectionModeChange: (mode: PromptInjectionMode) => void
   onStop?: () => void
   onSend: () => void
+  onWebSearchEnabledChange?: (enabled: boolean) => void
+  onWebSearchProviderChange?: (providerId?: WebSearchProviderId) => void
   onThinkingModeChange: (mode: ThinkingMode) => void
 }
 
@@ -67,6 +77,9 @@ export function ChatComposer({
   thinkingMode,
   knowledgeBases = [],
   selectedKnowledgeBaseIds = [],
+  webSearchEnabled = false,
+  webSearchProviderId,
+  webSearchSettings,
   onAttachmentsChange,
   onChange,
   onClearMessages,
@@ -74,17 +87,28 @@ export function ChatComposer({
   onPromptInjectionModeChange,
   onStop,
   onSend,
+  onWebSearchEnabledChange,
+  onWebSearchProviderChange,
   onThinkingModeChange,
 }: ChatComposerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const knowledgeMenuRef = useRef<HTMLDivElement>(null)
+  const webSearchMenuRef = useRef<HTMLDivElement>(null)
   const promptModeMenuRef = useRef<HTMLDivElement>(null)
   const thinkingMenuRef = useRef<HTMLDivElement>(null)
   const [attachmentError, setAttachmentError] = useState('')
   const [promptModeMenuOpen, setPromptModeMenuOpen] = useState(false)
   const [thinkingMenuOpen, setThinkingMenuOpen] = useState(false)
   const [knowledgeMenuOpen, setKnowledgeMenuOpen] = useState(false)
+  const [webSearchMenuOpen, setWebSearchMenuOpen] = useState(false)
   const activeThinkingOption = getThinkingOption(thinkingMode)
+  const activeWebSearchProvider = webSearchSettings
+    ? resolvePreferredWebSearchProvider(
+        webSearchSettings,
+        webSearchProviderId ?? webSearchSettings.defaultProviderId,
+      )
+    : undefined
+  const webSearchProviders = webSearchSettings?.providers ?? []
   const promptModeLabel =
     promptInjectionMode === 'system' ? '系统提示词' : '用户提示词'
   const hasContent = Boolean(input.trim() || attachments.length)
@@ -99,12 +123,18 @@ export function ChatComposer({
   }, [attachmentError])
 
   useEffect(() => {
-    if (!thinkingMenuOpen && !promptModeMenuOpen && !knowledgeMenuOpen) return
+    if (
+      !thinkingMenuOpen &&
+      !promptModeMenuOpen &&
+      !knowledgeMenuOpen &&
+      !webSearchMenuOpen
+    ) return
 
     const closeOnOutsidePointer = (event: PointerEvent) => {
       const target = event.target as Node
       if (
         knowledgeMenuRef.current?.contains(target) ||
+        webSearchMenuRef.current?.contains(target) ||
         thinkingMenuRef.current?.contains(target) ||
         promptModeMenuRef.current?.contains(target)
       ) {
@@ -113,12 +143,14 @@ export function ChatComposer({
       setThinkingMenuOpen(false)
       setPromptModeMenuOpen(false)
       setKnowledgeMenuOpen(false)
+      setWebSearchMenuOpen(false)
     }
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       setThinkingMenuOpen(false)
       setPromptModeMenuOpen(false)
       setKnowledgeMenuOpen(false)
+      setWebSearchMenuOpen(false)
     }
 
     document.addEventListener('pointerdown', closeOnOutsidePointer)
@@ -127,7 +159,7 @@ export function ChatComposer({
       document.removeEventListener('pointerdown', closeOnOutsidePointer)
       document.removeEventListener('keydown', closeOnEscape)
     }
-  }, [knowledgeMenuOpen, promptModeMenuOpen, thinkingMenuOpen])
+  }, [knowledgeMenuOpen, promptModeMenuOpen, thinkingMenuOpen, webSearchMenuOpen])
 
   const addFiles = async (files: File[]) => {
     if (!files.length) return
@@ -254,6 +286,7 @@ export function ChatComposer({
                 setKnowledgeMenuOpen((value) => !value)
                 setPromptModeMenuOpen(false)
                 setThinkingMenuOpen(false)
+                setWebSearchMenuOpen(false)
               }}
             />
             {knowledgeMenuOpen && (
@@ -294,6 +327,35 @@ export function ChatComposer({
               </div>
             )}
           </div>
+          <div className="composer-menu-shell" ref={webSearchMenuRef}>
+            <IconButton
+              active={webSearchMenuOpen || webSearchEnabled}
+              icon={<Globe />}
+              label={`网络搜索：${activeWebSearchProvider?.name ?? '未配置'}`}
+              onClick={() => {
+                setWebSearchMenuOpen((value) => !value)
+                setKnowledgeMenuOpen(false)
+                setPromptModeMenuOpen(false)
+                setThinkingMenuOpen(false)
+              }}
+            />
+            {webSearchMenuOpen && (
+              <WebSearchProviderMenu
+                activeProviderId={activeWebSearchProvider?.id}
+                enabled={webSearchEnabled}
+                providers={webSearchProviders}
+                onDisable={() => {
+                  onWebSearchEnabledChange?.(false)
+                  setWebSearchMenuOpen(false)
+                }}
+                onSelect={(providerId) => {
+                  onWebSearchProviderChange?.(providerId)
+                  onWebSearchEnabledChange?.(true)
+                  setWebSearchMenuOpen(false)
+                }}
+              />
+            )}
+          </div>
           <div className="composer-menu-shell" ref={promptModeMenuRef}>
             <IconButton
               active={promptModeMenuOpen}
@@ -303,6 +365,7 @@ export function ChatComposer({
                 setPromptModeMenuOpen((value) => !value)
                 setKnowledgeMenuOpen(false)
                 setThinkingMenuOpen(false)
+                setWebSearchMenuOpen(false)
               }}
             />
             {promptModeMenuOpen && (
@@ -339,6 +402,7 @@ export function ChatComposer({
                   setThinkingMenuOpen((value) => !value)
                   setKnowledgeMenuOpen(false)
                   setPromptModeMenuOpen(false)
+                  setWebSearchMenuOpen(false)
                 }}
               />
               {thinkingMenuOpen && (

@@ -137,6 +137,11 @@ vi.mock('@/shared/storage/db', () => ({
       put: vi.fn(),
       toArray: vi.fn(() => []),
     },
+    webSearchSettings: {
+      clear: vi.fn(),
+      get: vi.fn(() => undefined),
+      put: vi.fn(),
+    },
     transaction: vi.fn(async (_mode, _tables, callback) => callback()),
   },
 }))
@@ -230,7 +235,7 @@ describe('workspace repository', () => {
     }
 
     await expect(workspaceRepository.exportWorkspace()).resolves.toMatchObject({
-      version: 10,
+      version: 11,
       inputCards: [],
       canvasShapeNodes: [],
       canvasImageNodes: [],
@@ -251,6 +256,48 @@ describe('workspace repository', () => {
     expect(db.defaultModelSettings.bulkPut).toHaveBeenCalledWith([])
     expect(db.knowledgeBases.bulkPut).toHaveBeenCalledWith([])
     expect(db.chatKnowledgeSelections.bulkPut).toHaveBeenCalledWith([])
+    expect(db.webSearchSettings.clear).toHaveBeenCalled()
+    expect(db.webSearchSettings.put).not.toHaveBeenCalled()
+  })
+
+  it('exports and imports web search settings', async () => {
+    const webSearchSettings = {
+      id: 'web-search',
+      defaultProviderId: 'bing',
+      searchWithTime: true,
+      maxResults: 99,
+      excludeDomains: ['https://example.com/path'],
+      compression: { method: 'cutoff', cutoffLimit: 99999 },
+      providers: [],
+      createdAt: 'created',
+      updatedAt: 'updated',
+    } as ExportPayload['webSearchSettings']
+    vi.mocked(db.webSearchSettings.get).mockResolvedValueOnce(webSearchSettings)
+
+    await expect(workspaceRepository.exportWorkspace()).resolves.toMatchObject({
+      webSearchSettings,
+    })
+    await workspaceRepository.importWorkspace({
+      version: 11,
+      exportedAt: 'now',
+      canvases: [],
+      promptCards: [],
+      promptVersions: [],
+      providerConfigs: [],
+      chatSessions: [],
+      chatMessages: [],
+      compareRuns: [],
+      webSearchSettings,
+    })
+
+    expect(db.webSearchSettings.put).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'web-search',
+        maxResults: 10,
+        excludeDomains: ['example.com'],
+        compression: { method: 'cutoff', cutoffLimit: 12000 },
+      }),
+    )
   })
 
   it('imports default model settings when present', async () => {
@@ -336,7 +383,7 @@ describe('workspace repository', () => {
     ])
 
     await expect(
-      workspaceRepository.importWorkspace({ version: 11 } as never),
+      workspaceRepository.importWorkspace({ version: 12 } as never),
     ).rejects.toThrow('Unsupported file')
     await expect(workspaceRepository.listCanvasesByUpdatedAt()).resolves.toEqual([
       expect.objectContaining({ id: 'older' }),

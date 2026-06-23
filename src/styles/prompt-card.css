@@ -339,8 +339,10 @@
 .prompt-preview-body.markdown-preview {
   background: color-mix(in srgb, var(--surface) 78%, var(--panel));
   flex: 1;
-  font-size: 14px;
-  line-height: 1.72;
+  font-family: var(--serif);
+  font-size: var(--reading-font-size);
+  font-kerning: normal;
+  line-height: var(--reading-line-height);
   max-height: none;
   min-height: 360px;
   overflow: auto;
@@ -425,13 +427,13 @@
 
 .section-editor > textarea {
   background: var(--surface);
-  font-family: var(--mono);
-  font-size: 12px;
-  line-height: 1.55;
+  font-family: var(--serif);
+  font-size: var(--reading-font-size);
+  line-height: var(--reading-line-height);
   max-height: 420px;
   min-height: 132px;
   overflow-y: hidden;
-  padding: 10px;
+  padding: 12px;
   width: 100%;
 }
 
@@ -477,12 +479,12 @@
 
 .workflow-step textarea {
   background: var(--panel);
-  font-family: var(--mono);
-  font-size: 12px;
+  font-family: var(--serif);
+  font-size: var(--reading-font-size);
   grid-column: 1 / -1;
-  height: 92px;
-  line-height: 1.5;
-  padding: 8px;
+  height: 108px;
+  line-height: var(--reading-line-height);
+  padding: 10px;
 }
 
 .markdown-preview {

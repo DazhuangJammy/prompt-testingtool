@@ -1,14 +1,16 @@
-import { Bot, Box, Keyboard, MoreHorizontal, Server, X } from 'lucide-react'
+import { Bot, Box, Keyboard, MoreHorizontal, Search, Server, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type {
   DefaultModelSettings,
   ProviderConfig,
   SkillsLabSettings,
+  WebSearchSettings,
 } from '@/shared/types'
 import type {
   CanvasTool,
   CanvasToolShortcuts,
 } from '@/shared/model/canvasToolShortcuts'
+import type { AppFontId } from '@/shared/model/appFont'
 import type { SelectionMagnifierSettings } from '@/shared/model/selectionMagnifier'
 import { IconButton } from '@/shared/ui/IconButton'
 import { AddProviderDialog } from './components/AddProviderDialog'
@@ -19,22 +21,27 @@ import { ProviderListPanel } from './components/ProviderListPanel'
 import { SkillsLabSettingsPanel } from './components/SkillsLabSettingsPanel'
 import { ShortcutSettingsPanel } from './components/ShortcutSettingsPanel'
 import { normalizeProviderConfig } from './model/providerCatalog'
+import { WebSearchSettingsPanel } from '@/features/web-search/components/WebSearchSettingsPanel'
 
 interface SettingsDialogProps {
   open: boolean
   defaultModelSettings?: DefaultModelSettings
   flowchartModelSettings?: DefaultModelSettings
   canvasToolShortcuts: CanvasToolShortcuts
+  appFontId: AppFontId
   selectionMagnifier: SelectionMagnifierSettings
   skillsLabSettings?: SkillsLabSettings
+  webSearchSettings?: WebSearchSettings
   providers: ProviderConfig[]
   activeProviderId?: string
   onClose: () => void
+  onAppFontChange: (fontId: AppFontId) => void
   onSelectionMagnifierChange: (settings: Partial<SelectionMagnifierSettings>) => void
   onResetCanvasToolShortcuts: () => void
   onSaveCanvasToolShortcut: (tool: CanvasTool, key: string) => void
   onSaveDefaultModelSettings: (settings: DefaultModelSettings) => void
   onSaveSkillsLabSettings: (settings: SkillsLabSettings) => void
+  onSaveWebSearchSettings: (settings: WebSearchSettings) => void
   onReorderProviders: (providers: ProviderConfig[]) => void
   onSave: (provider: ProviderConfig) => void
   onDelete: (id: string) => void
@@ -43,6 +50,7 @@ interface SettingsDialogProps {
 
 const SETTING_CATEGORIES = [
   { id: 'models', label: '模型服务', icon: Server },
+  { id: 'web-search', label: '网络搜索', icon: Search },
   { id: 'default-model', label: '默认模型', icon: Box },
   { id: 'skills-lab', label: 'Skills 设置', icon: Bot },
   { id: 'shortcuts', label: '快捷键设置', icon: Keyboard },
@@ -56,16 +64,20 @@ export function SettingsDialog({
   defaultModelSettings,
   flowchartModelSettings,
   canvasToolShortcuts,
+  appFontId,
   selectionMagnifier,
   skillsLabSettings,
+  webSearchSettings,
   providers,
   activeProviderId,
   onClose,
+  onAppFontChange,
   onSelectionMagnifierChange,
   onResetCanvasToolShortcuts,
   onSaveCanvasToolShortcut,
   onSaveDefaultModelSettings,
   onSaveSkillsLabSettings,
+  onSaveWebSearchSettings,
   onReorderProviders,
   onSave,
   onDelete,
@@ -157,6 +169,11 @@ export function SettingsDialog({
                 onSave={onSaveDefaultModelSettings}
               />
             </main>
+          ) : activeCategory === 'web-search' ? (
+            <WebSearchSettingsPanel
+              settings={webSearchSettings}
+              onSave={onSaveWebSearchSettings}
+            />
           ) : activeCategory === 'skills-lab' ? (
             <main className="settings-main-panel skills-settings-page">
               <SkillsLabSettingsPanel
@@ -175,7 +192,9 @@ export function SettingsDialog({
           ) : (
             <main className="settings-main-panel other-settings-page">
               <OtherSettingsPanel
+                appFontId={appFontId}
                 selectionMagnifier={selectionMagnifier}
+                onAppFontChange={onAppFontChange}
                 onSelectionMagnifierChange={onSelectionMagnifierChange}
               />
             </main>

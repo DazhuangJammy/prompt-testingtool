@@ -8,6 +8,7 @@ import type {
   PromptInjectionMode,
   ProviderConfig,
   ThinkingMode,
+  WebSearchSettings,
 } from '@/shared/types'
 import { IconButton } from '@/shared/ui/IconButton'
 import { ChatComposer } from './components/ChatComposer'
@@ -47,6 +48,7 @@ interface ChatPanelProps {
   onKnowledgeSelectionChange?: (baseIds: string[]) => void
   selectedKnowledgeBaseIds?: string[]
   getKnowledgeProviders?: () => Promise<ProviderConfig[]>
+  webSearchSettings?: WebSearchSettings
   width: number
 }
 
@@ -74,6 +76,7 @@ export function ChatPanel({
   onKnowledgeSelectionChange,
   selectedKnowledgeBaseIds = [],
   getKnowledgeProviders,
+  webSearchSettings,
   width,
 }: ChatPanelProps) {
   const state = useChatPanelState(
@@ -93,6 +96,7 @@ export function ChatPanel({
     knowledgeBases,
     selectedKnowledgeBaseIds,
     getKnowledgeProviders,
+    webSearchSettings,
   )
   const disabled = !provider || !card
   const compareDisabled = promptCards.length < 2
@@ -249,6 +253,9 @@ export function ChatPanel({
               thinkingMode={state.thinkingMode}
               knowledgeBases={knowledgeBases}
               selectedKnowledgeBaseIds={selectedKnowledgeBaseIds}
+              webSearchEnabled={state.webSearchEnabled}
+              webSearchProviderId={state.webSearchProviderId}
+              webSearchSettings={webSearchSettings}
               onAttachmentsChange={state.setAttachments}
               onChange={state.setInput}
               onClearMessages={state.clearMainMessages}
@@ -256,6 +263,8 @@ export function ChatPanel({
               onPromptInjectionModeChange={state.setPromptInjectionMode}
               onSend={state.sendMainMessage}
               onStop={state.stopGeneration}
+              onWebSearchEnabledChange={state.setWebSearchEnabled}
+              onWebSearchProviderChange={state.setWebSearchProviderId}
               onThinkingModeChange={(mode) =>
                 state.setThinkingModeForProvider(provider, mode)
               }
@@ -360,6 +369,7 @@ function SplitPane({
         onPromptInjectionModeChange={onPromptInjectionModeChange}
         onSend={onSend}
         onStop={onStop}
+        onWebSearchEnabledChange={undefined}
         onThinkingModeChange={onThinkingModeChange}
       />
     </section>

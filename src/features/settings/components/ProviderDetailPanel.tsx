@@ -1,22 +1,14 @@
 import {
-  CheckCircle2,
   ChevronDown,
-  Edit3,
   Eye,
   EyeOff,
-  Minus,
-  Plus,
   Save,
   Trash2,
   X,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { testProvider } from '@/shared/api/ai'
+import { listProviderModels, testProvider } from '@/shared/api/ai'
 import type { ProviderConfig, ProviderModelConfig } from '@/shared/types'
-import {
-  MODEL_CAPABILITY_LABELS,
-  getModelCapabilities,
-} from '@/shared/model/providerModelCapabilities'
 import { IconButton } from '@/shared/ui/IconButton'
 import { nowIso } from '@/shared/utils/time'
 import {
@@ -24,6 +16,8 @@ import {
   PROVIDER_TYPE_LABELS,
 } from '../model/providerCatalog'
 import { ModelFormDialog, type ModelFormValue } from './ModelFormDialog'
+import { ProviderModelPickerDialog } from './ProviderModelPickerDialog'
+import { ProviderModelList } from './ProviderModelList'
 
 type AsyncState = 'idle' | 'busy' | 'ok' | 'error'
 
@@ -44,9 +38,15 @@ export function ProviderDetailPanel({
   const [addModelOpen, setAddModelOpen] = useState(false)
   const [editingModelId, setEditingModelId] = useState<string>()
   const [keyVisible, setKeyVisible] = useState(false)
+  const [modelPickerOpen, setModelPickerOpen] = useState(false)
+  const [providerModels, setProviderModels] = useState<ProviderModelConfig[]>([])
   const [selectedTestModelId, setSelectedTestModelId] = useState('')
   const [testDialogOpen, setTestDialogOpen] = useState(false)
   const [testState, setTestState] = useState<{
+    status: AsyncState
+    message: string
+  }>({ status: 'idle', message: '' })
+  const [modelSyncState, setModelSyncState] = useState<{
     status: AsyncState
     message: string
   }>({ status: 'idle', message: '' })
@@ -151,6 +151,54 @@ export function ProviderDetailPanel({
     }
   }
 
+  const openModelPicker = () => {
+    setModelPickerOpen(true)
+    if (modelSyncState.status === 'idle' || modelSyncState.status === 'error') {
+      void fetchProviderModelCatalog()
+    }
+  }
+
+  const fetchProviderModelCatalog = async () => {
+    setModelSyncState({ status: 'busy', message: '正在获取模型列表' })
+    try {
+      const incomingModels = await listProviderModels(normalized)
+      setProviderModels(incomingModels)
+      if (!incomingModels.length) {
+        setModelSyncState({ status: 'ok', message: '没有获取到可用模型' })
+        return
+      }
+
+      setModelSyncState({
+        status: 'ok',
+        message: `已获取 ${incomingModels.length} 个模型，请选择要添加的模型`,
+      })
+    } catch (error) {
+      setModelSyncState({
+        status: 'error',
+        message: error instanceof Error ? error.message : '获取模型列表失败',
+      })
+    }
+  }
+
+  const addProviderModels = (modelsToAdd: ProviderModelConfig[]) => {
+    if (!modelsToAdd.length) return
+
+    const existingIds = new Set(
+      (normalized.models ?? []).map((model) => model.id.trim()),
+    )
+    const addedCount = modelsToAdd.filter(
+      (model) => !existingIds.has(model.id.trim()),
+    ).length
+    if (!addedCount) return
+
+    const models = mergeModels(normalized.models ?? [], modelsToAdd)
+    saveDraft({ ...normalized, models })
+    setModelSyncState({
+      status: 'ok',
+      message: `已添加 ${addedCount} 个模型`,
+    })
+  }
+
   const editingModel = normalized.models?.find(
     (model) => model.id === editingModelId,
   )
@@ -225,60 +273,30 @@ export function ProviderDetailPanel({
         </label>
       </div>
 
-      {testState.status !== 'idle' && (
+      {(testState.status !== 'idle' || modelSyncState.status !== 'idle') && (
         <div className="settings-status-row">
-          <span className={`settings-status is-${testState.status}`}>
-            {testState.message}
-          </span>
+          {testState.status !== 'idle' && (
+            <span className={`settings-status is-${testState.status}`}>
+              {testState.message}
+            </span>
+          )}
+          {modelSyncState.status !== 'idle' && (
+            <span className={`settings-status is-${modelSyncState.status}`}>
+              {modelSyncState.message}
+            </span>
+          )}
         </div>
       )}
 
-      <div className="model-list-head">
-        <div>
-          <strong>模型</strong>
-          <span>{normalized.models?.length ?? 0}</span>
-        </div>
-        <IconButton
-          className="model-add-button"
-          icon={<Plus />}
-          label="添加模型"
-          onClick={() => setAddModelOpen(true)}
-        />
-      </div>
-
-      <div className="provider-model-list">
-        {(normalized.models ?? []).map((model) => (
-          <div className="provider-model-row" key={model.id}>
-            <label>
-              <input
-                type="checkbox"
-                checked={model.enabled}
-                onChange={() => toggleModel(model.id)}
-              />
-              <CheckCircle2 size={18} />
-            </label>
-            <div className="provider-model-main">
-              <strong>{model.name || model.id}</strong>
-              <div className="provider-model-meta">
-                {model.group && <small>{model.group}</small>}
-                <ModelCapabilityTags model={model} />
-              </div>
-            </div>
-            <div className="provider-model-actions">
-              <IconButton
-                icon={<Edit3 />}
-                label="编辑模型"
-                onClick={() => setEditingModelId(model.id)}
-              />
-              <IconButton
-                icon={<Minus />}
-                label="移除模型"
-                onClick={() => removeModel(model.id)}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
+      <ProviderModelList
+        models={normalized.models ?? []}
+        syncing={modelSyncState.status === 'busy'}
+        onAdd={() => setAddModelOpen(true)}
+        onEdit={setEditingModelId}
+        onRemove={removeModel}
+        onSync={openModelPicker}
+        onToggle={toggleModel}
+      />
 
       <div className="provider-detail-actions">
         <button type="button" className="danger-button" onClick={() => onDelete(normalized.id)}>
@@ -312,6 +330,17 @@ export function ProviderDetailPanel({
             updateModel(editingModel.id, model)
             setEditingModelId(undefined)
           }}
+        />
+      )}
+      {modelPickerOpen && (
+        <ProviderModelPickerDialog
+          existingModelIds={(normalized.models ?? []).map((model) => model.id)}
+          models={providerModels}
+          providerName={normalized.name}
+          status={modelSyncState}
+          onAddModels={addProviderModels}
+          onClose={() => setModelPickerOpen(false)}
+          onRefresh={() => void fetchProviderModelCatalog()}
         />
       )}
       <TestModelDialog
@@ -421,20 +450,6 @@ function mergeModels(
     })
   }
   return Array.from(map.values())
-}
-
-function ModelCapabilityTags({ model }: { model: ProviderModelConfig }) {
-  const capabilities = getModelCapabilities(model)
-
-  if (!capabilities.length) return null
-
-  return (
-    <span className="provider-model-tags">
-      {capabilities.map((capability) => (
-        <span key={capability}>{MODEL_CAPABILITY_LABELS[capability]}</span>
-      ))}
-    </span>
-  )
 }
 
 function buildPreviewUrl(baseUrl: string) {

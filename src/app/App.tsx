@@ -45,6 +45,7 @@ import { resolveSidebarSessions } from './sidebarSessions'
 import { resolveActiveChatSessionId, useActiveChatTopic } from './useActiveChatTopic'
 import { useResizablePanels } from './useResizablePanels'
 import { useResponsivePanels } from './useResponsivePanels'
+import { useAppFontSettings } from './useAppFontSettings'
 import { useCanvasToolShortcutSettings } from './useCanvasToolShortcutSettings'
 import { useSelectionMagnifierSettings } from './useSelectionMagnifierSettings'
 import { useThemeMode } from './useThemeMode'
@@ -64,6 +65,7 @@ function App() {
     { sessionId: string; sessionListKey: string } | undefined
   >()
   const panels = useResponsivePanels()
+  const appFont = useAppFontSettings()
   const canvasToolShortcuts = useCanvasToolShortcutSettings()
   const selectionMagnifier = useSelectionMagnifierSettings()
   const { theme, toggleTheme } = useThemeMode()
@@ -469,11 +471,13 @@ function App() {
             selectedKnowledgeBaseIds={chatKnowledgeSelection.selectedBaseIds}
             onKnowledgeSelectionChange={chatKnowledgeSelection.setSelectedBaseIds}
             getKnowledgeProviders={async () => workspace.providers}
+            webSearchSettings={workspace.webSearchSettings}
             width={chatPanelState.chatWidth}
           />
         )}
 
         <AppOverlays
+          appFont={appFont}
           canvasToolShortcuts={canvasToolShortcuts}
           createSkillBusy={skillsBusy}
           createSkillTopic={selectedCreateSkillTopic}
@@ -482,9 +486,7 @@ function App() {
           skillPathTopic={selectedSkillPathTopic}
           skillsLabSettings={skillsLab.settings}
           workspace={workspace}
-          onBindSkillPath={(topicId, skillPath) => {
-            void bindSkillToTopic(topicId, skillPath)
-          }}
+          onBindSkillPath={(topicId, skillPath) => void bindSkillToTopic(topicId, skillPath)}
           onCloseCreateSkill={() => setCreateSkillDialogTopicId(undefined)}
           onCloseSettings={() => setSettingsOpen(false)}
           onCloseSkillPath={() => setSkillPathDialogTopicId(undefined)}

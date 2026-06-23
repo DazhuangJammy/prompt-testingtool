@@ -177,10 +177,10 @@
 .input-outline-body.markdown-preview {
   background: transparent;
   border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.55;
-  max-height: 140px;
+  color: var(--text);
+  font-size: var(--reading-font-size);
+  line-height: var(--reading-line-height);
+  max-height: 180px;
   min-height: 0;
   padding: 9px 10px 10px 32px;
 }

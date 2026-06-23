@@ -60,6 +60,17 @@ const assistantMessage: ChatMessage = {
   createdAt: '2026-06-10T10:03:00.000Z',
 }
 
+const thinkingMessage: ChatMessage = {
+  id: 'message-thinking',
+  sessionId: 'session-1',
+  role: 'assistant',
+  content: '<think>先拆问题，再回答。</think>这是最终回答。',
+  thinkingMode: 'on',
+  thinkingDurationMs: 2400,
+  status: 'complete',
+  createdAt: '2026-06-10T10:04:30.000Z',
+}
+
 const knowledgeMessage: ChatMessage = {
   id: 'message-knowledge',
   sessionId: 'session-1',
@@ -89,6 +100,33 @@ const knowledgeMessage: ChatMessage = {
   ],
   status: 'complete',
   createdAt: '2026-06-10T10:05:00.000Z',
+}
+
+const webSearchMessage: ChatMessage = {
+  id: 'message-web-search',
+  sessionId: 'session-1',
+  role: 'assistant',
+  content: 'OpenAI 发布了新工具 [1]。',
+  webSearchReferences: [
+    {
+      title: 'OpenAI 发布说明',
+      url: 'https://example.com/openai-release',
+      content: 'OpenAI 发布了一项新的工具能力。',
+      sourceInput: 'OpenAI 新工具',
+      providerId: 'bing',
+      providerName: 'Bing',
+    },
+    {
+      title: '开发者文档',
+      url: 'https://example.com/docs',
+      content: '文档说明了工具的使用入口。',
+      sourceInput: 'OpenAI 新工具',
+      providerId: 'bing',
+      providerName: 'Bing',
+    },
+  ],
+  status: 'complete',
+  createdAt: '2026-06-10T10:07:00.000Z',
 }
 
 const userKnowledgeMessage: ChatMessage = {
@@ -264,6 +302,25 @@ describe('MessageList', () => {
     expect(table?.textContent).toContain('社交破冰')
   })
 
+  it('keeps thinking content collapsed until opened', () => {
+    renderMessageList([thinkingMessage])
+
+    const thinkingButton = document.querySelector<HTMLButtonElement>(
+      '.thinking-head',
+    )
+
+    expect(thinkingButton).toBeTruthy()
+    expect(thinkingButton?.textContent).toContain('Thinking')
+    expect(document.body.textContent).toContain('这是最终回答。')
+    expect(document.body.textContent).not.toContain('先拆问题，再回答。')
+
+    act(() => {
+      thinkingButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(document.body.textContent).toContain('先拆问题，再回答。')
+  })
+
   it('renders knowledge citation summary, dialog and inline markers', () => {
     renderMessageList([knowledgeMessage])
 
@@ -283,6 +340,39 @@ describe('MessageList', () => {
     expect(dialog?.textContent).toContain('引用内容')
     expect(dialog?.textContent).toContain('访谈总结提炼.docx')
     expect(dialog?.textContent).toContain('系统内有 130 多家客户')
+  })
+
+  it('renders web search result summary and clickable inline citations', () => {
+    renderMessageList([webSearchMessage])
+
+    const summary = document.querySelector<HTMLButtonElement>(
+      '.web-search-results-head',
+    )
+    expect(summary?.textContent).toContain('2 个搜索结果')
+    expect(summary?.textContent).toContain('Bing')
+
+    const markers = document.querySelectorAll<HTMLAnchorElement>(
+      '.web-search-citation-marker',
+    )
+    expect(markers).toHaveLength(2)
+    expect(markers[0].getAttribute('href')).toBe(
+      'https://example.com/openai-release',
+    )
+    expect(markers[0].getAttribute('target')).toBe('_blank')
+    expect(markers[1].getAttribute('href')).toBe('https://example.com/docs')
+
+    act(() => {
+      summary?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    const resultLinks = document.querySelectorAll<HTMLAnchorElement>(
+      '.web-search-results-list a',
+    )
+    expect(resultLinks).toHaveLength(2)
+    expect(resultLinks[0].textContent).toContain('OpenAI 发布说明')
+    expect(resultLinks[0].getAttribute('href')).toBe(
+      'https://example.com/openai-release',
+    )
   })
 
   it('hides knowledge citation chrome on user messages', () => {

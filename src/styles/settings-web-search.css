@@ -1,0 +1,109 @@
+.settings-layout:has(.web-search-detail-panel) {
+  grid-template-columns: 250px 330px minmax(460px, 1fr);
+}
+
+.web-search-general-entry {
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.web-search-general-entry span {
+  color: var(--text);
+  font-weight: 680;
+}
+
+.web-search-general-entry.is-active {
+  background: color-mix(in srgb, var(--line-strong) 54%, var(--panel));
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.web-search-detail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  overflow: auto;
+  padding: 22px 24px;
+}
+
+.web-search-provider-list .provider-items {
+  gap: 14px;
+}
+
+.web-search-provider-group {
+  display: grid;
+  gap: 4px;
+}
+
+.web-search-provider-group-label {
+  color: var(--muted);
+  font-size: 12px;
+  padding: 0 4px 4px;
+}
+
+.web-search-provider-card,
+.web-search-general-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+
+.web-search-detail-panel .settings-panel-head {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.web-search-detail-panel .settings-panel-head h3 {
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.25;
+  margin: 0 0 4px;
+}
+
+.web-search-detail-panel .settings-panel-head span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.settings-inline-toggle {
+  align-items: center;
+  color: var(--text);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 560;
+  gap: 8px;
+}
+
+.settings-inline-toggle input {
+  accent-color: var(--accent);
+  height: 16px;
+  width: 16px;
+}
+
+.web-search-detail-panel .secondary-button {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.web-search-detail-panel .secondary-button:hover:not(:disabled) {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.web-search-detail-panel .secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}

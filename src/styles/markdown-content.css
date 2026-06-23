@@ -2,7 +2,19 @@
 .message,
 .compare-result article {
   font-size: 13px;
-  line-height: 1.68;
+  line-height: var(--reading-line-height);
+}
+
+.prompt-markdown-preview.markdown-preview,
+.prompt-preface.markdown-preview,
+.section-accordion .markdown-preview,
+.prompt-outline-body.markdown-preview,
+.input-outline-body.markdown-preview {
+  color: var(--text);
+  font-family: var(--serif);
+  font-size: var(--reading-font-size);
+  font-kerning: normal;
+  line-height: var(--reading-line-height);
 }
 
 .markdown-preview h1,
@@ -58,6 +70,36 @@
   margin: 0 0 10px;
 }
 
+.message-bubble p,
+.message-bubble ul,
+.message-bubble ol,
+.prompt-markdown-preview.markdown-preview p,
+.prompt-markdown-preview.markdown-preview ul,
+.prompt-markdown-preview.markdown-preview ol,
+.prompt-preface.markdown-preview p,
+.prompt-preface.markdown-preview ul,
+.prompt-preface.markdown-preview ol,
+.section-accordion .markdown-preview p,
+.section-accordion .markdown-preview ul,
+.section-accordion .markdown-preview ol,
+.prompt-outline-body.markdown-preview p,
+.prompt-outline-body.markdown-preview ul,
+.prompt-outline-body.markdown-preview ol,
+.input-outline-body.markdown-preview p,
+.input-outline-body.markdown-preview ul,
+.input-outline-body.markdown-preview ol,
+.flow-shape-body.markdown-preview p,
+.flow-shape-body.markdown-preview ul,
+.flow-shape-body.markdown-preview ol,
+.message-list .thinking-box > :not(.thinking-head) p,
+.message-list .thinking-box > :not(.thinking-head) ul,
+.message-list .thinking-box > :not(.thinking-head) ol,
+.compare-result article p,
+.compare-result article ul,
+.compare-result article ol {
+  margin: 0 0 var(--reading-paragraph-gap);
+}
+
 .prompt-outline .markdown-preview p,
 .prompt-markdown-preview.markdown-preview p,
 .prompt-preface.markdown-preview p,
@@ -69,6 +111,18 @@
 .message li + li,
 .compare-result li + li {
   margin-top: 5px;
+}
+
+.message-bubble li + li,
+.prompt-markdown-preview.markdown-preview li + li,
+.prompt-preface.markdown-preview li + li,
+.section-accordion .markdown-preview li + li,
+.prompt-outline-body.markdown-preview li + li,
+.input-outline-body.markdown-preview li + li,
+.flow-shape-body.markdown-preview li + li,
+.message-list .thinking-box > :not(.thinking-head) li + li,
+.compare-result article li + li {
+  margin-top: var(--reading-list-item-gap);
 }
 
 .markdown-preview :is(p, ul, ol, pre, blockquote) + :is(h1, h2, h3),

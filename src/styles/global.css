@@ -6,17 +6,26 @@
   --surface: #1f1f1f;
   --line: #2f2f2f;
   --line-strong: #4a4a4a;
-  --text: #ededed;
-  --muted: #9b9b9b;
-  --faint: #6f6f6f;
+  --text: #f4f4f4;
+  --muted: #adadad;
+  --faint: #808080;
   --canvas: #0d0d0d;
   --canvas-dot: #303030;
   --focus: #ededed;
   --danger: #ff6b6b;
   --accent: #f2f2f2;
   --shadow: 0 14px 42px rgba(0, 0, 0, 0.35);
+  --reading-font-size: 1rem;
+  --reading-line-height: 1.72;
+  --reading-paragraph-gap: 1em;
+  --reading-list-item-gap: 0.5em;
   --font:
     ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --serif:
+    serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Ubuntu,
+    Roboto, Oxygen, Cantarell, 'Open Sans', 'Helvetica Neue', Arial,
+    'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+    'Noto Color Emoji';
   --mono:
     'SFMono-Regular', ui-monospace, Menlo, Monaco, Consolas, monospace;
   font-family: var(--font);
@@ -38,9 +47,9 @@
   --surface: #ffffff;
   --line: #dededc;
   --line-strong: #bdbdb9;
-  --text: #1f1f1d;
-  --muted: #70706b;
-  --faint: #989891;
+  --text: #1b1b19;
+  --muted: #62625d;
+  --faint: #85857e;
   --canvas: #f7f7f5;
   --canvas-dot: #ccccca;
   --focus: #1f1f1d;

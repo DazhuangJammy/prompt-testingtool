@@ -1,0 +1,303 @@
+.provider-model-picker-dialog {
+  gap: 16px;
+  max-height: min(82vh, 720px);
+  padding: 24px 28px;
+  width: min(980px, calc(100vw - 56px));
+}
+
+.provider-model-picker-head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.provider-model-picker-head span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.provider-model-picker-toolbar {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.provider-model-picker-search {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  display: flex;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 14px;
+}
+
+.provider-model-picker-search:focus-within {
+  border-color: var(--line-strong);
+  outline: 1px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.provider-model-picker-search svg {
+  flex: 0 0 auto;
+  height: 20px;
+  width: 20px;
+}
+
+.provider-model-picker-search input {
+  border: 0;
+  color: var(--text);
+  font-size: 16px;
+  min-width: 0;
+  outline: none;
+  width: 100%;
+}
+
+.provider-model-picker-search input::placeholder {
+  color: color-mix(in srgb, var(--muted) 62%, transparent);
+}
+
+.provider-model-picker-tool {
+  border-color: var(--line);
+  height: 48px;
+  min-height: 48px;
+  min-width: 48px;
+  width: 48px;
+}
+
+.provider-model-picker-tool svg {
+  height: 20px;
+  width: 20px;
+}
+
+.provider-model-picker-tool .is-spinning {
+  animation: model-sync-spin 0.8s linear infinite;
+}
+
+.provider-model-picker-tabs {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 28px;
+  min-height: 44px;
+  overflow-x: auto;
+}
+
+.provider-model-picker-tabs button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--muted);
+  flex: 0 0 auto;
+  font-size: 15px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 0 10px;
+}
+
+.provider-model-picker-tabs button:hover,
+.provider-model-picker-tabs button.is-active {
+  background: transparent;
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.provider-model-picker-status {
+  display: flex;
+}
+
+.provider-model-picker-list {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 260px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.provider-model-picker-group {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  flex: 0 0 auto;
+  overflow: hidden;
+}
+
+.provider-model-picker-group-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.provider-model-picker-group-head {
+  align-items: center;
+  background: color-mix(in srgb, var(--surface) 62%, transparent);
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  min-height: 46px;
+  padding: 0 10px 0 14px;
+}
+
+.provider-model-picker-group-head > button {
+  align-items: center;
+  border: 0;
+  border-radius: 0;
+  color: var(--text);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+  min-height: 44px;
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+}
+
+.provider-model-picker-group-head > button:hover {
+  background: transparent;
+}
+
+.provider-model-picker-group-head svg {
+  color: var(--muted);
+  flex: 0 0 auto;
+  height: 16px;
+  transition: transform 0.14s ease;
+  width: 16px;
+}
+
+.provider-model-picker-group-head svg.is-closed {
+  transform: rotate(-90deg);
+}
+
+.provider-model-picker-group-head strong {
+  font-size: 15px;
+  font-weight: 680;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provider-model-picker-group-head span {
+  background: var(--panel-2);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+.provider-model-picker-group-head .icon-button {
+  height: 36px;
+  min-height: 36px;
+  min-width: 36px;
+  width: 36px;
+}
+
+.provider-model-picker-row {
+  align-items: center;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 42px minmax(160px, 1fr) minmax(130px, auto) 40px;
+  min-height: 66px;
+  padding: 10px 14px;
+}
+
+.provider-model-picker-row:last-child {
+  border-bottom: 0;
+}
+
+.provider-model-picker-avatar {
+  align-items: center;
+  background: color-mix(in srgb, var(--line-strong) 22%, var(--surface));
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--text);
+  display: inline-flex;
+  font-size: 15px;
+  font-weight: 760;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.provider-model-picker-name {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.provider-model-picker-name strong,
+.provider-model-picker-name small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provider-model-picker-name strong {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.provider-model-picker-name small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.provider-model-picker-row .provider-model-tags {
+  max-width: 260px;
+}
+
+.provider-model-picker-row > .icon-button {
+  align-items: center;
+  display: inline-flex;
+  height: 36px;
+  justify-content: center;
+  justify-self: end;
+  min-height: 36px;
+  min-width: 36px;
+  width: 36px;
+}
+
+.provider-model-picker-empty {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  display: flex;
+  justify-content: center;
+  min-height: 260px;
+}
+
+@media (width <= 720px) {
+  .provider-model-picker-dialog {
+    max-height: calc(100vh - 40px);
+    padding: 20px;
+    width: calc(100vw - 32px);
+  }
+
+  .provider-model-picker-row {
+    gap: 8px;
+    grid-template-columns: 34px minmax(90px, 1fr) minmax(72px, auto) 36px;
+  }
+
+  .provider-model-picker-avatar {
+    height: 30px;
+    width: 30px;
+  }
+
+  .provider-model-picker-row .provider-model-tags {
+    max-width: 120px;
+  }
+}

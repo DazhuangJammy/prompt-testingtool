@@ -4,8 +4,6 @@ import {
   Download,
   Folder,
   FolderOpen,
-  MoreHorizontal,
-  Pencil,
   FileInput,
   Plus,
   Trash2,
@@ -15,6 +13,7 @@ import { useEffect, useState } from 'react'
 import { IconButton } from '@/shared/ui/IconButton'
 import type { Canvas, ChatSession, ThemeMode, WorkspaceMode } from '@/shared/types'
 import { AppVersionBadge } from './components/AppVersionBadge'
+import { ProjectActionsMenu } from './components/ProjectActionsMenu'
 import { TopicActionsMenu } from './components/TopicActionsMenu'
 import { TopicImportDialog } from './components/TopicImportDialog'
 import { WorkspaceRailNav } from './components/WorkspaceRailNav'
@@ -93,7 +92,6 @@ export function Sidebar({
     ? activeSessionId
     : undefined
   const { collapsedCanvasIds, toggleCanvas } = usePersistentCollapsedCanvasIds()
-  const [menuCanvasId, setMenuCanvasId] = useState<string>()
   const [draggingCanvasId, setDraggingCanvasId] = useState<string>()
   const [dragOverCanvasId, setDragOverCanvasId] = useState<string>()
   const [draggingSessionId, setDraggingSessionId] = useState<string>()
@@ -106,30 +104,6 @@ export function Sidebar({
     const timer = window.setTimeout(() => setToastMessage(''), 1400)
     return () => window.clearTimeout(timer)
   }, [toastMessage])
-
-  useEffect(() => {
-    if (!menuCanvasId) return
-
-    const close = (event: globalThis.PointerEvent) => {
-      if (
-        event.target instanceof Element &&
-        event.target.closest('.project-menu-wrap')
-      ) {
-        return
-      }
-      setMenuCanvasId(undefined)
-    }
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMenuCanvasId(undefined)
-    }
-
-    document.addEventListener('pointerdown', close)
-    document.addEventListener('keydown', closeOnEscape)
-    return () => {
-      document.removeEventListener('pointerdown', close)
-      document.removeEventListener('keydown', closeOnEscape)
-    }
-  }, [menuCanvasId])
 
   const handleExport = async () => {
     try {
@@ -148,7 +122,6 @@ export function Sidebar({
   const renameCanvas = (canvas: Canvas) => {
     const next = prompt('重命名工作台', canvas.title)
     if (next) onRename(canvas.id, next)
-    setMenuCanvasId(undefined)
   }
 
   const clearTopicDragState = () => {
@@ -277,36 +250,11 @@ export function Sidebar({
                         </span>
                       </button>
                       <div className="project-row-actions">
-                        <div className="project-menu-wrap">
-                          <IconButton
-                            icon={<MoreHorizontal />}
-                            label="工作台操作"
-                            active={menuCanvasId === canvas.id}
-                            onClick={() =>
-                              setMenuCanvasId((id) =>
-                                id === canvas.id ? undefined : canvas.id,
-                              )
-                            }
-                          />
-                          {menuCanvasId === canvas.id && (
-                            <div className="project-menu">
-                              <button type="button" onClick={() => renameCanvas(canvas)}>
-                                <Pencil />
-                                <span>重命名工作台</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setMenuCanvasId(undefined)
-                                  onDelete(canvas.id)
-                                }}
-                              >
-                                <Trash2 />
-                                <span>删除工作台</span>
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        <ProjectActionsMenu
+                          canvas={canvas}
+                          onDelete={(targetCanvas) => onDelete(targetCanvas.id)}
+                          onRename={renameCanvas}
+                        />
                         <IconButton
                           icon={<Plus />}
                           label="新建话题"

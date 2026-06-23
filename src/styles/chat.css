@@ -73,6 +73,27 @@
   padding: 10px;
 }
 
+.message-list .message-bubble,
+.message-list .thinking-box > :not(.thinking-head),
+.compare-result article {
+  font-family: var(--serif);
+  font-size: var(--reading-font-size);
+  font-kerning: normal;
+  line-height: var(--reading-line-height);
+}
+
+.message-list .message-bubble :is(button, input, textarea, select),
+.message-list .thinking-box :is(button, input, textarea, select),
+.compare-result article :is(button, input, textarea, select) {
+  font-family: var(--font);
+}
+
+.message-list .message-bubble :is(code, pre),
+.message-list .thinking-box :is(code, pre),
+.compare-result article :is(code, pre) {
+  font-family: var(--mono);
+}
+
 .message {
   display: flex;
   flex-direction: column;
@@ -83,8 +104,8 @@
 .message-bubble {
   border: 1px solid var(--line);
   border-radius: 8px;
-  max-width: min(720px, 100%);
-  padding: 9px 10px;
+  max-width: min(660px, 100%);
+  padding: 12px 14px;
 }
 
 .message-bubble.is-empty {
@@ -330,7 +351,6 @@
 
 .thinking-box > :not(.thinking-head) {
   border-top: 1px solid var(--line);
-  font-size: 12px;
   max-height: 220px;
   overflow: auto;
   padding: 8px;

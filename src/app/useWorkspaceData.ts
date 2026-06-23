@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { defaultModelSettingsRepository } from '@/features/settings/infrastructure/defaultModelSettingsRepository'
 import { providerRepository } from '@/features/settings/infrastructure/providerRepository'
+import { webSearchSettingsRepository } from '@/features/web-search/infrastructure/webSearchSettingsRepository'
 import {
   DEFAULT_MODEL_SETTINGS_ID,
   FLOWCHART_MODEL_SETTINGS_ID,
@@ -17,6 +18,7 @@ import type {
   InputCard,
   PromptCard,
   ProviderConfig,
+  WebSearchSettings,
 } from '@/shared/types'
 
 export function useWorkspaceData() {
@@ -74,6 +76,14 @@ export function useWorkspaceData() {
     [],
     undefined,
   )
+  const webSearchSettings = useLiveQuery<
+    WebSearchSettings | undefined,
+    WebSearchSettings | undefined
+  >(
+    () => webSearchSettingsRepository.get(),
+    [],
+    undefined,
+  )
 
   useEffect(() => {
     void ensureSeedData()
@@ -81,6 +91,7 @@ export function useWorkspaceData() {
         await providerRepository.ensureBuiltInProviders()
         await defaultModelSettingsRepository.ensure()
         await defaultModelSettingsRepository.ensureFlowchart()
+        await webSearchSettingsRepository.ensure()
         await repairLegacyWorkspaceTopicScopes()
       })
       .catch(() => undefined)
@@ -143,6 +154,7 @@ export function useWorkspaceData() {
       setActiveCanvasId,
       setActiveProviderId,
       setSelectedCardId,
+      webSearchSettings,
     }),
     [
       canvases,
@@ -158,6 +170,7 @@ export function useWorkspaceData() {
       flowchartProvider,
       providers,
       selectableProviders,
+      webSearchSettings,
     ],
   )
 }

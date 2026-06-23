@@ -1,7 +1,7 @@
 import { act, type ComponentProps } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { KnowledgeBase } from '@/shared/types'
+import type { KnowledgeBase, WebSearchSettings } from '@/shared/types'
 import { ChatComposer } from './ChatComposer'
 
 let root: Root | undefined
@@ -59,6 +59,43 @@ const knowledgeBases: KnowledgeBase[] = [
     updatedAt: 'now',
   },
 ]
+
+const webSearchSettings: WebSearchSettings = {
+  id: 'web-search',
+  defaultProviderId: 'bing',
+  searchWithTime: true,
+  maxResults: 5,
+  excludeDomains: [],
+  compression: { method: 'none', cutoffLimit: 2000 },
+  providers: [
+    {
+      id: 'bing',
+      name: 'Bing',
+      type: 'local',
+      enabled: true,
+      apiHost: 'https://www.bing.com/search',
+      apiKeys: [],
+    },
+    {
+      id: 'baidu',
+      name: 'Baidu',
+      type: 'local',
+      enabled: true,
+      apiHost: 'https://www.baidu.com/s',
+      apiKeys: [],
+    },
+    {
+      id: 'bocha',
+      name: 'Bocha',
+      type: 'api',
+      enabled: true,
+      apiHost: 'https://api.bochaai.com',
+      apiKeys: [],
+    },
+  ],
+  createdAt: 'now',
+  updatedAt: 'now',
+}
 
 afterEach(() => {
   act(() => {
@@ -172,5 +209,40 @@ describe('ChatComposer', () => {
 
     expect(document.querySelector('.composer-knowledge-tags')).toBeNull()
     expect(document.querySelector('.knowledge-pill')).toBeNull()
+  })
+
+  it('opens web search provider menu and enables the selected provider', () => {
+    const onWebSearchEnabledChange = vi.fn()
+    const onWebSearchProviderChange = vi.fn()
+    renderComposer({
+      webSearchSettings,
+      onWebSearchEnabledChange,
+      onWebSearchProviderChange,
+    })
+
+    act(() => {
+      document
+        .querySelector<HTMLButtonElement>('button[aria-label="网络搜索：Bing"]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    const menu = document.querySelector('.web-search-provider-menu')
+    expect(menu?.textContent).toContain('Bing')
+    expect(menu?.textContent).toContain('Baidu')
+    expect(menu?.textContent).toContain('Bocha')
+    expect(menu?.textContent).toContain('免费')
+    expect(menu?.textContent).toContain('未配置')
+
+    act(() => {
+      Array.from(
+        document.querySelectorAll<HTMLButtonElement>('.web-search-provider-menu button'),
+      )
+        .find((button) => button.textContent?.includes('Baidu'))
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(onWebSearchProviderChange).toHaveBeenCalledWith('baidu')
+    expect(onWebSearchEnabledChange).toHaveBeenCalledWith(true)
+    expect(document.querySelector('.web-search-provider-menu')).toBeNull()
   })
 })

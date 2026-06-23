@@ -1,20 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  assignChatSessionPromptCard,
   clearChatSession,
   editChatMessage,
   ensureChatSession,
 } from '@/features/chat/application/chatService'
 import { chatRepository } from '@/features/chat/infrastructure/chatRepository'
+import { useComparePaneActions } from '@/features/chat/hooks/useComparePaneActions'
 import { useChatMessageActions } from '@/features/chat/hooks/useChatMessageActions'
 import { useScopedComparePanes } from '@/features/chat/hooks/useScopedComparePanes'
 import { useChatTopics } from '@/features/chat/hooks/useChatTopics'
+import { useProviderThinkingModes } from '@/features/chat/hooks/useProviderThinkingModes'
 import {
   useChildSessions,
   useMessages,
   usePaneMessagesById,
 } from '@/features/chat/hooks/useChatPanelMessages'
-import { resolveChatKnowledgeContext } from '@/features/chat/application/chatKnowledgeContext'
+import { useChatContextResolution } from '@/features/chat/hooks/useChatContextResolution'
 import type { InputSegment } from '@/features/input-card/model/inputCard'
 import {
   getAttachmentCapability,
@@ -22,16 +23,10 @@ import {
 } from '@/features/chat/model/attachments'
 import {
   getThinkingCapability,
-  normalizeThinkingMode,
 } from '@/shared/model/thinking'
 import {
-  MAX_COMPARE_PANES,
-  canRemoveComparePane,
-  createComparePane,
   getPaneThinkingMode,
   getProviderThinkingMode,
-  pickCardForPane,
-  removeComparePaneById,
   resolvePaneCard,
   type ComparePaneId,
   type ComparePaneState,
@@ -44,7 +39,8 @@ import type {
   PromptCard,
   PromptInjectionMode,
   ProviderConfig,
-  ThinkingMode,
+  WebSearchProviderId,
+  WebSearchSettings,
 } from '@/shared/types'
 export type { ComparePaneView } from '@/features/chat/model/comparePanes'
 
@@ -67,14 +63,16 @@ export function useChatPanelState(
   knowledgeBases: KnowledgeBase[] = [],
   selectedKnowledgeBaseIds: string[] = [],
   getKnowledgeProviders?: () => Promise<ProviderConfig[]>,
+  webSearchSettings?: WebSearchSettings,
 ) {
   const [input, setInput] = useState('')
   const [attachments, setAttachments] = useState<ChatAttachment[]>([])
   const [error, setError] = useState('')
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false)
+  const [webSearchProviderId, setWebSearchProviderId] = useState<WebSearchProviderId>()
   const chatActions = useChatMessageActions(setError)
-  const [thinkingModesByProvider, setThinkingModesByProvider] = useState<
-    Record<string, ThinkingMode>
-  >({})
+  const { setThinkingModeForProvider, thinkingModesByProvider } =
+    useProviderThinkingModes()
   const [promptInjectionMode, setPromptInjectionMode] = useState<PromptInjectionMode>('system')
 
   const {
@@ -143,21 +141,28 @@ export function useChatPanelState(
       ),
     }
   })
+  const comparePaneActions = useComparePaneActions({
+    activeCard: card,
+    activeSessionId: effectiveSessionId,
+    comparePanes,
+    paneViews,
+    promptCards,
+    provider,
+    setComparePanes,
+    stopGeneration: chatActions.stopGeneration,
+    onActiveCardChange,
+    onCompareOpenChange,
+  })
 
-  const resolveSelectedKnowledge = async (
-    query: string,
-    fallbackReferences: ChatMessage['knowledgeReferences'] = [],
-  ) => {
-    if (!selectedKnowledgeBaseIds.length) {
-      return { context: '', references: fallbackReferences ?? [] }
-    }
-    return resolveChatKnowledgeContext({
-      baseIds: selectedKnowledgeBaseIds,
-      bases: knowledgeBases,
-      getProviders: getKnowledgeProviders,
-      query,
-    })
-  }
+  const { preflightBusy, prepareContexts } = useChatContextResolution({
+    getKnowledgeProviders,
+    knowledgeBases,
+    selectedKnowledgeBaseIds,
+    setError,
+    webSearchEnabled,
+    webSearchProviderId,
+    webSearchSettings,
+  })
 
   const sendMainMessage = async () => {
     const text = input.trim()
@@ -171,15 +176,19 @@ export function useChatPanelState(
       setError(unsupportedReason)
       return
     }
+    const prepared = await prepareContexts(text)
+    if (!prepared) return
+    const { knowledge, webSearch } = prepared
     setInput('')
     setAttachments([])
-    const knowledge = await resolveSelectedKnowledge(text)
     await chatActions.sendMessageForPane({
       attachments: nextAttachments,
       card,
       history: messages,
       knowledgeContext: knowledge.context,
       knowledgeReferences: knowledge.references,
+      webSearchContext: webSearch.context,
+      webSearchReferences: webSearch.references,
       provider,
       promptInjectionMode,
       sessionId: effectiveSessionId,
@@ -208,11 +217,17 @@ export function useChatPanelState(
     setAttachments([])
     let currentSessionId = effectiveSessionId
     for (const segment of runnableSegments) {
+      const prepared = await prepareContexts(segment.content)
+      if (!prepared) break
       const result = await chatActions.sendMessageForPane({
         attachments: [],
         card,
         history: messagesRef.current,
         provider,
+        knowledgeContext: prepared.knowledge.context,
+        knowledgeReferences: prepared.knowledge.references,
+        webSearchContext: prepared.webSearch.context,
+        webSearchReferences: prepared.webSearch.references,
         promptInjectionMode,
         sessionId: currentSessionId,
         setSessionId: (nextSessionId) => {
@@ -252,17 +267,28 @@ export function useChatPanelState(
     const sessionId = paneBelongsToCurrentTopic ? pane.sessionId : undefined
     const history = paneBelongsToCurrentTopic ? pane.messages : []
 
-    updateComparePane(paneId, { attachments: [], input: '', parentSessionId })
+    const prepared = await prepareContexts(text)
+    if (!prepared) return
+    comparePaneActions.updateComparePane(paneId, {
+      attachments: [],
+      input: '',
+      parentSessionId,
+    })
     await chatActions.sendMessageForPane({
       attachments: nextAttachments,
       card: pane.card,
       comparePaneIndex: pane.index,
       history,
+      knowledgeContext: prepared.knowledge.context,
+      knowledgeReferences: prepared.knowledge.references,
       parentSessionId,
       provider: pane.provider,
+      webSearchContext: prepared.webSearch.context,
+      webSearchReferences: prepared.webSearch.references,
       promptInjectionMode: pane.promptInjectionMode,
       sessionId,
-      setSessionId: (next) => updateComparePane(paneId, { sessionId: next }),
+      setSessionId: (next) =>
+        comparePaneActions.updateComparePane(paneId, { sessionId: next }),
       text,
       thinkingMode: pane.thinkingMode,
       requestKey: paneId,
@@ -271,15 +297,19 @@ export function useChatPanelState(
 
   const resendMainMessage = async (message: ChatMessage, content: string) => {
     if (!card || !provider) return
-    const knowledge = await resolveSelectedKnowledge(
+    const prepared = await prepareContexts(
       content,
       message.knowledgeReferences,
+      message.webSearchReferences,
     )
+    if (!prepared) return
     await chatActions.resendMessageForPane({
       card,
       history: messages,
-      knowledgeContext: knowledge.context,
-      knowledgeReferences: knowledge.references,
+      knowledgeContext: prepared.knowledge.context,
+      knowledgeReferences: prepared.knowledge.references,
+      webSearchContext: prepared.webSearch.context,
+      webSearchReferences: prepared.webSearch.references,
       message,
       provider,
       promptInjectionMode,
@@ -303,19 +333,29 @@ export function useChatPanelState(
     const paneBelongsToCurrentTopic = pane.parentSessionId === parentSessionId
     const sessionId = paneBelongsToCurrentTopic ? pane.sessionId : undefined
     const history = paneBelongsToCurrentTopic ? pane.messages : []
-    updateComparePane(paneId, { parentSessionId })
+    comparePaneActions.updateComparePane(paneId, { parentSessionId })
 
+    const prepared = await prepareContexts(
+      content,
+      message.knowledgeReferences,
+      message.webSearchReferences,
+    )
+    if (!prepared) return
     await chatActions.resendMessageForPane({
       card: pane.card,
       comparePaneIndex: pane.index,
       history,
-      knowledgeReferences: message.knowledgeReferences,
+      knowledgeContext: prepared.knowledge.context,
+      knowledgeReferences: prepared.knowledge.references,
+      webSearchContext: prepared.webSearch.context,
+      webSearchReferences: prepared.webSearch.references,
       message,
       parentSessionId,
       provider: pane.provider,
       promptInjectionMode: pane.promptInjectionMode,
       sessionId,
-      setSessionId: (next) => updateComparePane(paneId, { sessionId: next }),
+      setSessionId: (next) =>
+        comparePaneActions.updateComparePane(paneId, { sessionId: next }),
       text: content,
       thinkingMode: pane.thinkingMode,
       requestKey: paneId,
@@ -336,51 +376,6 @@ export function useChatPanelState(
     await editChatMessage(message.id, content)
   }
 
-  const updateComparePane = (
-    paneId: ComparePaneId,
-    updates: Partial<ComparePaneState>,
-  ) => {
-    setComparePanes((current) =>
-      current.map((pane) =>
-        pane.id === paneId
-          ? {
-              ...pane,
-              ...updates,
-            }
-          : pane,
-      ),
-    )
-  }
-
-  const setComparePaneCard = (paneId: ComparePaneId, cardId: string) => {
-    const pane = comparePanes.find((item) => item.id === paneId)
-    updateComparePane(paneId, { cardId })
-    if (pane?.sessionId && pane.parentSessionId === effectiveSessionId) {
-      void assignChatSessionPromptCard(pane.sessionId, cardId)
-    }
-  }
-
-  const setComparePaneProvider = (paneId: ComparePaneId, providerId: string) => {
-    updateComparePane(paneId, { attachments: [], providerId })
-  }
-
-  const setComparePaneThinkingMode = (
-    paneId: ComparePaneId,
-    mode: ThinkingMode,
-  ) => {
-    const pane = paneViews.find((item) => item.id === paneId)
-    updateComparePane(paneId, {
-      thinkingMode: normalizeThinkingMode(pane?.provider, mode),
-    })
-  }
-
-  const setComparePanePromptInjectionMode = (
-    paneId: ComparePaneId,
-    mode: PromptInjectionMode,
-  ) => {
-    updateComparePane(paneId, { promptInjectionMode: mode })
-  }
-
   const ensureMainSessionForCompare = async () => {
     if (effectiveSessionId) return effectiveSessionId
     if (!card?.canvasId) return undefined
@@ -390,55 +385,14 @@ export function useChatPanelState(
     return nextSessionId
   }
 
-  const addComparePane = () => {
-    setComparePanes((current) => {
-      if (current.length >= MAX_COMPARE_PANES) return current
-      const activeCardId = card?.id ?? promptCards[0]?.id
-      return [
-        ...current,
-        createComparePane({
-          cardId: pickCardForPane(current.length, current, promptCards, activeCardId),
-          providerId: provider?.id,
-        }),
-      ]
-    })
-  }
-
-  const removeComparePane = (paneId: ComparePaneId) => {
-    const result = removeComparePaneById(comparePanes, paneId)
-    if (!result.removed) return
-
-    chatActions.stopGeneration(paneId)
-    setComparePanes(result.panes)
-
-    if (result.shouldExitCompare) {
-      onCompareOpenChange?.(false)
-      const remaining = result.panes[0]
-      const remainingCardId =
-        remaining?.cardId ?? paneViews.find((pane) => pane.id === remaining?.id)?.card?.id
-      if (remainingCardId) onActiveCardChange?.(remainingCardId)
-    }
-  }
-
-  const setThinkingModeForProvider = (
-    targetProvider: ProviderConfig | undefined,
-    mode: ThinkingMode,
-  ) => {
-    if (!targetProvider) return
-    setThinkingModesByProvider((current) => ({
-      ...current,
-      [targetProvider.id]: normalizeThinkingMode(targetProvider, mode),
-    }))
-  }
-
   return {
     activeRequest: chatActions.activeRequest,
-    addComparePane,
+    addComparePane: comparePaneActions.addComparePane,
     attachmentCapability,
     attachments,
-    busy: chatActions.busy,
-    canAddComparePane: comparePanes.length < MAX_COMPARE_PANES,
-    canRemoveComparePane: canRemoveComparePane(comparePanes),
+    busy: chatActions.busy || preflightBusy,
+    canAddComparePane: comparePaneActions.canAddComparePane,
+    canRemoveComparePane: comparePaneActions.canRemoveComparePane,
     clearCompareMessages,
     clearMainMessages,
     comparePaneStates: comparePanes,
@@ -453,7 +407,7 @@ export function useChatPanelState(
     mainMessages: messages,
     mainSessions: sessions ?? [],
     promptInjectionMode,
-    removeComparePane,
+    removeComparePane: comparePaneActions.removeComparePane,
     resendCompareMessage,
     resendMainMessage,
     runInputSegments,
@@ -461,21 +415,24 @@ export function useChatPanelState(
     sendCompareMessage,
     sendMainMessage,
     setMainSessionId,
-    setComparePaneCard,
-    setComparePaneAttachments: (paneId: ComparePaneId, value: ChatAttachment[]) =>
-      updateComparePane(paneId, { attachments: value }),
-    setComparePaneInput: (paneId: ComparePaneId, value: string) =>
-      updateComparePane(paneId, { input: value }),
-    setComparePanePromptInjectionMode,
-    setComparePaneProvider,
-    setComparePaneThinkingMode,
+    setComparePaneCard: comparePaneActions.setComparePaneCard,
+    setComparePaneAttachments: comparePaneActions.setComparePaneAttachments,
+    setComparePaneInput: comparePaneActions.setComparePaneInput,
+    setComparePanePromptInjectionMode:
+      comparePaneActions.setComparePanePromptInjectionMode,
+    setComparePaneProvider: comparePaneActions.setComparePaneProvider,
+    setComparePaneThinkingMode: comparePaneActions.setComparePaneThinkingMode,
     setInput,
     setAttachments,
     setPromptInjectionMode,
+    setWebSearchEnabled,
+    setWebSearchProviderId,
     setThinkingModeForProvider,
     stopGeneration: chatActions.stopGeneration,
     supportsDeepThinking: thinkingCapability.supportsDeepMode,
     supportsThinking: thinkingCapability.supportsThinking,
     thinkingMode: effectiveThinkingMode,
+    webSearchEnabled,
+    webSearchProviderId,
   }
 }

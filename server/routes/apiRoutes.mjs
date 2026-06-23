@@ -24,6 +24,10 @@ import {
   streamAskSkillQuestion,
   streamSkillLabTask,
 } from '../controllers/skillsController.mjs'
+import {
+  checkWebSearchProvider,
+  runWebSearch,
+} from '../controllers/webSearchController.mjs'
 
 export const apiRoutes = Router()
 
@@ -33,6 +37,8 @@ apiRoutes.post('/rerank', rerankDocuments)
 apiRoutes.post('/test-provider', testProvider)
 apiRoutes.post('/provider-models', listProviderModels)
 apiRoutes.post('/knowledge/fetch-url', fetchKnowledgeUrl)
+apiRoutes.post('/web-search/search', runWebSearch)
+apiRoutes.post('/web-search/check', checkWebSearchProvider)
 apiRoutes.get('/app/update-status', getAppUpdateStatus)
 apiRoutes.post('/app/update', runAppUpdate)
 apiRoutes.post('/skills/list', listSkills)
