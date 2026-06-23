@@ -1,13 +1,16 @@
 import { Router } from 'express'
 import {
+  createEmbeddings,
   listProviderModels,
   proxyChatCompletion,
+  rerankDocuments,
   testProvider,
 } from '../controllers/chatController.mjs'
 import {
   getAppUpdateStatus,
   runAppUpdate,
 } from '../controllers/appUpdateController.mjs'
+import { fetchKnowledgeUrl } from '../controllers/knowledgeController.mjs'
 import {
   analyzeSkillTopic,
   askSkillQuestion,
@@ -25,8 +28,11 @@ import {
 export const apiRoutes = Router()
 
 apiRoutes.post('/chat/completions', proxyChatCompletion)
+apiRoutes.post('/embeddings', createEmbeddings)
+apiRoutes.post('/rerank', rerankDocuments)
 apiRoutes.post('/test-provider', testProvider)
 apiRoutes.post('/provider-models', listProviderModels)
+apiRoutes.post('/knowledge/fetch-url', fetchKnowledgeUrl)
 apiRoutes.get('/app/update-status', getAppUpdateStatus)
 apiRoutes.post('/app/update', runAppUpdate)
 apiRoutes.post('/skills/list', listSkills)

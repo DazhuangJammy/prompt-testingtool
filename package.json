@@ -1,7 +1,7 @@
 {
   "name": "prompt-canvas-tool",
   "private": true,
-  "version": "0.1.8",
+  "version": "0.1.9",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev-tool.mjs",
@@ -28,11 +28,15 @@
     "dexie": "^4.4.3",
     "dexie-react-hooks": "^4.4.0",
     "express": "^5.2.1",
+    "jszip": "^3.10.1",
     "lucide-react": "^1.17.0",
+    "mammoth": "^1.12.0",
+    "pdfjs-dist": "^6.0.227",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

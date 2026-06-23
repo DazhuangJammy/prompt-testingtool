@@ -6,6 +6,7 @@ import {
 import { useActiveChatRequests } from '@/features/chat/hooks/useActiveChatRequests'
 import type {
   ChatAttachment,
+  ChatKnowledgeReference,
   ChatMessage,
   PromptCard,
   PromptInjectionMode,
@@ -19,6 +20,8 @@ interface MessageActionBase {
   comparePaneIndex?: number
   defaultAssistantPrompt?: string
   history: ChatMessage[]
+  knowledgeContext?: string
+  knowledgeReferences?: ChatKnowledgeReference[]
   parentSessionId?: string
   provider: ProviderConfig
   promptInjectionMode: PromptInjectionMode
@@ -51,6 +54,8 @@ export function useChatMessageActions(setError: (error: string) => void) {
     attachments = [],
     defaultAssistantPrompt,
     history,
+    knowledgeContext,
+    knowledgeReferences,
     parentSessionId,
     provider,
     promptInjectionMode,
@@ -80,6 +85,8 @@ export function useChatMessageActions(setError: (error: string) => void) {
         attachments,
         defaultAssistantPrompt,
         history,
+        knowledgeContext,
+        knowledgeReferences,
         provider,
         promptInjectionMode,
         sessionId: activeSessionId,
@@ -101,6 +108,8 @@ export function useChatMessageActions(setError: (error: string) => void) {
     comparePaneIndex,
     defaultAssistantPrompt,
     history,
+    knowledgeContext,
+    knowledgeReferences,
     parentSessionId,
     message,
     provider,
@@ -130,6 +139,8 @@ export function useChatMessageActions(setError: (error: string) => void) {
         card,
         defaultAssistantPrompt,
         history,
+        knowledgeContext,
+        knowledgeReferences,
         message,
         provider,
         promptInjectionMode,

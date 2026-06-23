@@ -1,6 +1,7 @@
 import { requestCompletion, requestCompletionStream } from '@/shared/api/ai'
 import type {
   ChatAttachment,
+  ChatKnowledgeReference,
   ChatMessage,
   ChatSession,
   PromptInjectionMode,
@@ -109,10 +110,14 @@ export async function sendChatMessage({
   sessionId,
   signal,
   attachments = [],
+  knowledgeContext = '',
+  knowledgeReferences = [],
   text,
   thinkingMode,
 }: {
   attachments?: ChatAttachment[]
+  knowledgeContext?: string
+  knowledgeReferences?: ChatKnowledgeReference[]
   card: PromptCard
   defaultAssistantPrompt?: string
   history: ChatMessage[]
@@ -133,6 +138,7 @@ export async function sendChatMessage({
     role: 'user',
     content: text,
     attachments,
+    knowledgeReferences,
     promptVersionId: version.id,
     createdAt: nowIso(),
   }
@@ -143,6 +149,7 @@ export async function sendChatMessage({
     sessionId,
     role: 'assistant',
     content: '',
+    knowledgeReferences,
     promptVersionId: version.id,
     thinkingMode,
     status: 'streaming',
@@ -164,6 +171,7 @@ export async function sendChatMessage({
       userMessage.content,
       promptInjectionMode,
       userMessage.attachments,
+      knowledgeContext,
     ),
     provider,
     setAssistantText: (value) => {
@@ -192,6 +200,8 @@ export async function sendChatMessage({
 
 async function requestAssistantReply({
   attachments = [],
+  knowledgeContext = '',
+  knowledgeReferences = [],
   card,
   defaultAssistantPrompt,
   history,
@@ -203,6 +213,8 @@ async function requestAssistantReply({
   thinkingMode,
 }: {
   attachments?: ChatAttachment[]
+  knowledgeContext?: string
+  knowledgeReferences?: ChatKnowledgeReference[]
   card: PromptCard
   defaultAssistantPrompt?: string
   history: ChatMessage[]
@@ -221,6 +233,7 @@ async function requestAssistantReply({
     sessionId,
     role: 'assistant',
     content: '',
+    knowledgeReferences,
     promptVersionId: version.id,
     thinkingMode,
     status: 'streaming',
@@ -241,6 +254,7 @@ async function requestAssistantReply({
       text,
       promptInjectionMode,
       attachments,
+      knowledgeContext,
     ),
     provider,
     setAssistantText: (value) => {
@@ -370,6 +384,8 @@ export async function resendChatMessage({
   card,
   defaultAssistantPrompt,
   history,
+  knowledgeContext = '',
+  knowledgeReferences,
   message,
   provider,
   promptInjectionMode,
@@ -381,6 +397,8 @@ export async function resendChatMessage({
   card: PromptCard
   defaultAssistantPrompt?: string
   history: ChatMessage[]
+  knowledgeContext?: string
+  knowledgeReferences?: ChatKnowledgeReference[]
   message: ChatMessage
   provider: ProviderConfig
   promptInjectionMode: PromptInjectionMode
@@ -396,6 +414,8 @@ export async function resendChatMessage({
     card,
     defaultAssistantPrompt,
     history: history.filter((item) => item.createdAt < message.createdAt),
+    knowledgeContext,
+    knowledgeReferences: knowledgeReferences ?? message.knowledgeReferences ?? [],
     provider,
     promptInjectionMode,
     sessionId,

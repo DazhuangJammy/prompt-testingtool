@@ -4,6 +4,7 @@ import {
   buildSelectableProviderId,
   createProviderFromType,
   deriveSelectableProviders,
+  hasProviderModelCapability,
   normalizeProviderConfig,
 } from './providerCatalog'
 
@@ -39,7 +40,15 @@ describe('provider catalog', () => {
 
     expect(provider.enabled).toBe(true)
     expect(provider.type).toBe('custom')
-    expect(provider.models).toEqual([{ id: 'old-model', enabled: true }])
+    expect(provider.models).toEqual([
+      {
+        id: 'old-model',
+        capabilities: ['chat', 'function-call'],
+        group: undefined,
+        name: undefined,
+        enabled: true,
+      },
+    ])
   })
 
   it('normalizes explicit empty model lists without restoring legacy model', () => {
@@ -66,7 +75,12 @@ describe('provider catalog', () => {
       apiKey: 'key',
       model: '',
       models: [
-        { id: ' model-a ', name: ' Model A ', enabled: true },
+        {
+          id: ' model-a ',
+          name: ' Model A ',
+          capabilities: ['chat', 'chat', 'reasoning'],
+          enabled: true,
+        },
         { id: 'model-a', enabled: false },
         { id: ' ', enabled: true },
         { id: 'model-b', group: ' ChatGPT ', enabled: false },
@@ -79,9 +93,37 @@ describe('provider catalog', () => {
     expect(provider.model).toBe('model-a')
     expect(provider.order).toBe(3)
     expect(provider.models).toEqual([
-      { id: 'model-a', name: 'Model A', enabled: true },
-      { id: 'model-b', group: 'ChatGPT', name: undefined, enabled: false },
+      {
+        id: 'model-a',
+        capabilities: ['chat', 'reasoning'],
+        name: 'Model A',
+        enabled: true,
+      },
+      {
+        id: 'model-b',
+        capabilities: ['chat', 'function-call'],
+        group: 'ChatGPT',
+        name: undefined,
+        enabled: false,
+      },
     ])
+  })
+
+  it('keeps built-in model capability labels from the registry', () => {
+    const provider = createProviderFromType('dashscope', '百炼')
+
+    expect(
+      provider.models?.find((model) => model.id === 'text-embedding-v4')
+        ?.capabilities,
+    ).toEqual(['embedding'])
+    expect(
+      provider.models?.find((model) => model.id === 'gte-rerank-v2')
+        ?.capabilities,
+    ).toEqual(['embedding', 'rerank'])
+    expect(
+      provider.models?.find((model) => model.id === 'qwen3.7-plus')
+        ?.capabilities,
+    ).toContain('reasoning')
   })
 
   it('creates custom fallback providers from type', () => {
@@ -118,8 +160,23 @@ describe('provider catalog', () => {
         sourceProviderId: 'p1',
         name: 'Deep · deepseek-v4-flash',
         model: 'deepseek-v4-flash',
+        models: [
+          expect.objectContaining({
+            id: 'deepseek-v4-flash',
+            capabilities: ['chat', 'reasoning', 'function-call'],
+          }),
+        ],
       }),
     ])
+  })
+
+  it('checks capabilities on selectable provider models', () => {
+    const [embeddingProvider] = deriveSelectableProviders([
+      { ...createProviderFromType('dashscope', '百炼'), enabled: true },
+    ]).filter((provider) => provider.model === 'text-embedding-v4')
+
+    expect(hasProviderModelCapability(embeddingProvider, 'embedding')).toBe(true)
+    expect(hasProviderModelCapability(embeddingProvider, 'rerank')).toBe(false)
   })
 
   it('does not derive providers when provider is disabled', () => {

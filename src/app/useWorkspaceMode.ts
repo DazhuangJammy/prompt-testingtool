@@ -4,7 +4,9 @@ import type { WorkspaceMode } from '@/shared/types'
 const workspaceModeStorageKey = 'prompt-workspace-mode'
 
 export function resolveStoredWorkspaceMode(value: string | null): WorkspaceMode {
-  return value === 'skills' || value === 'prompt' ? value : 'prompt'
+  return value === 'skills' || value === 'knowledge' || value === 'prompt'
+    ? value
+    : 'prompt'
 }
 
 function readWorkspaceMode(): WorkspaceMode {

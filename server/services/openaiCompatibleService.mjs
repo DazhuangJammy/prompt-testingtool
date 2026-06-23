@@ -17,6 +17,31 @@ export const buildModelsEndpoint = (baseUrl) => {
   return new URL(`${clean}/v1/models`)
 }
 
+export const buildEmbeddingsEndpoint = (baseUrl) => {
+  const clean = String(baseUrl ?? '').replace(/\/$/, '')
+  if (!clean) throw new Error('Base URL missing')
+  if (clean.endsWith('/embeddings')) return new URL(clean)
+  if (clean.endsWith('/chat/completions')) {
+    return new URL(clean.replace(/\/chat\/completions$/, '/embeddings'))
+  }
+  if (clean.endsWith('/v1')) return new URL(`${clean}/embeddings`)
+  return new URL(`${clean}/v1/embeddings`)
+}
+
+export const buildRerankEndpoint = (baseUrl, model = '') => {
+  const clean = String(baseUrl ?? '').replace(/\/$/, '')
+  if (!clean) throw new Error('Base URL missing')
+  if (clean.endsWith('/reranks')) return new URL(clean)
+  if (clean.includes('dashscope.aliyuncs.com') && !isQwenRerankModel(model)) {
+    return new URL('https://dashscope.aliyuncs.com/api/v1/services/rerank/text-rerank/text-rerank')
+  }
+  if (clean.includes('dashscope.aliyuncs.com')) {
+    return new URL('https://dashscope.aliyuncs.com/compatible-api/v1/reranks')
+  }
+  if (clean.endsWith('/v1')) return new URL(`${clean}/reranks`)
+  return new URL(`${clean}/v1/reranks`)
+}
+
 export const parseUpstreamError = (text) => {
   try {
     const payload = JSON.parse(text)
@@ -72,6 +97,70 @@ export const requestModelList = async ({ provider, signal }) => {
     },
     signal,
   })
+}
+
+export const requestEmbeddings = async ({
+  provider,
+  model,
+  input,
+  signal,
+}) => {
+  const endpoint = buildEmbeddingsEndpoint(provider.baseUrl)
+
+  return fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${provider.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    signal,
+    body: JSON.stringify({ model, input }),
+  })
+}
+
+export const requestRerank = async ({
+  provider,
+  model,
+  query,
+  documents,
+  topN,
+  signal,
+}) => {
+  const endpoint = buildRerankEndpoint(provider.baseUrl, model)
+
+  return fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${provider.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    signal,
+    body: JSON.stringify(buildRerankRequestBody({ documents, model, query, topN })),
+  })
+}
+
+export const buildRerankRequestBody = ({ model, query, documents, topN }) => {
+  if (isQwenRerankModel(model)) {
+    return {
+      model,
+      query,
+      documents,
+      top_n: topN,
+    }
+  }
+
+  return {
+    model,
+    input: { query, documents },
+    parameters: {
+      top_n: topN,
+      return_documents: false,
+    },
+  }
+}
+
+function isQwenRerankModel(model) {
+  return /^qwen3-rerank$/i.test(String(model ?? ''))
 }
 
 export const buildChatRequestBody = ({

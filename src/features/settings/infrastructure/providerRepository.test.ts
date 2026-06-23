@@ -37,7 +37,16 @@ describe('provider repository', () => {
       ...provider,
       enabled: true,
       type: 'custom',
-      models: [{ id: 'model', enabled: true }],
+      order: undefined,
+      models: [
+        {
+          id: 'model',
+          capabilities: ['chat', 'function-call'],
+          group: undefined,
+          name: undefined,
+          enabled: true,
+        },
+      ],
     })
     expect(db.providerConfigs.delete).toHaveBeenCalledWith('p')
   })
@@ -62,7 +71,44 @@ describe('provider repository', () => {
     expect(
       vi
         .mocked(db.providerConfigs.bulkPut)
-        .mock.calls[0][0].some((provider) => provider.type === 'deepseek'),
-    ).toBe(false)
+        .mock.calls[0][0].filter((provider) => provider.type === 'deepseek'),
+    ).toHaveLength(1)
+  })
+
+  it('syncs missing built-in models into existing providers', async () => {
+    vi.mocked(db.providerConfigs.toArray).mockResolvedValue([
+      {
+        id: 'dashscope',
+        name: '阿里云百炼',
+        type: 'dashscope',
+        baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/',
+        apiKey: 'key',
+        enabled: true,
+        model: 'qwen3.7-plus',
+        models: [{ id: 'qwen3.7-plus', enabled: true }],
+        createdAt: 'now',
+        updatedAt: 'now',
+      } as ProviderConfig,
+    ])
+
+    await providerRepository.ensureBuiltInProviders()
+
+    expect(db.providerConfigs.bulkPut).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'dashscope',
+          models: expect.arrayContaining([
+            expect.objectContaining({
+              id: 'text-embedding-v4',
+              capabilities: ['embedding'],
+            }),
+            expect.objectContaining({
+              id: 'gte-rerank-v2',
+              capabilities: ['embedding', 'rerank'],
+            }),
+          ]),
+        }),
+      ]),
+    )
   })
 })

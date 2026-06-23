@@ -94,6 +94,51 @@
   padding: 8px 10px;
 }
 
+.model-dialog-capabilities {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 10px;
+}
+
+.model-dialog-capabilities legend {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 0 4px;
+}
+
+.model-dialog-capabilities > div {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.model-dialog-capabilities label {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  font-size: 13px;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 9px;
+}
+
+.model-dialog-capabilities input {
+  accent-color: var(--accent);
+  margin: 0;
+}
+
+.model-dialog-capabilities label:has(input:checked) {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
 .model-dialog-actions {
   border-top: 1px solid var(--line);
   display: flex;

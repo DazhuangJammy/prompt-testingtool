@@ -1,12 +1,15 @@
-import { act } from 'react'
+import { act, type ComponentProps } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { KnowledgeBase } from '@/shared/types'
 import { ChatComposer } from './ChatComposer'
 
 let root: Root | undefined
 let host: HTMLDivElement | undefined
 
-function renderComposer() {
+function renderComposer(
+  props: Partial<ComponentProps<typeof ChatComposer>> = {},
+) {
   host = document.createElement('div')
   document.body.append(host)
   root = createRoot(host)
@@ -34,10 +37,28 @@ function renderComposer() {
         onPromptInjectionModeChange={vi.fn()}
         onSend={vi.fn()}
         onThinkingModeChange={vi.fn()}
+        {...props}
       />,
     )
   })
 }
+
+const knowledgeBases: KnowledgeBase[] = [
+  {
+    id: 'kb-test',
+    name: '测试',
+    providerType: 'local',
+    config: {
+      chunkSize: 800,
+      chunkOverlap: 120,
+      topK: 4,
+      threshold: 0.2,
+      rerankEnabled: false,
+    },
+    createdAt: 'now',
+    updatedAt: 'now',
+  },
+]
 
 afterEach(() => {
   act(() => {
@@ -79,5 +100,77 @@ describe('ChatComposer', () => {
     })
 
     expect(document.querySelector('.composer-error-toast')).toBeNull()
+  })
+
+  it('renders selected knowledge bases as removable tags after menu selection', () => {
+    const onKnowledgeSelectionChange = vi.fn()
+    renderComposer({
+      knowledgeBases,
+      onKnowledgeSelectionChange,
+      selectedKnowledgeBaseIds: [],
+    })
+
+    act(() => {
+      document
+        .querySelector<HTMLButtonElement>('button[aria-label="知识库"]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    act(() => {
+      Array.from(document.querySelectorAll<HTMLButtonElement>('.knowledge-menu button'))
+        .find((button) => button.textContent?.includes('测试'))
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(onKnowledgeSelectionChange).toHaveBeenLastCalledWith(['kb-test'])
+
+    act(() => {
+      root?.render(
+        <ChatComposer
+          attachmentCapability={{
+            supportsDocuments: false,
+            supportsImages: false,
+            supportsTextFiles: true,
+          }}
+          attachments={[]}
+          busy={false}
+          canClearMessages={false}
+          disabled={false}
+          input=""
+          knowledgeBases={knowledgeBases}
+          promptInjectionMode="system"
+          selectedKnowledgeBaseIds={['kb-test']}
+          supportsDeepThinking={false}
+          supportsThinking={false}
+          thinkingMode="off"
+          onAttachmentsChange={vi.fn()}
+          onChange={vi.fn()}
+          onClearMessages={vi.fn()}
+          onKnowledgeSelectionChange={onKnowledgeSelectionChange}
+          onPromptInjectionModeChange={vi.fn()}
+          onSend={vi.fn()}
+          onThinkingModeChange={vi.fn()}
+        />,
+      )
+    })
+
+    expect(document.querySelector('.composer-knowledge-tags')?.textContent).toContain('测试')
+
+    act(() => {
+      document
+        .querySelector<HTMLButtonElement>('button[aria-label="移除 测试"]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(onKnowledgeSelectionChange).toHaveBeenLastCalledWith([])
+  })
+
+  it('does not render knowledge tags when no base is selected', () => {
+    renderComposer({
+      knowledgeBases,
+      selectedKnowledgeBaseIds: [],
+    })
+
+    expect(document.querySelector('.composer-knowledge-tags')).toBeNull()
+    expect(document.querySelector('.knowledge-pill')).toBeNull()
   })
 })

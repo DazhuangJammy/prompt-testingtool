@@ -3,6 +3,7 @@ import type { CSSProperties, PointerEvent } from 'react'
 import { useMemo, useState } from 'react'
 import type {
   ChatAttachment,
+  KnowledgeBase,
   PromptCard,
   PromptInjectionMode,
   ProviderConfig,
@@ -26,6 +27,7 @@ interface ChatPanelProps {
   promptCards: PromptCard[]
   providers: ProviderConfig[]
   inputSources?: PromptInputSource[]
+  knowledgeBases?: KnowledgeBase[]
   compareOpen: boolean
   comparePaneCardIds: string[]
   comparePanes: ComparePaneState[]
@@ -42,6 +44,9 @@ interface ChatPanelProps {
     panes: ComparePaneState[] | ((current: ComparePaneState[]) => ComparePaneState[]),
   ) => void
   onEnsureWidth: (width: number) => void
+  onKnowledgeSelectionChange?: (baseIds: string[]) => void
+  selectedKnowledgeBaseIds?: string[]
+  getKnowledgeProviders?: () => Promise<ProviderConfig[]>
   width: number
 }
 
@@ -51,6 +56,7 @@ export function ChatPanel({
   promptCards,
   providers,
   inputSources = [],
+  knowledgeBases = [],
   compareOpen,
   comparePaneCardIds,
   comparePanes,
@@ -65,6 +71,9 @@ export function ChatPanel({
   onComparePaneCardIdsChange,
   onComparePanesChange,
   onEnsureWidth,
+  onKnowledgeSelectionChange,
+  selectedKnowledgeBaseIds = [],
+  getKnowledgeProviders,
   width,
 }: ChatPanelProps) {
   const state = useChatPanelState(
@@ -81,6 +90,9 @@ export function ChatPanel({
     onComparePaneCardIdsChange,
     onComparePanesChange,
     onActiveCardChange,
+    knowledgeBases,
+    selectedKnowledgeBaseIds,
+    getKnowledgeProviders,
   )
   const disabled = !provider || !card
   const compareDisabled = promptCards.length < 2
@@ -235,9 +247,12 @@ export function ChatPanel({
               supportsDeepThinking={state.supportsDeepThinking}
               supportsThinking={state.supportsThinking}
               thinkingMode={state.thinkingMode}
+              knowledgeBases={knowledgeBases}
+              selectedKnowledgeBaseIds={selectedKnowledgeBaseIds}
               onAttachmentsChange={state.setAttachments}
               onChange={state.setInput}
               onClearMessages={state.clearMainMessages}
+              onKnowledgeSelectionChange={onKnowledgeSelectionChange}
               onPromptInjectionModeChange={state.setPromptInjectionMode}
               onSend={state.sendMainMessage}
               onStop={state.stopGeneration}

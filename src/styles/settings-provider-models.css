@@ -7,8 +7,15 @@
 
 .model-add-button {
   border-color: var(--line);
-  height: 30px;
-  width: 30px;
+  flex: 0 0 auto;
+  height: 40px;
+  min-width: 40px;
+  width: 40px;
+}
+
+.model-add-button svg {
+  height: 18px;
+  width: 18px;
 }
 
 .model-list-head > div:first-child {
@@ -33,7 +40,9 @@
 .provider-model-list {
   border: 1px solid var(--line);
   border-radius: 10px;
-  overflow: hidden;
+  flex: 1 1 180px;
+  min-height: 156px;
+  overflow: auto;
 }
 
 .provider-model-row {
@@ -74,7 +83,41 @@
 .provider-model-main {
   display: flex;
   flex-direction: column;
+  gap: 6px;
   min-width: 0;
+}
+
+.provider-model-meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.provider-model-meta small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.provider-model-tags {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.provider-model-tags span {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1;
+  padding: 4px 7px;
+  white-space: nowrap;
 }
 
 .provider-model-actions {

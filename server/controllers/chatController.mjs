@@ -1,7 +1,9 @@
 import {
   parseUpstreamError,
   requestChatCompletion,
+  requestEmbeddings,
   requestModelList,
+  requestRerank,
 } from '../services/openaiCompatibleService.mjs'
 
 export const proxyChatCompletion = async (req, res) => {
@@ -143,6 +145,80 @@ export const listProviderModels = async (req, res) => {
     res.status(502).json({
       ok: false,
       error: error instanceof Error ? error.message : 'Fetch models failed',
+    })
+  }
+}
+
+export const createEmbeddings = async (req, res) => {
+  const { provider, model, input } = req.body ?? {}
+
+  if (!provider?.baseUrl || !provider?.apiKey || !model) {
+    res.status(400).json({ error: 'Provider incomplete' })
+    return
+  }
+
+  if (!Array.isArray(input) && typeof input !== 'string') {
+    res.status(400).json({ error: 'Invalid embedding input' })
+    return
+  }
+
+  try {
+    const upstream = await requestEmbeddings({ provider, model, input })
+    const text = await upstream.text()
+
+    if (!upstream.ok) {
+      res.status(upstream.status).json({
+        error: parseUpstreamError(text) || upstream.statusText,
+        status: upstream.status,
+      })
+      return
+    }
+
+    res.type(upstream.headers.get('content-type') ?? 'application/json')
+    res.send(text)
+  } catch (error) {
+    res.status(502).json({
+      error: error instanceof Error ? error.message : 'Embedding failed',
+    })
+  }
+}
+
+export const rerankDocuments = async (req, res) => {
+  const { provider, model, query, documents, topN } = req.body ?? {}
+
+  if (!provider?.baseUrl || !provider?.apiKey || !model) {
+    res.status(400).json({ error: 'Provider incomplete' })
+    return
+  }
+
+  if (!query || !Array.isArray(documents)) {
+    res.status(400).json({ error: 'Invalid rerank input' })
+    return
+  }
+
+  try {
+    const upstream = await requestRerank({
+      provider,
+      model,
+      query,
+      documents,
+      topN,
+    })
+    const text = await upstream.text()
+
+    if (!upstream.ok) {
+      res.status(upstream.status).json({
+        error: parseUpstreamError(text) || upstream.statusText,
+        status: upstream.status,
+      })
+      return
+    }
+
+    res.type(upstream.headers.get('content-type') ?? 'application/json')
+    res.send(text)
+  } catch (error) {
+    res.status(502).json({
+      error: error instanceof Error ? error.message : 'Rerank failed',
     })
   }
 }

@@ -1,4 +1,5 @@
 import type { ProviderConfig, ThinkingMode } from '@/shared/types'
+import { hasModelCapability } from './providerModelCapabilities'
 
 export interface ThinkingOption {
   mode: ThinkingMode
@@ -75,6 +76,10 @@ export function formatMessageTime(createdAt: string) {
 }
 
 export function getThinkingCapability(provider?: ProviderConfig) {
+  const providerModel =
+    provider?.models?.find((model) => model.id === provider.model) ??
+    provider?.models?.[0]
+  const supportsTaggedThinking = hasModelCapability(providerModel, 'reasoning')
   const model = provider?.model.toLowerCase() ?? ''
   const name = provider?.name.toLowerCase() ?? ''
   const baseUrl = provider?.baseUrl?.toLowerCase() ?? ''
@@ -82,6 +87,7 @@ export function getThinkingCapability(provider?: ProviderConfig) {
   const isMiniMax = target.includes('minimax')
   const isQwen = target.includes('qwen') || target.includes('dashscope')
   const supportsThinking =
+    supportsTaggedThinking ||
     isQwen ||
     target.includes('deepseek') ||
     target.includes('kimi') ||

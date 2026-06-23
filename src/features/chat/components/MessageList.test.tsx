@@ -60,6 +60,45 @@ const assistantMessage: ChatMessage = {
   createdAt: '2026-06-10T10:03:00.000Z',
 }
 
+const knowledgeMessage: ChatMessage = {
+  id: 'message-knowledge',
+  sessionId: 'session-1',
+  role: 'assistant',
+  content: '根据参考材料，活跃客户集中在少数高频客户中。',
+  knowledgeReferences: [
+    {
+      baseId: 'base',
+      baseName: '测试知识库',
+      itemId: 'item-1',
+      itemTitle: '访谈总结提炼.docx',
+      chunkId: 'chunk-1',
+      chunkIndex: 0,
+      content: '系统内有 130 多家客户，但真正活跃、高频率下单的仅 30-40 家。',
+      score: 0.92,
+    },
+    {
+      baseId: 'base',
+      baseName: '测试知识库',
+      itemId: 'item-2',
+      itemTitle: '销售复盘.md',
+      chunkId: 'chunk-2',
+      chunkIndex: 1,
+      content: '销售端需要把客户按成交频次、客单价和流失风险进行分层。',
+      score: 0.88,
+    },
+  ],
+  status: 'complete',
+  createdAt: '2026-06-10T10:05:00.000Z',
+}
+
+const userKnowledgeMessage: ChatMessage = {
+  ...knowledgeMessage,
+  id: 'message-user-knowledge',
+  role: 'user',
+  content: '第三次转型是什么时候发生了啥',
+  createdAt: '2026-06-10T10:06:00.000Z',
+}
+
 const tableMessage: ChatMessage = {
   id: 'message-5',
   sessionId: 'session-1',
@@ -223,5 +262,42 @@ describe('MessageList', () => {
     expect(table?.querySelectorAll('th')).toHaveLength(2)
     expect(table?.textContent).toContain('角度编号')
     expect(table?.textContent).toContain('社交破冰')
+  })
+
+  it('renders knowledge citation summary, dialog and inline markers', () => {
+    renderMessageList([knowledgeMessage])
+
+    const summary = document.querySelector<HTMLButtonElement>(
+      '.knowledge-citation-summary',
+    )
+    expect(summary?.textContent).toContain('2 个引用内容')
+    expect(document.querySelectorAll('.knowledge-citation-marker')).toHaveLength(2)
+    expect(document.body.textContent).toContain('根据参考材料')
+
+    act(() => {
+      summary?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    const dialog = document.querySelector('.knowledge-citation-dialog')
+    expect(dialog).toBeTruthy()
+    expect(dialog?.textContent).toContain('引用内容')
+    expect(dialog?.textContent).toContain('访谈总结提炼.docx')
+    expect(dialog?.textContent).toContain('系统内有 130 多家客户')
+  })
+
+  it('hides knowledge citation chrome on user messages', () => {
+    renderMessageList([userKnowledgeMessage])
+
+    expect(document.body.textContent).toContain('第三次转型是什么时候发生了啥')
+    expect(document.body.textContent).not.toContain('2 个引用内容')
+    expect(document.querySelector('.knowledge-citation-summary')).toBeNull()
+    expect(document.querySelector('.knowledge-citation-marker')).toBeNull()
+  })
+
+  it('keeps normal messages free of knowledge citation chrome', () => {
+    renderMessageList([assistantMessage])
+
+    expect(document.querySelector('.knowledge-citation-summary')).toBeNull()
+    expect(document.querySelector('.knowledge-citation-marker')).toBeNull()
   })
 })

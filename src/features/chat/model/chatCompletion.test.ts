@@ -39,6 +39,13 @@ describe('chat completion model', () => {
     ])
   })
 
+  it('adds knowledge context to the prompt message', () => {
+    expect(buildChatMessages('prompt', [], 'question', 'system', [], 'knowledge')).toEqual([
+      { role: 'system', content: 'prompt\n\nknowledge' },
+      { role: 'user', content: 'question' },
+    ])
+  })
+
   it('strips assistant thinking blocks from history', () => {
     const history: ChatMessage[] = [
       {

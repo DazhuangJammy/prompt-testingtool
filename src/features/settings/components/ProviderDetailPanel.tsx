@@ -13,6 +13,10 @@ import {
 import { useMemo, useState } from 'react'
 import { testProvider } from '@/shared/api/ai'
 import type { ProviderConfig, ProviderModelConfig } from '@/shared/types'
+import {
+  MODEL_CAPABILITY_LABELS,
+  getModelCapabilities,
+} from '@/shared/model/providerModelCapabilities'
 import { IconButton } from '@/shared/ui/IconButton'
 import { nowIso } from '@/shared/utils/time'
 import {
@@ -90,6 +94,7 @@ export function ProviderDetailPanel({
     if (!id) return
     const models = mergeModels(normalized.models ?? [], [
       {
+        capabilities: model.capabilities,
         group: model.group?.trim() || undefined,
         id,
         name: model.name?.trim() || undefined,
@@ -106,6 +111,7 @@ export function ProviderDetailPanel({
       item.id === previousModelId
         ? {
             ...item,
+            capabilities: model.capabilities,
             group: model.group?.trim() || undefined,
             id,
             name: model.name?.trim() || undefined,
@@ -253,6 +259,10 @@ export function ProviderDetailPanel({
             </label>
             <div className="provider-model-main">
               <strong>{model.name || model.id}</strong>
+              <div className="provider-model-meta">
+                {model.group && <small>{model.group}</small>}
+                <ModelCapabilityTags model={model} />
+              </div>
             </div>
             <div className="provider-model-actions">
               <IconButton
@@ -404,12 +414,27 @@ function mergeModels(
     if (!id || map.has(id)) continue
     map.set(id, {
       id,
+      capabilities: model.capabilities,
       name: model.name?.trim() || undefined,
       group: model.group?.trim() || undefined,
       enabled: model.enabled !== false,
     })
   }
   return Array.from(map.values())
+}
+
+function ModelCapabilityTags({ model }: { model: ProviderModelConfig }) {
+  const capabilities = getModelCapabilities(model)
+
+  if (!capabilities.length) return null
+
+  return (
+    <span className="provider-model-tags">
+      {capabilities.map((capability) => (
+        <span key={capability}>{MODEL_CAPABILITY_LABELS[capability]}</span>
+      ))}
+    </span>
+  )
 }
 
 function buildPreviewUrl(baseUrl: string) {

@@ -231,6 +231,22 @@ function normalizeDeltaText(value: unknown): string {
 }
 
 export const testProvider = async (provider: ProviderConfig) => {
+  if (isEmbeddingModel(provider.model)) {
+    await requestEmbeddings(provider, provider.model, ['测试嵌入模型'])
+    return '嵌入模型测试成功'
+  }
+  if (isRerankModel(provider.model)) {
+    const results = await requestRerank(
+      provider,
+      provider.model,
+      '测试重排模型',
+      ['这是一段相关文档', '这是一段无关文档'],
+      1,
+    )
+    if (!results.length) throw new Error('Rerank model returned no scores')
+    return '重排模型测试成功'
+  }
+
   const response = await fetch('/api/test-provider', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -259,6 +275,127 @@ export const testProvider = async (provider: ProviderConfig) => {
   }
 
   return payload.message || '测试成功'
+}
+
+async function readApiPayload(response: Response) {
+  const text = await response.text()
+  if (!text) return { payload: null, text: '' }
+
+  try {
+    return { payload: JSON.parse(text) as unknown, text }
+  } catch {
+    return { payload: null, text }
+  }
+}
+
+function getApiErrorMessage(payload: unknown) {
+  if (!payload || typeof payload !== 'object') return ''
+  const data = payload as {
+    error?: string | { message?: string }
+    message?: string
+  }
+  if (typeof data.error === 'string') return data.error
+  return data.error?.message || data.message || ''
+}
+
+function getApiErrorStatus(payload: unknown, response: Response) {
+  if (!payload || typeof payload !== 'object') return response.status
+  const data = payload as { status?: number }
+  return data.status ?? response.status
+}
+
+function buildApiError(response: Response, payload: unknown, text: string, fallback: string) {
+  const status = getApiErrorStatus(payload, response)
+  const message = getApiErrorMessage(payload) || text.trim() || response.statusText || fallback
+  return [status, message].filter(Boolean).join(' ')
+}
+
+function isEmbeddingModel(model: string) {
+  return /(^|[-_])(?:embed|embedding)(?:[-_]|$)|text-embedding/i.test(model)
+}
+
+function isRerankModel(model: string) {
+  return /(^|[-_])rerank(?:[-_]|$)|reranker/i.test(model)
+}
+
+export const requestEmbeddings = async (
+  provider: ProviderConfig,
+  model: string,
+  input: string[],
+) => {
+  const response = await fetch('/api/embeddings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      provider: {
+        baseUrl: provider.baseUrl,
+        apiKey: provider.apiKey,
+      },
+      model,
+      input,
+    }),
+  })
+
+  const { payload, text } = await readApiPayload(response)
+  const data = payload as {
+    data?: Array<{ embedding?: number[] }>
+    embeddings?: number[][]
+  } | null
+
+  if (!response.ok) {
+    throw new Error(buildApiError(response, payload, text, 'Embedding request failed'))
+  }
+
+  const embeddings =
+    data?.embeddings ??
+    data?.data?.map((item) => item.embedding ?? []) ??
+    []
+  if (embeddings.length !== input.length || embeddings.some((item) => !item.length)) {
+    throw new Error('Embedding model returned invalid vectors')
+  }
+  return embeddings
+}
+
+export const requestRerank = async (
+  provider: ProviderConfig,
+  model: string,
+  query: string,
+  documents: string[],
+  topN = documents.length,
+) => {
+  const response = await fetch('/api/rerank', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      provider: {
+        baseUrl: provider.baseUrl,
+        apiKey: provider.apiKey,
+      },
+      model,
+      query,
+      documents,
+      topN,
+    }),
+  })
+
+  const { payload, text } = await readApiPayload(response)
+  const data = payload as {
+    results?: Array<{ index?: number; relevance_score?: number; score?: number }>
+    output?: {
+      results?: Array<{ index?: number; relevance_score?: number; score?: number }>
+    }
+  } | null
+
+  if (!response.ok) {
+    throw new Error(buildApiError(response, payload, text, 'Rerank request failed'))
+  }
+
+  return (data?.results ?? data?.output?.results ?? [])
+    .map((item) => ({
+      index: Number(item.index),
+      score: Number(item.relevance_score ?? item.score ?? 0),
+    }))
+    .filter((item) => Number.isInteger(item.index) && item.index >= 0)
 }
 
 export const listProviderModels = async (

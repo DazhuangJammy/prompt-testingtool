@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   buildChatEndpoint,
   buildChatRequestBody,
+  buildEmbeddingsEndpoint,
   buildModelsEndpoint,
+  buildRerankEndpoint,
+  buildRerankRequestBody,
   buildThinkingOptions,
 } from './openaiCompatibleService.mjs'
 
@@ -31,6 +34,45 @@ describe('openai compatible service', () => {
     expect(
       buildModelsEndpoint('https://api.moonshot.cn/v1/chat/completions').href,
     ).toBe('https://api.moonshot.cn/v1/models')
+  })
+
+  it('builds embedding and rerank endpoints for compatible providers', () => {
+    expect(buildEmbeddingsEndpoint('https://api.example.com').href).toBe(
+      'https://api.example.com/v1/embeddings',
+    )
+    expect(buildEmbeddingsEndpoint('https://api.example.com/v1').href).toBe(
+      'https://api.example.com/v1/embeddings',
+    )
+    expect(
+      buildRerankEndpoint('https://dashscope.aliyuncs.com/compatible-mode/v1/', 'qwen3-rerank').href,
+    ).toBe('https://dashscope.aliyuncs.com/compatible-api/v1/reranks')
+    expect(
+      buildRerankEndpoint('https://dashscope.aliyuncs.com/compatible-mode/v1/', 'gte-rerank-v2').href,
+    ).toBe('https://dashscope.aliyuncs.com/api/v1/services/rerank/text-rerank/text-rerank')
+  })
+
+  it('builds rerank request bodies for qwen and gte models', () => {
+    expect(buildRerankRequestBody({
+      documents: ['a', 'b'],
+      model: 'qwen3-rerank',
+      query: 'q',
+      topN: 1,
+    })).toEqual({
+      model: 'qwen3-rerank',
+      query: 'q',
+      documents: ['a', 'b'],
+      top_n: 1,
+    })
+    expect(buildRerankRequestBody({
+      documents: ['a', 'b'],
+      model: 'gte-rerank-v2',
+      query: 'q',
+      topN: 1,
+    })).toEqual({
+      model: 'gte-rerank-v2',
+      input: { query: 'q', documents: ['a', 'b'] },
+      parameters: { top_n: 1, return_documents: false },
+    })
   })
 
   it('omits sampling parameters for Moonshot Kimi K2.6 requests', () => {

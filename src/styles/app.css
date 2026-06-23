@@ -4,6 +4,7 @@
 @import './sidebar-version.css';
 @import './sidebar-topic-menu.css';
 @import './canvas-toolbar.css';
+@import './flow-shape.css';
 @import './canvas-elements.css';
 @import './prompt-card.css';
 @import './input-card.css';
@@ -13,7 +14,9 @@
 @import './prompt-markdown-card.css';
 @import './markdown-content.css';
 @import './chat.css';
+@import './chat-knowledge-citations.css';
 @import './chat-composer.css';
+@import './knowledge.css';
 @import './settings.css';
 @import './settings-states.css';
 @import './settings-provider-models.css';

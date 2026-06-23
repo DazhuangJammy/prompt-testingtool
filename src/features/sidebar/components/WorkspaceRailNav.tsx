@@ -1,5 +1,6 @@
 import {
   Bot,
+  BookOpen,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
@@ -36,6 +37,12 @@ export function WorkspaceRailNav({
         label="工作台"
         active={mode === 'prompt'}
         onClick={() => onModeChange('prompt')}
+      />
+      <IconButton
+        icon={<BookOpen />}
+        label="知识库"
+        active={mode === 'knowledge'}
+        onClick={() => onModeChange('knowledge')}
       />
       <IconButton
         icon={<Bot />}

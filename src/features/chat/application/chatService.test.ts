@@ -204,6 +204,47 @@ describe('chat service', () => {
     )
   })
 
+  it('stores knowledge references on both user and assistant messages', async () => {
+    mockAssistantStream('assistant')
+    const knowledgeReferences = [
+      {
+        baseId: 'base',
+        baseName: '测试知识库',
+        itemId: 'item',
+        itemTitle: '资料.docx',
+        chunkId: 'chunk',
+        chunkIndex: 0,
+        content: '事实',
+        score: 0.9,
+      },
+    ]
+
+    await sendChatMessage({
+      card,
+      history: [],
+      knowledgeContext: 'knowledge context',
+      knowledgeReferences,
+      provider,
+      promptInjectionMode: 'system',
+      sessionId: 'session',
+      text: 'hello',
+      thinkingMode: 'off',
+    })
+
+    expect(chatRepository.addMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        role: 'user',
+        knowledgeReferences,
+      }),
+    )
+    expect(chatRepository.addMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        role: 'assistant',
+        knowledgeReferences,
+      }),
+    )
+  })
+
   it('sends default assistant prompt before the card prompt', async () => {
     mockAssistantStream('assistant')
 

@@ -1,4 +1,3 @@
-import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
 import {
   assignChatSessionPromptCard,
@@ -10,6 +9,12 @@ import { chatRepository } from '@/features/chat/infrastructure/chatRepository'
 import { useChatMessageActions } from '@/features/chat/hooks/useChatMessageActions'
 import { useScopedComparePanes } from '@/features/chat/hooks/useScopedComparePanes'
 import { useChatTopics } from '@/features/chat/hooks/useChatTopics'
+import {
+  useChildSessions,
+  useMessages,
+  usePaneMessagesById,
+} from '@/features/chat/hooks/useChatPanelMessages'
+import { resolveChatKnowledgeContext } from '@/features/chat/application/chatKnowledgeContext'
 import type { InputSegment } from '@/features/input-card/model/inputCard'
 import {
   getAttachmentCapability,
@@ -35,7 +40,7 @@ import {
 import type {
   ChatAttachment,
   ChatMessage,
-  ChatSession,
+  KnowledgeBase,
   PromptCard,
   PromptInjectionMode,
   ProviderConfig,
@@ -59,6 +64,9 @@ export function useChatPanelState(
     panes: ComparePaneState[] | ((current: ComparePaneState[]) => ComparePaneState[]),
   ) => void,
   onActiveCardChange?: (id: string) => void,
+  knowledgeBases: KnowledgeBase[] = [],
+  selectedKnowledgeBaseIds: string[] = [],
+  getKnowledgeProviders?: () => Promise<ProviderConfig[]>,
 ) {
   const [input, setInput] = useState('')
   const [attachments, setAttachments] = useState<ChatAttachment[]>([])
@@ -97,27 +105,7 @@ export function useChatPanelState(
     onComparePanesChange,
   })
 
-  const paneSessionKey = comparePanes
-    .map((pane) => `${pane.id}:${pane.sessionId ?? ''}`)
-    .join('|')
-  const paneMessagesById = useLiveQuery<
-    Record<ComparePaneId, ChatMessage[]>,
-    Record<ComparePaneId, ChatMessage[]>
-  >(
-    async () => {
-      const entries = await Promise.all(
-        comparePanes.map(async (pane) => [
-          pane.id,
-          pane.sessionId
-            ? await chatRepository.listMessagesBySession(pane.sessionId)
-            : [],
-        ]),
-      )
-      return Object.fromEntries(entries)
-    },
-    [paneSessionKey],
-    {},
-  )
+  const paneMessagesById = usePaneMessagesById(comparePanes)
 
   useEffect(() => {
     messagesRef.current = messages
@@ -156,6 +144,21 @@ export function useChatPanelState(
     }
   })
 
+  const resolveSelectedKnowledge = async (
+    query: string,
+    fallbackReferences: ChatMessage['knowledgeReferences'] = [],
+  ) => {
+    if (!selectedKnowledgeBaseIds.length) {
+      return { context: '', references: fallbackReferences ?? [] }
+    }
+    return resolveChatKnowledgeContext({
+      baseIds: selectedKnowledgeBaseIds,
+      bases: knowledgeBases,
+      getProviders: getKnowledgeProviders,
+      query,
+    })
+  }
+
   const sendMainMessage = async () => {
     const text = input.trim()
     const nextAttachments = attachments
@@ -170,10 +173,13 @@ export function useChatPanelState(
     }
     setInput('')
     setAttachments([])
+    const knowledge = await resolveSelectedKnowledge(text)
     await chatActions.sendMessageForPane({
       attachments: nextAttachments,
       card,
       history: messages,
+      knowledgeContext: knowledge.context,
+      knowledgeReferences: knowledge.references,
       provider,
       promptInjectionMode,
       sessionId: effectiveSessionId,
@@ -265,9 +271,15 @@ export function useChatPanelState(
 
   const resendMainMessage = async (message: ChatMessage, content: string) => {
     if (!card || !provider) return
+    const knowledge = await resolveSelectedKnowledge(
+      content,
+      message.knowledgeReferences,
+    )
     await chatActions.resendMessageForPane({
       card,
       history: messages,
+      knowledgeContext: knowledge.context,
+      knowledgeReferences: knowledge.references,
       message,
       provider,
       promptInjectionMode,
@@ -291,13 +303,13 @@ export function useChatPanelState(
     const paneBelongsToCurrentTopic = pane.parentSessionId === parentSessionId
     const sessionId = paneBelongsToCurrentTopic ? pane.sessionId : undefined
     const history = paneBelongsToCurrentTopic ? pane.messages : []
-
     updateComparePane(paneId, { parentSessionId })
 
     await chatActions.resendMessageForPane({
       card: pane.card,
       comparePaneIndex: pane.index,
       history,
+      knowledgeReferences: message.knowledgeReferences,
       message,
       parentSessionId,
       provider: pane.provider,
@@ -466,24 +478,4 @@ export function useChatPanelState(
     supportsThinking: thinkingCapability.supportsThinking,
     thinkingMode: effectiveThinkingMode,
   }
-}
-
-function useMessages(sessionId?: string) {
-  return useLiveQuery<ChatMessage[], ChatMessage[]>(
-    () => sessionId
-      ? chatRepository.listMessagesBySession(sessionId)
-      : Promise.resolve([] as ChatMessage[]),
-    [sessionId],
-    [],
-  )
-}
-
-function useChildSessions(parentSessionId?: string) {
-  return useLiveQuery<ChatSession[], ChatSession[]>(
-    () => parentSessionId
-      ? chatRepository.listChildSessions(parentSessionId)
-      : Promise.resolve([] as ChatSession[]),
-    [parentSessionId],
-    [],
-  )
 }

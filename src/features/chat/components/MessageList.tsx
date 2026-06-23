@@ -26,6 +26,14 @@ import type { ChatAttachment, ChatMessage } from '@/shared/types'
 import { IconButton } from '@/shared/ui/IconButton'
 import { ImagePreviewDialog } from '@/shared/ui/ImagePreviewDialog'
 import { MessageExportMenu } from './MessageExportMenu'
+import {
+  KnowledgeAnswerContent,
+  KnowledgeCitationSummary,
+} from './KnowledgeCitations'
+import {
+  appendMissingKnowledgeCitationMarks,
+  createKnowledgeCitations,
+} from '@/features/chat/model/knowledgeCitations'
 
 interface MessageListProps {
   messages: ChatMessage[]
@@ -174,6 +182,11 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
                       {answerText && (
                         <MessageContent
                           content={answerText}
+                          knowledgeReferences={
+                            message.role === 'assistant'
+                              ? message.knowledgeReferences ?? []
+                              : []
+                          }
                           onPreview={setPreviewItem}
                         />
                       )}
@@ -269,20 +282,37 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
 
 interface MessageContentProps {
   content: string
+  knowledgeReferences: ChatMessage['knowledgeReferences']
   onPreview: (item: ImagePreviewItem) => void
 }
 
-function MessageContent({ content, onPreview }: MessageContentProps) {
-  const blocks = splitSvgPreviewBlocks(content)
+function MessageContent({
+  content,
+  knowledgeReferences = [],
+  onPreview,
+}: MessageContentProps) {
+  const citations = createKnowledgeCitations(knowledgeReferences)
+  const displayContent = appendMissingKnowledgeCitationMarks(content, citations)
+  const blocks = splitSvgPreviewBlocks(displayContent)
   if (!blocks.length) return null
 
   return (
     <>
+      {knowledgeReferences.length > 0 && (
+        <KnowledgeCitationSummary references={knowledgeReferences} />
+      )}
       {blocks.map((block) =>
         block.kind === 'svg' ? (
           <SvgPreviewCard block={block} key={block.id} onPreview={onPreview} />
         ) : (
-          <MarkdownRenderer key={block.id}>{block.markdown}</MarkdownRenderer>
+          <KnowledgeAnswerContent
+            content={block.markdown}
+            key={block.id}
+            references={knowledgeReferences}
+            renderContent={(markdown) => (
+              <MarkdownRenderer>{markdown}</MarkdownRenderer>
+            )}
+          />
         ),
       )}
     </>

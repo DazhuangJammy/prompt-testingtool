@@ -1,0 +1,257 @@
+.knowledge-citation-summary {
+  align-items: center;
+  background: color-mix(in srgb, var(--surface) 74%, var(--panel-2));
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  cursor: pointer;
+  display: inline-flex;
+  gap: 8px;
+  margin: 0 0 10px;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 3px 12px 3px 6px;
+  width: fit-content;
+}
+
+.knowledge-citation-summary:hover {
+  background: var(--surface);
+  border-color: var(--line-strong);
+}
+
+.knowledge-citation-stack {
+  display: inline-flex;
+  padding-left: 4px;
+}
+
+.knowledge-citation-stack span {
+  align-items: center;
+  background: var(--panel-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--muted);
+  display: inline-flex;
+  height: 24px;
+  justify-content: center;
+  margin-left: -4px;
+  width: 24px;
+}
+
+.knowledge-citation-stack svg {
+  height: 14px;
+  width: 14px;
+}
+
+.knowledge-citation-summary > span:last-child {
+  font-size: 13px;
+  font-weight: 520;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.knowledge-citation-backdrop {
+  align-items: flex-start;
+  background: color-mix(in srgb, var(--bg) 64%, transparent);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: clamp(44px, 9vh, 84px) 18px 24px;
+  position: fixed;
+  z-index: 1000;
+}
+
+.knowledge-citation-dialog {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  max-height: min(78vh, 760px);
+  max-width: min(780px, calc(100vw - 36px));
+  overflow: hidden;
+  width: 100%;
+}
+
+.knowledge-citation-dialog header {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  min-height: 50px;
+  padding: 0 8px 0 18px;
+}
+
+.knowledge-citation-dialog header strong {
+  color: var(--text);
+  flex: 1;
+  font-size: 16px;
+  font-weight: 720;
+  min-width: 0;
+}
+
+.knowledge-citation-dialog header button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.knowledge-citation-dialog header button:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.knowledge-citation-dialog-list {
+  overflow: auto;
+}
+
+.knowledge-citation-dialog-list article {
+  display: grid;
+  gap: 10px;
+  padding: 18px 22px;
+}
+
+.knowledge-citation-dialog-list article + article {
+  border-top: 1px solid var(--line);
+}
+
+.knowledge-citation-dialog-title {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 20px 1fr auto;
+  min-width: 0;
+}
+
+.knowledge-citation-dialog-title svg {
+  color: var(--muted);
+}
+
+.knowledge-citation-dialog-title strong {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 680;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.knowledge-citation-dialog-title span {
+  align-items: center;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  display: inline-flex;
+  font-size: 12px;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.knowledge-citation-dialog-list p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.knowledge-citation-dialog-list small {
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.knowledge-citation-marker-wrap {
+  display: inline-flex;
+  line-height: 1;
+  margin: 0 1px;
+  position: relative;
+  vertical-align: super;
+}
+
+.knowledge-citation-marker {
+  align-items: center;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  cursor: help;
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 680;
+  height: 18px;
+  justify-content: center;
+  min-width: 18px;
+  padding: 0 5px;
+}
+
+.knowledge-citation-marker:hover,
+.knowledge-citation-marker:focus-visible {
+  background: var(--panel-2);
+  border-color: var(--line-strong);
+}
+
+.knowledge-citation-tooltip {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  bottom: calc(100% + 8px);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  display: grid;
+  gap: 8px;
+  left: 50%;
+  line-height: 1.5;
+  max-width: min(360px, calc(100vw - 40px));
+  min-width: min(300px, calc(100vw - 40px));
+  opacity: 0;
+  padding: 14px;
+  pointer-events: none;
+  position: absolute;
+  transform: translateX(-50%) translateY(4px);
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+  visibility: hidden;
+  z-index: 35;
+}
+
+.knowledge-citation-marker-wrap:hover .knowledge-citation-tooltip,
+.knowledge-citation-marker-wrap:focus-within .knowledge-citation-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  visibility: visible;
+}
+
+.knowledge-citation-tooltip strong {
+  font-size: 14px;
+  font-weight: 680;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.knowledge-citation-tooltip span {
+  color: var(--muted);
+  display: -webkit-box;
+  font-size: 13px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.knowledge-citation-tooltip small {
+  color: var(--accent);
+  font-size: 12px;
+}

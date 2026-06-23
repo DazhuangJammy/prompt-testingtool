@@ -20,6 +20,8 @@ import {
 import { repairLegacyChatTopicScope } from '@/features/workspace/application/workspaceService'
 import { chatRepository } from '@/features/chat/infrastructure/chatRepository'
 import { CanvasWorkspace } from '@/features/canvas/CanvasWorkspace'
+import { KnowledgeWorkspace } from '@/features/knowledge/components/KnowledgeWorkspace'
+import { knowledgeRepository } from '@/features/knowledge/infrastructure/knowledgeRepository'
 import { useScopedCanvasRecords } from '@/features/canvas/hooks/useScopedCanvasRecords'
 import { findPromptInputSources } from '@/features/input-card/model/inputCard'
 import { copyStoredCanvasViewport } from '@/features/canvas/model/canvasViewport'
@@ -49,6 +51,7 @@ import { useThemeMode } from './useThemeMode'
 import { useWorkspaceMode } from './useWorkspaceMode'
 import { useWorkspaceActions } from './useWorkspaceActions'
 import { useWorkspaceData } from './useWorkspaceData'
+import { useChatKnowledgeSelection } from './useChatKnowledgeSelection'
 
 function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -85,6 +88,7 @@ function App() {
     [],
     undefined,
   )
+  const knowledgeBases = useLiveQuery(() => knowledgeRepository.listBases(), [], [])
   const sidebarSessionsLoaded = sidebarChatSessions !== undefined
   const sidebarSessions = resolveSidebarSessions({
     fallbackPromptCards: workspace.promptCards,
@@ -149,6 +153,7 @@ function App() {
     activeChatSessionId,
     panels.chatCollapsed,
   )
+  const chatKnowledgeSelection = useChatKnowledgeSelection(activeChatSessionId)
   const resizablePanels = useResizablePanels(
     chatPanelState.chatWidth,
     chatPanelState.setChatWidth,
@@ -340,7 +345,7 @@ function App() {
   return (
     <ReactFlowProvider>
       <div className="app-shell">
-        {workspaceMode === 'prompt' ? (
+        {workspaceMode !== 'skills' ? (
           <Sidebar
             canvases={workspace.canvases}
             activeCanvasId={workspace.effectiveCanvasId}
@@ -375,6 +380,7 @@ function App() {
             onOpenSettings={() => setSettingsOpen(true)}
             onResizeStart={resizablePanels.startSidebarResize}
             width={resizablePanels.sidebarWidth}
+            contentHidden={workspaceMode === 'knowledge'}
           />
         ) : (
           <SkillsLabShell
@@ -430,6 +436,12 @@ function App() {
           </main>
         )}
 
+        {workspaceMode === 'knowledge' && (
+          <main className="workspace knowledge-mode">
+            <KnowledgeWorkspace providerConfigs={workspace.providers} />
+          </main>
+        )}
+
         {workspaceMode === 'prompt' && (
           <ChatPanel
             card={activeChatCard}
@@ -437,6 +449,7 @@ function App() {
             promptCards={chatPromptCards}
             providers={workspace.providers}
             inputSources={activeChatInputSources}
+            knowledgeBases={knowledgeBases}
             compareOpen={chatPanelState.compareOpen}
             comparePaneCardIds={chatPanelState.comparePaneCardIds}
             comparePanes={chatPanelState.comparePanes}
@@ -453,6 +466,9 @@ function App() {
             onComparePaneCardIdsChange={chatPanelState.setComparePaneCardIds}
             onComparePanesChange={chatPanelState.setComparePanes}
             onEnsureWidth={resizablePanels.ensureChatWidth}
+            selectedKnowledgeBaseIds={chatKnowledgeSelection.selectedBaseIds}
+            onKnowledgeSelectionChange={chatKnowledgeSelection.setSelectedBaseIds}
+            getKnowledgeProviders={async () => workspace.providers}
             width={chatPanelState.chatWidth}
           />
         )}

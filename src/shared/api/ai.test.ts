@@ -4,6 +4,8 @@ import {
   listProviderModels,
   requestCompletion,
   requestCompletionStream,
+  requestEmbeddings,
+  requestRerank,
   testProvider,
 } from './ai'
 
@@ -58,6 +60,78 @@ describe('ai api helpers', () => {
       expect.objectContaining({
         body: expect.stringContaining('"thinkingMode":"deep"'),
       }),
+    )
+  })
+
+  it('requests embeddings through local proxy', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ data: [{ embedding: [1, 2, 3] }] }), {
+        status: 200,
+      }),
+    )
+
+    await expect(requestEmbeddings(provider, 'text-embedding-v4', ['hello'])).resolves.toEqual([[1, 2, 3]])
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/embeddings',
+      expect.objectContaining({
+        body: expect.stringContaining('"model":"text-embedding-v4"'),
+      }),
+    )
+  })
+
+  it('surfaces structured embedding request errors', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ message: 'wrong endpoint' }), {
+        status: 404,
+        statusText: 'Not Found',
+      }),
+    )
+
+    await expect(
+      requestEmbeddings(provider, 'text-embedding-v4', ['hello']),
+    ).rejects.toThrow('404 wrong endpoint')
+  })
+
+  it('surfaces plain text embedding request errors', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('not found', {
+        status: 404,
+        statusText: 'Not Found',
+      }),
+    )
+
+    await expect(
+      requestEmbeddings(provider, 'text-embedding-v4', ['hello']),
+    ).rejects.toThrow('404 not found')
+  })
+
+  it('requests rerank through local proxy', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ results: [{ index: 1, relevance_score: 0.8 }] }), {
+        status: 200,
+      }),
+    )
+
+    await expect(requestRerank(provider, 'qwen3-rerank', 'q', ['a', 'b'])).resolves.toEqual([
+      { index: 1, score: 0.8 },
+    ])
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/rerank',
+      expect.objectContaining({
+        body: expect.stringContaining('"model":"qwen3-rerank"'),
+      }),
+    )
+  })
+
+  it('surfaces rerank request errors', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ error: { message: 'bad rerank route' } }), {
+        status: 400,
+      }),
+    )
+
+    await expect(requestRerank(provider, 'qwen3-rerank', 'q', ['a'])).rejects.toThrow(
+      '400 bad rerank route',
     )
   })
 
@@ -255,6 +329,42 @@ describe('ai api helpers', () => {
     )
 
     await expect(testProvider(provider)).resolves.toBe('测试成功')
+  })
+
+  it('tests embedding models through the embedding proxy', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ data: [{ embedding: [1, 2, 3] }] }), {
+        status: 200,
+      }),
+    )
+
+    await expect(testProvider({ ...provider, model: 'text-embedding-v4' })).resolves.toBe(
+      '嵌入模型测试成功',
+    )
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/embeddings',
+      expect.objectContaining({
+        body: expect.stringContaining('"model":"text-embedding-v4"'),
+      }),
+    )
+  })
+
+  it('tests rerank models through the rerank proxy', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ results: [{ index: 0, relevance_score: 0.9 }] }), {
+        status: 200,
+      }),
+    )
+
+    await expect(testProvider({ ...provider, model: 'gte-rerank-v2' })).resolves.toBe(
+      '重排模型测试成功',
+    )
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/rerank',
+      expect.objectContaining({
+        body: expect.stringContaining('"model":"gte-rerank-v2"'),
+      }),
+    )
   })
 
   it('surfaces provider errors when response body is not json', async () => {

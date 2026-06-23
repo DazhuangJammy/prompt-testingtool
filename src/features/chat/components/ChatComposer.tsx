@@ -6,6 +6,7 @@ import {
   Lightbulb,
   MessageSquare,
   Paperclip,
+  FileSearch,
   Square,
   X,
 } from 'lucide-react'
@@ -22,6 +23,7 @@ import {
 import { createChatAttachment } from '@/features/chat/infrastructure/fileAttachmentReader'
 import type {
   ChatAttachment,
+  KnowledgeBase,
   PromptInjectionMode,
   ThinkingMode,
 } from '@/shared/types'
@@ -39,9 +41,12 @@ interface ChatComposerProps {
   supportsDeepThinking: boolean
   supportsThinking: boolean
   thinkingMode: ThinkingMode
+  knowledgeBases?: KnowledgeBase[]
+  selectedKnowledgeBaseIds?: string[]
   onAttachmentsChange: (attachments: ChatAttachment[]) => void
   onChange: (value: string) => void
   onClearMessages: () => void
+  onKnowledgeSelectionChange?: (baseIds: string[]) => void
   onPromptInjectionModeChange: (mode: PromptInjectionMode) => void
   onStop?: () => void
   onSend: () => void
@@ -60,20 +65,25 @@ export function ChatComposer({
   supportsDeepThinking,
   supportsThinking,
   thinkingMode,
+  knowledgeBases = [],
+  selectedKnowledgeBaseIds = [],
   onAttachmentsChange,
   onChange,
   onClearMessages,
+  onKnowledgeSelectionChange,
   onPromptInjectionModeChange,
   onStop,
   onSend,
   onThinkingModeChange,
 }: ChatComposerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const knowledgeMenuRef = useRef<HTMLDivElement>(null)
   const promptModeMenuRef = useRef<HTMLDivElement>(null)
   const thinkingMenuRef = useRef<HTMLDivElement>(null)
   const [attachmentError, setAttachmentError] = useState('')
   const [promptModeMenuOpen, setPromptModeMenuOpen] = useState(false)
   const [thinkingMenuOpen, setThinkingMenuOpen] = useState(false)
+  const [knowledgeMenuOpen, setKnowledgeMenuOpen] = useState(false)
   const activeThinkingOption = getThinkingOption(thinkingMode)
   const promptModeLabel =
     promptInjectionMode === 'system' ? '系统提示词' : '用户提示词'
@@ -89,11 +99,12 @@ export function ChatComposer({
   }, [attachmentError])
 
   useEffect(() => {
-    if (!thinkingMenuOpen && !promptModeMenuOpen) return
+    if (!thinkingMenuOpen && !promptModeMenuOpen && !knowledgeMenuOpen) return
 
     const closeOnOutsidePointer = (event: PointerEvent) => {
       const target = event.target as Node
       if (
+        knowledgeMenuRef.current?.contains(target) ||
         thinkingMenuRef.current?.contains(target) ||
         promptModeMenuRef.current?.contains(target)
       ) {
@@ -101,11 +112,13 @@ export function ChatComposer({
       }
       setThinkingMenuOpen(false)
       setPromptModeMenuOpen(false)
+      setKnowledgeMenuOpen(false)
     }
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       setThinkingMenuOpen(false)
       setPromptModeMenuOpen(false)
+      setKnowledgeMenuOpen(false)
     }
 
     document.addEventListener('pointerdown', closeOnOutsidePointer)
@@ -114,7 +127,7 @@ export function ChatComposer({
       document.removeEventListener('pointerdown', closeOnOutsidePointer)
       document.removeEventListener('keydown', closeOnEscape)
     }
-  }, [promptModeMenuOpen, thinkingMenuOpen])
+  }, [knowledgeMenuOpen, promptModeMenuOpen, thinkingMenuOpen])
 
   const addFiles = async (files: File[]) => {
     if (!files.length) return
@@ -165,6 +178,30 @@ export function ChatComposer({
             ))}
           </div>
         )}
+        {selectedKnowledgeBaseIds.length > 0 && (
+          <div className="composer-knowledge-tags" aria-label="已选知识库">
+            {selectedKnowledgeBaseIds.map((baseId) => {
+              const base = knowledgeBases.find((item) => item.id === baseId)
+              return (
+                <span className="knowledge-pill" key={baseId}>
+                  <FileSearch />
+                  <span>{base?.name ?? '知识库'}</span>
+                  <button
+                    type="button"
+                    aria-label={`移除 ${base?.name ?? '知识库'}`}
+                    onClick={() =>
+                      onKnowledgeSelectionChange?.(
+                        selectedKnowledgeBaseIds.filter((id) => id !== baseId),
+                      )
+                    }
+                  >
+                    <X />
+                  </button>
+                </span>
+              )
+            })}
+          </div>
+        )}
         <textarea
           value={input}
           placeholder="在这里输入消息，按 Enter 发送"
@@ -208,6 +245,55 @@ export function ChatComposer({
               event.target.value = ''
             }}
           />
+          <div className="composer-menu-shell" ref={knowledgeMenuRef}>
+            <IconButton
+              active={knowledgeMenuOpen || selectedKnowledgeBaseIds.length > 0}
+              icon={<FileSearch />}
+              label="知识库"
+              onClick={() => {
+                setKnowledgeMenuOpen((value) => !value)
+                setPromptModeMenuOpen(false)
+                setThinkingMenuOpen(false)
+              }}
+            />
+            {knowledgeMenuOpen && (
+              <div className="composer-menu knowledge-menu">
+                <button
+                  type="button"
+                  onClick={() => onKnowledgeSelectionChange?.([])}
+                >
+                  <span>清除</span>
+                  <small>清除选中的知识库</small>
+                </button>
+                {knowledgeBases.map((base) => {
+                  const selected = selectedKnowledgeBaseIds.includes(base.id)
+                  return (
+                    <button
+                      type="button"
+                      className={selected ? 'is-active' : ''}
+                      key={base.id}
+                      onClick={() => {
+                        onKnowledgeSelectionChange?.(
+                          selected
+                            ? selectedKnowledgeBaseIds.filter((id) => id !== base.id)
+                            : [...selectedKnowledgeBaseIds, base.id],
+                        )
+                      }}
+                    >
+                      <span>{base.name}</span>
+                      <small>{selected ? '已选择' : '点击加载'}</small>
+                    </button>
+                  )
+                })}
+                {!knowledgeBases.length && (
+                  <button type="button">
+                    <span>暂无知识库</span>
+                    <small>先到知识库页面创建</small>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
           <div className="composer-menu-shell" ref={promptModeMenuRef}>
             <IconButton
               active={promptModeMenuOpen}
@@ -215,6 +301,7 @@ export function ChatComposer({
               label={`提示词模式：${promptModeLabel}`}
               onClick={() => {
                 setPromptModeMenuOpen((value) => !value)
+                setKnowledgeMenuOpen(false)
                 setThinkingMenuOpen(false)
               }}
             />
@@ -250,6 +337,7 @@ export function ChatComposer({
                 label={`思考：${activeThinkingOption.label}`}
                 onClick={() => {
                   setThinkingMenuOpen((value) => !value)
+                  setKnowledgeMenuOpen(false)
                   setPromptModeMenuOpen(false)
                 }}
               />

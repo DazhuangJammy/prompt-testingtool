@@ -56,6 +56,7 @@ interface SidebarProps {
   width: number
   mode: WorkspaceMode
   onModeChange: (mode: WorkspaceMode) => void
+  contentHidden?: boolean
 }
 
 export function Sidebar({
@@ -86,6 +87,7 @@ export function Sidebar({
   width,
   mode,
   onModeChange,
+  contentHidden = false,
 }: SidebarProps) {
   const effectiveSessionId = sessions.some((session) => session.id === activeSessionId)
     ? activeSessionId
@@ -161,7 +163,7 @@ export function Sidebar({
 
   return (
     <aside
-      className={`sidebar ${collapsed ? 'is-collapsed' : ''}`}
+      className={`sidebar ${collapsed ? 'is-collapsed' : ''} ${contentHidden ? 'is-rail-only' : ''}`}
       style={{ '--panel-width': `${width}px` } as CSSProperties}
     >
       <WorkspaceRailNav
@@ -173,7 +175,7 @@ export function Sidebar({
         onToggle={onToggle}
         onToggleTheme={onToggleTheme}
       />
-      <div className="sidebar-head">
+      {!contentHidden && <div className="sidebar-head">
         {!collapsed && (
           <div className="app-brand">
             <div className="app-logo-wrap" aria-hidden="true">
@@ -185,9 +187,9 @@ export function Sidebar({
             </div>
           </div>
         )}
-      </div>
+      </div>}
 
-      {!collapsed && (
+      {!contentHidden && !collapsed && (
         <>
           <section className="sidebar-section project-tree-section">
             <div className="sidebar-section-head">
@@ -439,7 +441,7 @@ export function Sidebar({
           </section>
         </>
       )}
-      {!collapsed && (
+      {!contentHidden && !collapsed && (
         <button
           type="button"
           className="panel-resizer is-right"
@@ -447,7 +449,7 @@ export function Sidebar({
           onPointerDown={onResizeStart}
         />
       )}
-      {importDialogOpen && (
+      {!contentHidden && importDialogOpen && (
         <TopicImportDialog
           activeCanvasId={activeCanvasId}
           canvases={canvases}

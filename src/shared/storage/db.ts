@@ -9,8 +9,12 @@ import type {
   CanvasTextNode,
   ChatMessage,
   ChatSession,
+  ChatKnowledgeSelection,
   CompareRun,
   DefaultModelSettings,
+  KnowledgeBase,
+  KnowledgeChunk,
+  KnowledgeItem,
   PromptCard,
   PromptVersion,
   ProviderConfig,
@@ -34,7 +38,11 @@ class PromptCanvasDatabase extends Dexie {
   defaultModelSettings!: Table<DefaultModelSettings, string>
   chatSessions!: Table<ChatSession, string>
   chatMessages!: Table<ChatMessage, string>
+  chatKnowledgeSelections!: Table<ChatKnowledgeSelection, string>
   compareRuns!: Table<CompareRun, string>
+  knowledgeBases!: Table<KnowledgeBase, string>
+  knowledgeItems!: Table<KnowledgeItem, string>
+  knowledgeChunks!: Table<KnowledgeChunk, string>
   skillTopics!: Table<SkillTopic, string>
   skillLabMessages!: Table<SkillLabMessage, string>
   skillAnalysisSnapshots!: Table<SkillAnalysisSnapshot, string>
@@ -220,6 +228,30 @@ class PromptCanvasDatabase extends Dexie {
       skillLabMessages: 'id, topicId, agentSessionId, createdAt',
       skillAnalysisSnapshots: 'id, topicId, createdAt',
       skillsLabSettings: 'id, updatedAt',
+    })
+    this.version(12).stores({
+      canvases: 'id, updatedAt',
+      promptCards: 'id, canvasId, updatedAt',
+      inputCards: 'id, canvasId, updatedAt',
+      canvasShapeNodes: 'id, canvasId, updatedAt',
+      canvasEdges: 'id, canvasId, sourceId, targetId, updatedAt',
+      canvasStrokes: 'id, canvasId, updatedAt',
+      canvasTextNodes: 'id, canvasId, updatedAt',
+      canvasImageNodes: 'id, canvasId, updatedAt',
+      promptVersions: 'id, promptCardId, createdAt',
+      providerConfigs: 'id, updatedAt',
+      defaultModelSettings: 'id, updatedAt',
+      chatSessions: 'id, canvasId, promptCardId, parentSessionId, hidden, updatedAt',
+      chatMessages: 'id, sessionId, createdAt, promptVersionId',
+      chatKnowledgeSelections: 'id, sessionId, updatedAt',
+      compareRuns: 'id, promptCardId, createdAt',
+      skillTopics: 'id, skillPath, agentSessionId, updatedAt',
+      skillLabMessages: 'id, topicId, agentSessionId, createdAt',
+      skillAnalysisSnapshots: 'id, topicId, createdAt',
+      skillsLabSettings: 'id, updatedAt',
+      knowledgeBases: 'id, providerType, updatedAt',
+      knowledgeItems: 'id, baseId, sourceType, status, updatedAt',
+      knowledgeChunks: 'id, baseId, itemId, [baseId+itemId], createdAt',
     })
   }
 }

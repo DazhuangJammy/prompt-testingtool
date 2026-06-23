@@ -72,7 +72,31 @@ vi.mock('@/shared/storage/db', () => ({
       toArray: vi.fn(() => []),
       where: vi.fn(() => chain([])),
     },
+    chatKnowledgeSelections: {
+      bulkPut: vi.fn(),
+      clear: vi.fn(),
+      toArray: vi.fn(() => []),
+      where: vi.fn(() => chain([])),
+    },
     compareRuns: {
+      bulkPut: vi.fn(),
+      clear: vi.fn(),
+      toArray: vi.fn(() => []),
+      where: vi.fn(() => chain([])),
+    },
+    knowledgeBases: {
+      bulkPut: vi.fn(),
+      clear: vi.fn(),
+      toArray: vi.fn(() => []),
+      where: vi.fn(() => chain([])),
+    },
+    knowledgeItems: {
+      bulkPut: vi.fn(),
+      clear: vi.fn(),
+      toArray: vi.fn(() => []),
+      where: vi.fn(() => chain([])),
+    },
+    knowledgeChunks: {
       bulkPut: vi.fn(),
       clear: vi.fn(),
       toArray: vi.fn(() => []),
@@ -206,7 +230,7 @@ describe('workspace repository', () => {
     }
 
     await expect(workspaceRepository.exportWorkspace()).resolves.toMatchObject({
-      version: 9,
+      version: 10,
       inputCards: [],
       canvasShapeNodes: [],
       canvasImageNodes: [],
@@ -225,6 +249,8 @@ describe('workspace repository', () => {
     expect(db.canvasTextNodes.bulkPut).toHaveBeenCalledWith([])
     expect(db.defaultModelSettings.clear).toHaveBeenCalled()
     expect(db.defaultModelSettings.bulkPut).toHaveBeenCalledWith([])
+    expect(db.knowledgeBases.bulkPut).toHaveBeenCalledWith([])
+    expect(db.chatKnowledgeSelections.bulkPut).toHaveBeenCalledWith([])
   })
 
   it('imports default model settings when present', async () => {
@@ -310,7 +336,7 @@ describe('workspace repository', () => {
     ])
 
     await expect(
-      workspaceRepository.importWorkspace({ version: 10 } as never),
+      workspaceRepository.importWorkspace({ version: 11 } as never),
     ).rejects.toThrow('Unsupported file')
     await expect(workspaceRepository.listCanvasesByUpdatedAt()).resolves.toEqual([
       expect.objectContaining({ id: 'older' }),

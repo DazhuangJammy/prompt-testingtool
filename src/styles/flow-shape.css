@@ -1,0 +1,256 @@
+.flow-shape {
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  box-sizing: border-box;
+  color: var(--text);
+  container-type: size;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  justify-content: flex-start;
+  padding: 15px 16px;
+  position: relative;
+  width: 100%;
+}
+
+.flow-shape::before {
+  background: color-mix(in srgb, var(--panel) 96%, var(--surface));
+  border: 1px solid var(--node-frame-color, var(--line));
+  border-radius: inherit;
+  box-shadow: var(--shadow);
+  content: '';
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
+}
+
+.flow-shape-drag-area {
+  cursor: grab;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 9px;
+  height: 100%;
+  justify-content: flex-start;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+.flow-shape-drag-area:active {
+  cursor: grabbing;
+}
+
+.flow-shape.is-selected {
+  border-color: transparent;
+}
+
+.flow-shape.is-selected::before {
+  border-color: var(--node-frame-color, var(--line-strong));
+}
+
+.flow-shape-decision {
+  border-radius: 4px;
+  gap: 4px;
+  justify-content: center;
+  overflow: visible;
+  padding: 34px 54px;
+}
+
+.flow-shape-decision::before {
+  box-shadow: none;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  filter: drop-shadow(0 14px 42px rgba(0, 0, 0, 0.35));
+}
+
+.flow-shape-decision-content {
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  text-align: center;
+}
+
+.flow-shape-decision-content .flow-shape-head {
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 100%;
+}
+
+.flow-shape-text {
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  border-style: dashed;
+}
+
+.flow-shape-head {
+  align-items: center;
+  display: flex;
+  min-width: 0;
+}
+
+.flow-shape-head span {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flow-shape-body {
+  background: transparent;
+  color: color-mix(in srgb, var(--text) 72%, var(--muted));
+  flex: 1 1 auto;
+  font-size: 13px;
+  line-height: 1.56;
+  margin: 0;
+  max-width: 100%;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+  scrollbar-gutter: stable;
+  width: 100%;
+}
+
+.flow-shape-body.markdown-preview {
+  background: transparent;
+  font-size: 13px;
+  line-height: 1.56;
+  max-height: none;
+  min-height: 0;
+  padding: 0 2px 0 0;
+}
+
+.flow-shape-body.markdown-preview p,
+.flow-shape-body.markdown-preview ul,
+.flow-shape-body.markdown-preview ol {
+  margin: 0 0 8px;
+}
+
+.flow-shape-body.markdown-preview p {
+  white-space: pre-line;
+}
+
+.flow-shape-body.markdown-preview ul,
+.flow-shape-body.markdown-preview ol {
+  padding-left: 16px;
+}
+
+.flow-shape-body.markdown-preview li + li {
+  margin-top: 4px;
+}
+
+.flow-shape-decision .flow-shape-body {
+  align-self: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-align: center;
+  white-space: normal;
+  word-break: keep-all;
+}
+
+.flow-shape-decision .flow-shape-body.markdown-preview ul,
+.flow-shape-decision .flow-shape-body.markdown-preview ol {
+  display: inline-block;
+  text-align: left;
+}
+
+.flow-shape-editor {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+  width: 100%;
+  z-index: 1;
+}
+
+.flow-shape-editor input,
+.flow-shape-editor textarea {
+  background: transparent;
+  box-sizing: border-box;
+  border-color: transparent;
+  font-size: 12px;
+  width: 100%;
+}
+
+.flow-shape-editor input {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  height: auto;
+  line-height: 1.25;
+  min-height: 22px;
+  padding: 0;
+}
+
+.flow-shape-editor textarea {
+  color: color-mix(in srgb, var(--text) 72%, var(--muted));
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.56;
+  min-height: 0;
+  overflow: auto;
+  padding: 0;
+  resize: none;
+}
+
+@container (min-width: 360px) and (min-height: 220px) {
+  .flow-shape-step-content,
+  .flow-shape-step .flow-shape-editor {
+    gap: 11px;
+  }
+
+  .flow-shape-step-content .flow-shape-head span,
+  .flow-shape-step .flow-shape-editor input,
+  .flow-shape-step-content .flow-shape-body,
+  .flow-shape-step .flow-shape-editor textarea {
+    font-size: 14px;
+  }
+}
+
+@container (min-width: 520px) and (min-height: 360px) {
+  .flow-shape-step-content,
+  .flow-shape-step .flow-shape-editor {
+    gap: 13px;
+  }
+
+  .flow-shape-step-content .flow-shape-head span,
+  .flow-shape-step .flow-shape-editor input {
+    font-size: 16px;
+    line-height: 1.32;
+  }
+
+  .flow-shape-step-content .flow-shape-body,
+  .flow-shape-step .flow-shape-editor textarea {
+    font-size: 16px;
+    line-height: 1.66;
+  }
+}
+
+@container (min-width: 640px) and (min-height: 560px) {
+  .flow-shape-step-content,
+  .flow-shape-step .flow-shape-editor {
+    gap: 15px;
+  }
+
+  .flow-shape-step-content .flow-shape-head span,
+  .flow-shape-step .flow-shape-editor input {
+    font-size: 18px;
+  }
+
+  .flow-shape-step-content .flow-shape-body,
+  .flow-shape-step .flow-shape-editor textarea {
+    font-size: 18px;
+    line-height: 1.7;
+  }
+}

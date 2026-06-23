@@ -44,6 +44,16 @@
   grid-template-rows: 1fr;
 }
 
+.sidebar.is-rail-only {
+  grid-template-columns: 52px;
+  grid-template-rows: 1fr;
+  width: 52px;
+}
+
+.sidebar.is-rail-only .rail-nav {
+  grid-row: 1;
+}
+
 .sidebar-head,
 .panel-head {
   border-bottom: 1px solid var(--line);

@@ -139,7 +139,7 @@ export const workspaceRepository = {
     const defaultModelSettings = await db.defaultModelSettings.toArray()
 
     return {
-      version: 9,
+      version: 10,
       exportedAt: nowIso(),
       canvases: await db.canvases.toArray(),
       promptCards: await db.promptCards.toArray(),
@@ -158,6 +158,10 @@ export const workspaceRepository = {
       chatSessions: await db.chatSessions.toArray(),
       chatMessages: await db.chatMessages.toArray(),
       compareRuns: await db.compareRuns.toArray(),
+      knowledgeBases: await db.knowledgeBases.toArray(),
+      knowledgeItems: await db.knowledgeItems.toArray(),
+      knowledgeChunks: await db.knowledgeChunks.toArray(),
+      chatKnowledgeSelections: await db.chatKnowledgeSelections.toArray(),
     }
   },
 
@@ -181,7 +185,11 @@ export const workspaceRepository = {
         db.defaultModelSettings,
         db.chatSessions,
         db.chatMessages,
+        db.chatKnowledgeSelections,
         db.compareRuns,
+        db.knowledgeBases,
+        db.knowledgeItems,
+        db.knowledgeChunks,
       ],
       async () => {
         await Promise.all([
@@ -198,7 +206,11 @@ export const workspaceRepository = {
           db.defaultModelSettings.clear(),
           db.chatSessions.clear(),
           db.chatMessages.clear(),
+          db.chatKnowledgeSelections.clear(),
           db.compareRuns.clear(),
+          db.knowledgeBases.clear(),
+          db.knowledgeItems.clear(),
+          db.knowledgeChunks.clear(),
         ])
 
         await Promise.all([
@@ -215,7 +227,11 @@ export const workspaceRepository = {
           db.defaultModelSettings.bulkPut(getImportedDefaultModelSettings(payload)),
           db.chatSessions.bulkPut(payload.chatSessions ?? []),
           db.chatMessages.bulkPut(payload.chatMessages ?? []),
+          db.chatKnowledgeSelections.bulkPut(payload.chatKnowledgeSelections ?? []),
           db.compareRuns.bulkPut(payload.compareRuns ?? []),
+          db.knowledgeBases.bulkPut(payload.knowledgeBases ?? []),
+          db.knowledgeItems.bulkPut(payload.knowledgeItems ?? []),
+          db.knowledgeChunks.bulkPut(payload.knowledgeChunks ?? []),
         ])
       },
     )

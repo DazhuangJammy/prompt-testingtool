@@ -1,7 +1,27 @@
+import type {
+  ChatKnowledgeReference,
+  ChatKnowledgeSelection,
+  KnowledgeBase,
+  KnowledgeChunk,
+  KnowledgeItem,
+} from './knowledge.types'
+
 export type PromptSectionKey = string
+export type {
+  ChatKnowledgeReference,
+  ChatKnowledgeSelection,
+  KnowledgeBase,
+  KnowledgeChunk,
+  KnowledgeItem,
+  KnowledgeItemStatus,
+  KnowledgeProviderType,
+  KnowledgeRagConfig,
+  KnowledgeSearchResult,
+  KnowledgeSourceType,
+} from './knowledge.types'
 
 export type ThemeMode = 'light' | 'dark'
-export type WorkspaceMode = 'prompt' | 'skills'
+export type WorkspaceMode = 'prompt' | 'knowledge' | 'skills'
 
 export interface Canvas {
   id: string
@@ -152,9 +172,18 @@ export type ProviderType =
 export interface ProviderModelConfig {
   id: string
   group?: string
+  capabilities?: ProviderModelCapability[]
   name?: string
   enabled: boolean
 }
+
+export type ProviderModelCapability =
+  | 'chat'
+  | 'reasoning'
+  | 'embedding'
+  | 'rerank'
+  | 'vision'
+  | 'function-call'
 
 export interface ProviderConfig {
   id: string
@@ -336,6 +365,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system'
   content: string
   attachments?: ChatAttachment[]
+  knowledgeReferences?: ChatKnowledgeReference[]
   promptVersionId?: string
   thinkingMode?: ThinkingMode
   thinkingDurationMs?: number
@@ -354,6 +384,7 @@ export interface ChatAttachment {
   dataUrl?: string
   text?: string
 }
+
 
 export type CompletionContentPart =
   | { type: 'text'; text: string }
@@ -380,7 +411,7 @@ export interface CompareRun {
 }
 
 export interface ExportPayload {
-  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
   exportedAt: string
   canvases: Canvas[]
   promptCards: PromptCard[]
@@ -397,6 +428,10 @@ export interface ExportPayload {
   chatSessions: ChatSession[]
   chatMessages: ChatMessage[]
   compareRuns: CompareRun[]
+  knowledgeBases?: KnowledgeBase[]
+  knowledgeItems?: KnowledgeItem[]
+  knowledgeChunks?: KnowledgeChunk[]
+  chatKnowledgeSelections?: ChatKnowledgeSelection[]
 }
 
 export interface ChatTopicExportPayload {

@@ -3,7 +3,7 @@ import type { ChatTopicExportPayload, ExportPayload } from '@/shared/types'
 export function isSupportedWorkspacePayloadVersion(
   version: ExportPayload['version'] | number,
 ) {
-  return [1, 2, 3, 4, 5, 6, 7, 8, 9].includes(version)
+  return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].includes(version)
 }
 
 export function createTopicImportIdMap(payload: ChatTopicExportPayload) {
