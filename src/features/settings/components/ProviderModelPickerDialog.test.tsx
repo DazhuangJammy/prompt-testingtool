@@ -55,6 +55,19 @@ describe('ProviderModelPickerDialog', () => {
 
     expect(addedButton?.disabled).toBe(true)
   })
+
+  it('renders capability icons with hover labels instead of visible tag text', () => {
+    renderPicker()
+
+    const firstRow = document.querySelector('.provider-model-picker-row')
+    const tags = firstRow?.querySelector('.provider-model-tags')
+
+    expect(tags?.textContent).not.toContain('视觉')
+    expect(tags?.textContent).not.toContain('推理')
+    expect(tags?.querySelector('[aria-label="视觉"]')).toBeTruthy()
+    expect(tags?.querySelector('[aria-label="推理"]')).toBeTruthy()
+    expect(tags?.querySelector('[aria-label="工具"]')).toBeTruthy()
+  })
 })
 
 function renderPicker(
@@ -71,7 +84,7 @@ function renderPicker(
         models={[
           {
             id: 'qwen3.7-plus',
-            capabilities: ['chat', 'reasoning', 'function-call'],
+            capabilities: ['chat', 'reasoning', 'vision', 'function-call'],
             enabled: true,
           },
           {

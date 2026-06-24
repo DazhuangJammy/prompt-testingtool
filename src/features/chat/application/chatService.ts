@@ -1,9 +1,10 @@
-import { requestCompletion, requestCompletionStream } from '@/shared/api/ai'
+import { requestCompletion } from '@/shared/api/ai'
 import type {
   ChatAttachment,
   ChatKnowledgeReference,
   ChatMessage,
   ChatSession,
+  CompletionWebSearchToolConfig,
   PromptInjectionMode,
   PromptCard,
   ProviderConfig,
@@ -17,7 +18,6 @@ import {
   createCompareRun,
   createPromptVersion,
 } from '@/features/chat/model/chatCompletion'
-import { splitThinkingBlock } from '@/shared/model/thinking'
 import {
   createTopicTitleMessages,
   normalizeGeneratedChatTopicTitle,
@@ -26,6 +26,14 @@ import {
 import { createChatSession } from '@/features/chat/model/chatSession'
 import { createReorderedChatSessionSortUpdates } from '@/features/chat/model/chatSessionOrdering'
 import { chatRepository } from '@/features/chat/infrastructure/chatRepository'
+import { streamAssistantMessage } from './chatAssistantStream'
+
+export interface ResolvedChatContexts {
+  knowledgeContext: string
+  knowledgeReferences: ChatKnowledgeReference[]
+  webSearchContext: string
+  webSearchReferences: WebSearchReference[]
+}
 
 export async function ensureChatSession(
   canvasId: string,
@@ -115,6 +123,8 @@ export async function sendChatMessage({
   knowledgeReferences = [],
   webSearchContext = '',
   webSearchReferences = [],
+  webSearchTool,
+  resolveContexts,
   text,
   thinkingMode,
 }: {
@@ -123,6 +133,8 @@ export async function sendChatMessage({
   knowledgeReferences?: ChatKnowledgeReference[]
   webSearchContext?: string
   webSearchReferences?: WebSearchReference[]
+  webSearchTool?: CompletionWebSearchToolConfig
+  resolveContexts?: () => Promise<ResolvedChatContexts>
   card: PromptCard
   defaultAssistantPrompt?: string
   history: ChatMessage[]
@@ -150,13 +162,27 @@ export async function sendChatMessage({
   }
   await chatRepository.addMessage(userMessage)
 
+  const contexts = await resolveMessageContexts({
+    knowledgeContext,
+    knowledgeReferences,
+    webSearchContext,
+    webSearchReferences,
+    resolveContexts,
+  })
+  if (resolveContexts) {
+    await chatRepository.updateMessageContextReferences(userMessage.id, {
+      knowledgeReferences: contexts.knowledgeReferences,
+      webSearchReferences: contexts.webSearchReferences,
+    })
+  }
+
   const assistantMessage: ChatMessage = {
     id: createId(),
     sessionId,
     role: 'assistant',
     content: '',
-    knowledgeReferences,
-    webSearchReferences,
+    knowledgeReferences: contexts.knowledgeReferences,
+    webSearchReferences: contexts.webSearchReferences,
     promptVersionId: version.id,
     thinkingMode,
     status: 'streaming',
@@ -165,45 +191,42 @@ export async function sendChatMessage({
   await chatRepository.addMessage(assistantMessage)
   onAssistantMessage?.(assistantMessage)
 
-  const startedAt = performance.now()
-  let assistantText = ''
-  let thinkingText = ''
-  const aborted = await streamAssistantReply({
+  await streamAssistantMessage({
     assistantMessageId: assistantMessage.id,
-    getAssistantText: () => assistantText,
-    getThinkingText: () => thinkingText,
     messages: buildChatMessages(
       version.compiledMarkdown,
       history,
       userMessage.content,
       promptInjectionMode,
       userMessage.attachments,
-      knowledgeContext,
-      webSearchContext,
+      contexts.knowledgeContext,
+      contexts.webSearchContext,
     ),
     provider,
-    setAssistantText: (value) => {
-      assistantText = value
-    },
-    setThinkingText: (value) => {
-      thinkingText = value
-    },
     signal,
-    startedAt,
     thinkingMode,
-  })
-  if (!aborted && !assistantText.trim() && !thinkingText.trim()) {
-    throw new Error('上游返回为空')
-  }
-  await chatRepository.updateAssistantMessage(assistantMessage.id, {
-    content: mergeThinkingContent(thinkingText, assistantText, thinkingMode),
-    thinkingDurationMs: thinkingText && thinkingMode !== 'off'
-      ? Math.round(performance.now() - startedAt)
-      : undefined,
-    status: 'complete',
+    webSearch: webSearchTool,
   })
   await chatRepository.updateSessionAfterReply(sessionId)
   await autoNameChatTopic(sessionId, userMessage.content, provider)
+}
+
+async function resolveMessageContexts({
+  knowledgeContext,
+  knowledgeReferences,
+  webSearchContext,
+  webSearchReferences,
+  resolveContexts,
+}: ResolvedChatContexts & {
+  resolveContexts?: () => Promise<ResolvedChatContexts>
+}) {
+  if (resolveContexts) return resolveContexts()
+  return {
+    knowledgeContext,
+    knowledgeReferences,
+    webSearchContext,
+    webSearchReferences,
+  }
 }
 
 async function requestAssistantReply({
@@ -254,13 +277,8 @@ async function requestAssistantReply({
   }
   await chatRepository.addMessage(assistantMessage)
 
-  const startedAt = performance.now()
-  let assistantText = ''
-  let thinkingText = ''
-  const aborted = await streamAssistantReply({
+  await streamAssistantMessage({
     assistantMessageId: assistantMessage.id,
-    getAssistantText: () => assistantText,
-    getThinkingText: () => thinkingText,
     messages: buildChatMessages(
       version.compiledMarkdown,
       history,
@@ -271,25 +289,8 @@ async function requestAssistantReply({
       webSearchContext,
     ),
     provider,
-    setAssistantText: (value) => {
-      assistantText = value
-    },
-    setThinkingText: (value) => {
-      thinkingText = value
-    },
     signal,
-    startedAt,
     thinkingMode,
-  })
-  if (!aborted && !assistantText.trim() && !thinkingText.trim()) {
-    throw new Error('上游返回为空')
-  }
-  await chatRepository.updateAssistantMessage(assistantMessage.id, {
-    content: mergeThinkingContent(thinkingText, assistantText, thinkingMode),
-    thinkingDurationMs: thinkingText && thinkingMode !== 'off'
-      ? Math.round(performance.now() - startedAt)
-      : undefined,
-    status: 'complete',
   })
   await chatRepository.updateSessionAfterReply(sessionId)
   await autoNameChatTopic(sessionId, text, provider)
@@ -319,79 +320,6 @@ async function autoNameChatTopic(
       normalizeGeneratedChatTopicTitle(userText) || '新话题',
     )
   }
-}
-
-function mergeThinkingContent(
-  thinking: string,
-  text: string,
-  thinkingMode: ThinkingMode,
-) {
-  if (thinkingMode === 'off') return splitThinkingBlock(text).answer || text
-  return thinking ? `<think>${thinking}</think>${text}` : text
-}
-
-async function streamAssistantReply({
-  assistantMessageId,
-  getAssistantText,
-  getThinkingText,
-  messages,
-  provider,
-  setAssistantText,
-  setThinkingText,
-  signal,
-  startedAt,
-  thinkingMode,
-}: {
-  assistantMessageId: string
-  getAssistantText: () => string
-  getThinkingText: () => string
-  messages: ReturnType<typeof buildChatMessages>
-  provider: ProviderConfig
-  setAssistantText: (value: string) => void
-  setThinkingText: (value: string) => void
-  signal?: AbortSignal
-  startedAt: number
-  thinkingMode: ThinkingMode
-}) {
-  try {
-    await requestCompletionStream(
-      provider,
-      messages,
-      {
-        onText: async (chunk) => {
-          setAssistantText(getAssistantText() + chunk)
-          await chatRepository.updateAssistantMessage(assistantMessageId, {
-            content: mergeThinkingContent(
-              getThinkingText(),
-              getAssistantText(),
-              thinkingMode,
-            ),
-          })
-        },
-        onThinking: async (chunk) => {
-          setThinkingText(getThinkingText() + chunk)
-          await chatRepository.updateAssistantMessage(assistantMessageId, {
-            content: mergeThinkingContent(
-              getThinkingText(),
-              getAssistantText(),
-              thinkingMode,
-            ),
-            thinkingDurationMs: Math.round(performance.now() - startedAt),
-          })
-        },
-      },
-      thinkingMode,
-      signal,
-    )
-    return false
-  } catch (error) {
-    if (!isAbortError(error)) throw error
-    return true
-  }
-}
-
-function isAbortError(error: unknown) {
-  return error instanceof DOMException && error.name === 'AbortError'
 }
 
 export async function resendChatMessage({

@@ -14,6 +14,7 @@
 @import './prompt-markdown-card.css';
 @import './markdown-content.css';
 @import './chat.css';
+@import './chat-model-picker.css';
 @import './chat-knowledge-citations.css';
 @import './chat-composer.css';
 @import './knowledge.css';

@@ -5,6 +5,11 @@ import {
   requestModelList,
   requestRerank,
 } from '../services/openaiCompatibleService.mjs'
+import {
+  runWebSearchToolLoop,
+  shouldUseWebSearchTools,
+  webSearchToolDefinition,
+} from '../services/webSearchToolService.mjs'
 
 export const proxyChatCompletion = async (req, res) => {
   const {
@@ -14,6 +19,7 @@ export const proxyChatCompletion = async (req, res) => {
     stream = false,
     temperature = 0.7,
     thinkingMode = 'off',
+    webSearch,
   } = req.body ?? {}
 
   if (!provider?.baseUrl || !provider?.apiKey) {
@@ -33,25 +39,117 @@ export const proxyChatCompletion = async (req, res) => {
   })
 
   try {
+    const useWebSearchTools = shouldUseWebSearchTools(webSearch)
+    if (useWebSearchTools && stream) {
+      prepareSseResponse(res)
+      writeSseEvent(res, {
+        webSearchStatus: {
+          phase: 'preparing',
+          message: '准备联网搜索',
+        },
+      })
+    }
     const upstream = await requestChatCompletion({
       provider,
       model,
       messages,
       signal: controller.signal,
-      stream,
+      stream: stream && !useWebSearchTools,
       temperature,
       thinkingMode,
+      ...(useWebSearchTools
+        ? { tools: [webSearchToolDefinition], toolChoice: 'auto' }
+        : {}),
     })
 
-    await forwardUpstreamResponse(upstream, res, stream)
+    if (useWebSearchTools) {
+      const result = await runWebSearchToolLoop({
+        finalStream: stream,
+        initialResponse: upstream,
+        onEvent: stream ? (event) => writeSseEvent(res, event) : undefined,
+        requestChatCompletion,
+        requestOptions: {
+          provider,
+          model,
+          messages,
+          signal: controller.signal,
+          stream: false,
+          temperature,
+          thinkingMode,
+        },
+        webSearch,
+      })
+      if (stream) await sendToolLoopStream(result, res)
+      else await sendToolLoopJson(result, res)
+    } else {
+      await forwardUpstreamResponse(upstream, res, stream)
+    }
     completed = true
   } catch (error) {
     if (isAbortError(error)) return
+    if (res.headersSent) {
+      writeSseEvent(res, {
+        error: error instanceof Error ? error.message : 'Proxy failed',
+      })
+      res.write('data: [DONE]\n\n')
+      res.end()
+      return
+    }
     res.status(502).json({
       error: error instanceof Error ? error.message : 'Proxy failed',
     })
   }
 }
+
+const sendToolLoopJson = async ({ response, references }, res) => {
+  const text = await response.text()
+  const payload = JSON.parse(text)
+  payload.webSearchReferences = references
+  res.status(response.status)
+  res.type('application/json')
+  res.send(JSON.stringify(payload))
+}
+
+const sendToolLoopStream = async ({ response, references }, res) => {
+  prepareSseResponse(res)
+  if (references.length) {
+    writeSseEvent(res, { webSearchReferences: references })
+  }
+
+  const contentType = response.headers.get('content-type') ?? ''
+  if (contentType.includes('text/event-stream') && response.body) {
+    await pipeReadableStream(response.body, res)
+    return
+  }
+
+  const text = await response.text()
+  const payload = JSON.parse(text)
+  const content = extractAssistantContent(payload)
+  if (content) {
+    writeSseEvent(res, { choices: [{ delta: { content } }] })
+  }
+  res.write('data: [DONE]\n\n')
+  res.end()
+}
+
+const prepareSseResponse = (res) => {
+  if (res.headersSent) return
+  res.status(200)
+  res.type('text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.flushHeaders?.()
+}
+
+const writeSseEvent = (res, payload) => {
+  if (res.destroyed) return
+  res.write(`data: ${JSON.stringify(payload)}\n\n`)
+}
+
+const extractAssistantContent = (payload) =>
+  payload?.choices?.[0]?.message?.content ??
+  payload?.choices?.[0]?.text ??
+  payload?.output_text ??
+  ''
 
 const forwardUpstreamResponse = async (upstream, res, shouldStream) => {
   res.status(upstream.status)
@@ -62,9 +160,12 @@ const forwardUpstreamResponse = async (upstream, res, shouldStream) => {
     return
   }
 
-  const reader = upstream.body.getReader()
   res.flushHeaders?.()
+  await pipeReadableStream(upstream.body, res)
+}
 
+const pipeReadableStream = async (body, res) => {
+  const reader = body.getReader()
   while (true) {
     const { done, value } = await reader.read()
     if (done) break

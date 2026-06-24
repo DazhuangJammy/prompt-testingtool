@@ -1,6 +1,7 @@
 import {
   ensureChatSession,
   resendChatMessage,
+  type ResolvedChatContexts,
   sendChatMessage,
 } from '@/features/chat/application/chatService'
 import { useActiveChatRequests } from '@/features/chat/hooks/useActiveChatRequests'
@@ -8,6 +9,7 @@ import type {
   ChatAttachment,
   ChatKnowledgeReference,
   ChatMessage,
+  CompletionWebSearchToolConfig,
   PromptCard,
   PromptInjectionMode,
   ProviderConfig,
@@ -28,10 +30,12 @@ interface MessageActionBase {
   parentSessionId?: string
   provider: ProviderConfig
   promptInjectionMode: PromptInjectionMode
+  resolveContexts?: () => Promise<ResolvedChatContexts>
   sessionId?: string
   setSessionId: (id: string) => void
   text: string
   thinkingMode: ThinkingMode
+  webSearchTool?: CompletionWebSearchToolConfig
   requestKey: ActiveRequest
 }
 
@@ -64,10 +68,12 @@ export function useChatMessageActions(setError: (error: string) => void) {
     parentSessionId,
     provider,
     promptInjectionMode,
+    resolveContexts,
     sessionId,
     setSessionId,
     text,
     thinkingMode,
+    webSearchTool,
     requestKey,
   }: SendMessageAction): Promise<SendMessageResult> => {
     const controller = chatRequests.startRequest(requestKey)
@@ -96,10 +102,12 @@ export function useChatMessageActions(setError: (error: string) => void) {
         webSearchReferences,
         provider,
         promptInjectionMode,
+        resolveContexts,
         sessionId: activeSessionId,
         signal: controller.signal,
         text,
         thinkingMode,
+        webSearchTool,
       })
       return { completed: !controller.signal.aborted, sessionId: activeSessionId }
     } catch (event) {

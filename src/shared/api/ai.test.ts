@@ -178,6 +178,66 @@ describe('ai api helpers', () => {
     )
   })
 
+  it('passes web search tool config and streams search references', async () => {
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          new TextEncoder().encode(
+            'data: {"webSearchStatus":{"phase":"searching","query":"AI","providerName":"Bing"}}\n\n',
+          ),
+        )
+        controller.enqueue(
+          new TextEncoder().encode(
+            'data: {"webSearchReferences":[{"title":"Result","content":"Content","url":"https://example.com","sourceInput":"AI","providerId":"bing","providerName":"Bing"}]}\n\n',
+          ),
+        )
+        controller.enqueue(
+          new TextEncoder().encode(
+            'data: {"choices":[{"delta":{"content":"answer [1]"}}]}\n\n',
+          ),
+        )
+        controller.close()
+      },
+    })
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(stream, {
+        headers: { 'Content-Type': 'text/event-stream' },
+        status: 200,
+      }),
+    )
+    const chunks: string[] = []
+    const references: unknown[] = []
+    const statuses: unknown[] = []
+
+    await expect(
+      requestCompletionStream(
+        provider,
+        [],
+        {
+          onText: (chunk) => chunks.push(chunk),
+          onWebSearchReferences: (items) => references.push(...items),
+          onWebSearchStatus: (status) => statuses.push(status),
+        },
+        'off',
+        undefined,
+        { providerId: 'bing' },
+      ),
+    ).resolves.toBe('answer [1]')
+    expect(chunks).toEqual(['answer [1]'])
+    expect(references).toEqual([
+      expect.objectContaining({ title: 'Result', providerName: 'Bing' }),
+    ])
+    expect(statuses).toEqual([
+      expect.objectContaining({ phase: 'searching', query: 'AI' }),
+    ])
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/chat/completions',
+      expect.objectContaining({
+        body: expect.stringContaining('"webSearch":{"providerId":"bing"}'),
+      }),
+    )
+  })
+
   it('streams final unterminated and array content chunks', async () => {
     const stream = new ReadableStream({
       start(controller) {
@@ -391,7 +451,7 @@ describe('ai api helpers', () => {
         JSON.stringify({
           ok: true,
           models: [
-            { id: 'model-a', name: 'Model A' },
+            { id: 'qwen3.7-plus', name: 'Qwen3.7 Plus' },
             { id: 'model-b' },
             { name: 'missing id' },
           ],
@@ -401,8 +461,13 @@ describe('ai api helpers', () => {
     )
 
     await expect(listProviderModels(provider)).resolves.toEqual([
-      { id: 'model-a', name: 'Model A', enabled: true },
-      { id: 'model-b', name: undefined, enabled: true },
+      {
+        id: 'qwen3.7-plus',
+        capabilities: ['chat', 'reasoning', 'vision', 'function-call'],
+        name: 'Qwen3.7 Plus',
+        enabled: true,
+      },
+      { id: 'model-b', capabilities: ['chat'], name: undefined, enabled: true },
     ])
     expect(fetch).toHaveBeenCalledWith(
       '/api/provider-models',

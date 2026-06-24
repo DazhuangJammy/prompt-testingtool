@@ -1,6 +1,7 @@
 import { searchLocalEngine } from './webSearchLocalEngines.mjs'
+import { fetchPageSnippet } from './webSearchPageSnippetService.mjs'
 
-const SEARCH_TIMEOUT_MS = 15000
+const SEARCH_TIMEOUT_MS = 8000
 
 const USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36'
@@ -59,7 +60,14 @@ async function runProviderSearch({ provider, query, maxResults, signal }) {
     case 'google':
     case 'bing':
     case 'baidu':
-      return searchLocalEngine({ provider, query, maxResults, signal, fetchText })
+      return searchLocalEngine({
+        provider,
+        query,
+        maxResults,
+        signal,
+        fetchPageSnippet,
+        fetchText,
+      })
     case 'exa-mcp':
       throw new Error('当前项目未接入 ExaMCP 搜索运行时')
     default:
@@ -341,11 +349,52 @@ function getSearxngHeaders(provider) {
   }
 }
 
-function normalizeQuery(query, searchWithTime) {
+export function normalizeQuery(query, searchWithTime) {
   const trimmed = String(query ?? '').trim()
   if (!trimmed) throw new Error('搜索关键词不能为空')
-  if (!searchWithTime) return trimmed
-  return `${trimmed} ${new Date().toISOString().slice(0, 10)}`
+  const keywords = buildSearchKeywords(trimmed)
+  if (!searchWithTime) return keywords
+  return `${keywords} ${formatLocalDate(new Date())}`
+}
+
+export function buildSearchKeywords(query) {
+  const trimmed = normalizeText(query)
+  const withoutIntent = stripSearchIntent(trimmed)
+  const cleaned = withoutIntent
+    .replace(/[?？!！。；;，,、]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (isAiNewsQuery(cleaned)) return 'AI 人工智能 新闻 最新'
+
+  const currentQuery = cleaned
+    .replace(/今天|今日/g, '最新')
+    .replace(/现在|目前|当前/g, '')
+    .replace(/有什么|有哪些|有没有|是什么|是啥|一下|一下子/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  const fallback = currentQuery || cleaned || trimmed
+  return fallback.slice(0, 200)
+}
+
+function stripSearchIntent(value) {
+  return value
+    .replace(/^(请|麻烦)?(你)?(帮我|帮忙|给我|替我)?(搜索|搜一下|搜|查询|查一下|查查|查|找一下|找找|了解一下)\s*/i, '')
+    .replace(/^(一下|下)\s*/i, '')
+    .replace(/^关于\s*/i, '')
+    .trim()
+}
+
+function isAiNewsQuery(value) {
+  return /(\bai\b|人工智能|大模型)/i.test(value) && /(今天|今日|最新|最近|新闻|资讯|动态)/.test(value)
+}
+
+function formatLocalDate(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 function normalizeDomains(values) {

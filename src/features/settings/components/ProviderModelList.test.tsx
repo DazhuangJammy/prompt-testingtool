@@ -27,8 +27,12 @@ describe('ProviderModelList', () => {
 
     expect(firstRow).toBeTruthy()
     expect(name?.textContent).toContain('qwen3.7-plus')
-    expect(tags?.textContent).toContain('对话')
-    expect(tags?.textContent).toContain('推理')
+    expect(tags?.textContent).not.toContain('对话')
+    expect(tags?.textContent).not.toContain('视觉')
+    expect(tags?.textContent).not.toContain('推理')
+    expect(tags?.querySelector('[aria-label="视觉"]')).toBeTruthy()
+    expect(tags?.querySelector('[aria-label="推理"]')).toBeTruthy()
+    expect(tags?.querySelector('[aria-label="工具"]')).toBeTruthy()
     expect(tags?.parentElement).toBe(firstRow)
     expect(name?.contains(tags ?? null)).toBe(false)
   })
@@ -64,7 +68,7 @@ function renderList(overrides: Partial<Parameters<typeof ProviderModelList>[0]> 
           {
             id: 'qwen3.7-plus',
             group: 'qwen3',
-            capabilities: ['chat', 'reasoning', 'function-call'],
+            capabilities: ['chat', 'reasoning', 'vision', 'function-call'],
             enabled: true,
           },
           {

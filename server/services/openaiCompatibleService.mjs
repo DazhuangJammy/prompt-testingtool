@@ -63,6 +63,8 @@ export const requestChatCompletion = async ({
   signal,
   stream = false,
   thinkingMode = 'off',
+  tools,
+  toolChoice,
 }) => {
   const endpoint = buildChatEndpoint(provider.baseUrl)
   const body = buildChatRequestBody({
@@ -73,6 +75,8 @@ export const requestChatCompletion = async ({
     stream,
     temperature,
     thinkingMode,
+    tools,
+    toolChoice,
   })
 
   return fetch(endpoint, {
@@ -171,6 +175,8 @@ export const buildChatRequestBody = ({
   maxTokens,
   stream,
   thinkingMode,
+  tools,
+  toolChoice,
 }) => {
   const target = providerSignature({ model, provider })
   const isMoonshot = isMoonshotProvider(target)
@@ -181,6 +187,8 @@ export const buildChatRequestBody = ({
     stream,
     ...(!isMoonshot && temperature !== undefined ? { temperature } : {}),
     ...(maxTokens ? { max_tokens: maxTokens } : {}),
+    ...(Array.isArray(tools) && tools.length ? { tools } : {}),
+    ...(toolChoice ? { tool_choice: toolChoice } : {}),
     ...buildThinkingOptions({ model, provider, thinkingMode }),
   }
 }

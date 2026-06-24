@@ -8,12 +8,9 @@ import {
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { ProviderModelConfig } from '@/shared/types'
-import {
-  MODEL_CAPABILITY_LABELS,
-  getModelCapabilities,
-} from '@/shared/model/providerModelCapabilities'
 import { IconButton } from '@/shared/ui/IconButton'
 import { groupProviderModels } from '../model/providerModelGroups'
+import { ProviderModelCapabilityIcons } from './ProviderModelCapabilityIcons'
 
 interface ProviderModelListProps {
   models: ProviderModelConfig[]
@@ -142,7 +139,7 @@ function ProviderModelRow({
       <div className="provider-model-name">
         <strong title={title}>{title}</strong>
       </div>
-      <ModelCapabilityTags model={model} />
+      <ProviderModelCapabilityIcons model={model} />
       <div className="provider-model-actions">
         <IconButton
           icon={<Edit3 />}
@@ -156,19 +153,5 @@ function ProviderModelRow({
         />
       </div>
     </div>
-  )
-}
-
-function ModelCapabilityTags({ model }: { model: ProviderModelConfig }) {
-  const capabilities = getModelCapabilities(model)
-
-  if (!capabilities.length) return <span className="provider-model-tags" />
-
-  return (
-    <span className="provider-model-tags" aria-label="模型标签">
-      {capabilities.map((capability) => (
-        <span key={capability}>{MODEL_CAPABILITY_LABELS[capability]}</span>
-      ))}
-    </span>
   )
 }

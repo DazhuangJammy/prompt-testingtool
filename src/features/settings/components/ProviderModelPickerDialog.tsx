@@ -9,15 +9,13 @@ import {
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ProviderModelCapability, ProviderModelConfig } from '@/shared/types'
-import {
-  MODEL_CAPABILITY_LABELS,
-  getModelCapabilities,
-} from '@/shared/model/providerModelCapabilities'
+import { MODEL_CAPABILITY_LABELS, getModelCapabilities } from '@/shared/model/providerModelCapabilities'
 import { IconButton } from '@/shared/ui/IconButton'
 import {
   getProviderModelFamilyLabel,
   groupProviderModels,
 } from '../model/providerModelGroups'
+import { ProviderModelCapabilityIcons } from './ProviderModelCapabilityIcons'
 
 type PickerStatus = 'idle' | 'busy' | 'ok' | 'error'
 type CapabilityFilter = 'all' | ProviderModelCapability
@@ -226,7 +224,7 @@ function ProviderModelPickerRow({
         <strong title={title}>{title}</strong>
         {model.name && model.name !== model.id && <small>{model.id}</small>}
       </div>
-      <ProviderModelPickerTags model={model} />
+      <ProviderModelCapabilityIcons model={model} />
       <IconButton
         icon={added ? <Check /> : <Plus />}
         label={added ? '已添加' : '添加模型'}
@@ -234,18 +232,6 @@ function ProviderModelPickerRow({
         onClick={onAdd}
       />
     </div>
-  )
-}
-
-function ProviderModelPickerTags({ model }: { model: ProviderModelConfig }) {
-  const capabilities = getModelCapabilities(model)
-
-  return (
-    <span className="provider-model-tags" aria-label="模型标签">
-      {capabilities.map((capability) => (
-        <span key={capability}>{MODEL_CAPABILITY_LABELS[capability]}</span>
-      ))}
-    </span>
   )
 }
 

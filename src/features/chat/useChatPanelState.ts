@@ -154,15 +154,16 @@ export function useChatPanelState(
     onCompareOpenChange,
   })
 
-  const { preflightBusy, prepareContexts } = useChatContextResolution({
-    getKnowledgeProviders,
-    knowledgeBases,
-    selectedKnowledgeBaseIds,
-    setError,
-    webSearchEnabled,
-    webSearchProviderId,
-    webSearchSettings,
-  })
+  const { preflightBusy, prepareContexts, prepareContextsOrThrow } =
+    useChatContextResolution({
+      getKnowledgeProviders,
+      knowledgeBases,
+      selectedKnowledgeBaseIds,
+      setError,
+    })
+  const activeWebSearchTool = webSearchEnabled
+    ? { providerId: webSearchProviderId, settings: webSearchSettings }
+    : undefined
 
   const sendMainMessage = async () => {
     const text = input.trim()
@@ -176,25 +177,28 @@ export function useChatPanelState(
       setError(unsupportedReason)
       return
     }
-    const prepared = await prepareContexts(text)
-    if (!prepared) return
-    const { knowledge, webSearch } = prepared
     setInput('')
     setAttachments([])
     await chatActions.sendMessageForPane({
       attachments: nextAttachments,
       card,
       history: messages,
-      knowledgeContext: knowledge.context,
-      knowledgeReferences: knowledge.references,
-      webSearchContext: webSearch.context,
-      webSearchReferences: webSearch.references,
+      resolveContexts: async () => {
+        const prepared = await prepareContextsOrThrow(text)
+        return {
+          knowledgeContext: prepared.knowledge.context,
+          knowledgeReferences: prepared.knowledge.references,
+          webSearchContext: prepared.webSearch.context,
+          webSearchReferences: prepared.webSearch.references,
+        }
+      },
       provider,
       promptInjectionMode,
       sessionId: effectiveSessionId,
       setSessionId: setMainSessionId,
       text,
       thinkingMode: effectiveThinkingMode,
+      webSearchTool: activeWebSearchTool,
       requestKey: 'main',
     })
   }
@@ -267,13 +271,20 @@ export function useChatPanelState(
     const sessionId = paneBelongsToCurrentTopic ? pane.sessionId : undefined
     const history = paneBelongsToCurrentTopic ? pane.messages : []
 
-    const prepared = await prepareContexts(text)
-    if (!prepared) return
     comparePaneActions.updateComparePane(paneId, {
       attachments: [],
       input: '',
       parentSessionId,
     })
+    const prepared = await prepareContexts(text)
+    if (!prepared) {
+      comparePaneActions.updateComparePane(paneId, {
+        attachments: nextAttachments,
+        input: text,
+        parentSessionId,
+      })
+      return
+    }
     await chatActions.sendMessageForPane({
       attachments: nextAttachments,
       card: pane.card,

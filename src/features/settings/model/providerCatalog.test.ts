@@ -43,7 +43,7 @@ describe('provider catalog', () => {
     expect(provider.models).toEqual([
       {
         id: 'old-model',
-        capabilities: ['chat', 'function-call'],
+        capabilities: ['chat'],
         group: undefined,
         name: undefined,
         enabled: true,
@@ -96,12 +96,13 @@ describe('provider catalog', () => {
       {
         id: 'model-a',
         capabilities: ['chat', 'reasoning'],
+        group: undefined,
         name: 'Model A',
         enabled: true,
       },
       {
         id: 'model-b',
-        capabilities: ['chat', 'function-call'],
+        capabilities: ['chat'],
         group: 'ChatGPT',
         name: undefined,
         enabled: false,
@@ -124,6 +125,10 @@ describe('provider catalog', () => {
       provider.models?.find((model) => model.id === 'qwen3.7-plus')
         ?.capabilities,
     ).toContain('reasoning')
+    expect(
+      provider.models?.find((model) => model.id === 'qwen3.7-plus')
+        ?.capabilities,
+    ).toContain('vision')
   })
 
   it('creates custom fallback providers from type', () => {

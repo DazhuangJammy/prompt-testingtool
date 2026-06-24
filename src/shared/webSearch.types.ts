@@ -65,3 +65,16 @@ export interface WebSearchReference extends WebSearchResult {
   providerId: WebSearchProviderId
   providerName: string
 }
+
+export interface WebSearchStreamStatus {
+  phase: 'preparing' | 'searching' | 'complete' | 'error'
+  query?: string
+  providerName?: string
+  count?: number
+  message?: string
+}
+
+export interface CompletionWebSearchToolConfig {
+  providerId?: WebSearchProviderId
+  settings?: WebSearchSettings
+}

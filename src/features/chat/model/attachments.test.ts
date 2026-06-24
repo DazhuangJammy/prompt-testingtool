@@ -16,6 +16,9 @@ describe('chat attachments model', () => {
     expect(getAttachmentCapability(provider('qwen3.7-plus')).supportsImages).toBe(
       true,
     )
+    expect(getAttachmentCapability(provider('qwen3.7-max')).supportsImages).toBe(
+      false,
+    )
     expect(getAttachmentCapability(provider('text-only')).supportsImages).toBe(false)
   })
 

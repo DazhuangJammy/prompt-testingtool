@@ -107,7 +107,15 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
             (message.role === 'assistant' && message.status === 'complete'
               ? '空回复'
               : '')
-          const showBubble = isEditing || Boolean(answerText) || attachments.length > 0
+          const hasWebSearchProgress =
+            message.role === 'assistant' &&
+            (Boolean(message.webSearchStatus) ||
+              Boolean(message.webSearchReferences?.length))
+          const showBubble =
+            isEditing ||
+            Boolean(answerText) ||
+            attachments.length > 0 ||
+            hasWebSearchProgress
           const thinkingCollapsed =
             defaultThinkingCollapsed && !expandedThinkingIds.has(message.id)
 
@@ -151,7 +159,7 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
                     />
                   ) : (
                     <>
-                      {answerText && (
+                      {(answerText || hasWebSearchProgress) && (
                         <MessageContent
                           content={answerText}
                           knowledgeReferences={
@@ -163,6 +171,11 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
                             message.role === 'assistant'
                               ? message.webSearchReferences ?? []
                               : []
+                          }
+                          webSearchStatus={
+                            message.role === 'assistant'
+                              ? message.webSearchStatus
+                              : undefined
                           }
                           onPreview={setPreviewItem}
                         />
@@ -261,6 +274,7 @@ interface MessageContentProps {
   content: string
   knowledgeReferences: ChatMessage['knowledgeReferences']
   webSearchReferences: ChatMessage['webSearchReferences']
+  webSearchStatus: ChatMessage['webSearchStatus']
   onPreview: (item: ImagePreviewItem) => void
 }
 
@@ -268,6 +282,7 @@ function MessageContent({
   content,
   knowledgeReferences = [],
   webSearchReferences = [],
+  webSearchStatus,
   onPreview,
 }: MessageContentProps) {
   const citations = createKnowledgeCitations(knowledgeReferences)
@@ -275,15 +290,22 @@ function MessageContent({
     ? content
     : appendMissingKnowledgeCitationMarks(content, citations)
   const blocks = splitSvgPreviewBlocks(displayContent)
-  if (!blocks.length) return null
+  const hasKnowledgeCitations = knowledgeReferences.length > 0
+  const hasWebSearchCitations = webSearchReferences.length > 0 || Boolean(webSearchStatus)
+  if (!blocks.length && !hasKnowledgeCitations && !hasWebSearchCitations) {
+    return null
+  }
 
   return (
     <>
-      {knowledgeReferences.length > 0 && (
+      {hasKnowledgeCitations && (
         <KnowledgeCitationSummary references={knowledgeReferences} />
       )}
-      {webSearchReferences.length > 0 && (
-        <WebSearchCitationSummary references={webSearchReferences} />
+      {hasWebSearchCitations && (
+        <WebSearchCitationSummary
+          references={webSearchReferences}
+          status={webSearchStatus}
+        />
       )}
       {blocks.map((block) =>
         block.kind === 'svg' ? (

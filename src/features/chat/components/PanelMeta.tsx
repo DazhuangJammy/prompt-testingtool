@@ -1,13 +1,15 @@
 import { GitCompare } from 'lucide-react'
 import type { ReactNode } from 'react'
+import type { ProviderConfig } from '@/shared/types'
 import { IconButton } from '@/shared/ui/IconButton'
+import { ChatModelPicker } from './ChatModelPicker'
 
 interface PanelMetaProps {
   activeProviderId?: string
   compareDisabled?: boolean
   compareLabel?: string
   compareOpen?: boolean
-  providers: Array<{ id: string; name: string; model: string }>
+  providers: ProviderConfig[]
   extraActions?: ReactNode
   onToggleCompare?: () => void
   onSelectProvider: (id: string) => void
@@ -25,18 +27,11 @@ export function PanelMeta({
 }: PanelMetaProps) {
   return (
     <div className="panel-meta">
-      <select
-        aria-label="服务商"
-        value={activeProviderId ?? ''}
-        onChange={(event) => onSelectProvider(event.target.value)}
-      >
-        {!providers.length && <option value="">服务商</option>}
-        {providers.map((provider) => (
-          <option key={provider.id} value={provider.id}>
-            {provider.name || provider.model}
-          </option>
-        ))}
-      </select>
+      <ChatModelPicker
+        activeProviderId={activeProviderId}
+        providers={providers}
+        onSelectProvider={onSelectProvider}
+      />
       {onToggleCompare && (
         <IconButton
           active={compareOpen}

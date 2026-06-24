@@ -5,7 +5,7 @@ import {
   type ComponentProps,
   type ReactNode,
 } from 'react'
-import type { WebSearchReference } from '@/shared/types'
+import type { WebSearchReference, WebSearchStreamStatus } from '@/shared/types'
 import { MarkdownRenderer } from '@/shared/ui/MarkdownRenderer'
 import {
   appendMissingWebSearchCitationMarks,
@@ -14,13 +14,16 @@ import {
 
 interface WebSearchCitationSummaryProps {
   references: WebSearchReference[]
+  status?: WebSearchStreamStatus
 }
 
 export function WebSearchCitationSummary({
   references,
+  status,
 }: WebSearchCitationSummaryProps) {
   const [expanded, setExpanded] = useState(false)
-  if (!references.length) return null
+  if (!references.length && !status) return null
+  const resultCount = status?.count ?? references.length
 
   return (
     <section className="web-search-results">
@@ -30,10 +33,12 @@ export function WebSearchCitationSummary({
         onClick={() => setExpanded((value) => !value)}
       >
         <Search />
-        <span>{references.length} 个搜索结果</span>
-        <small>{references[0]?.providerName ?? '网络搜索'}</small>
+        <span>{formatWebSearchStatus(status, resultCount)}</span>
+        <small>
+          {status?.providerName ?? references[0]?.providerName ?? '网络搜索'}
+        </small>
       </button>
-      {expanded && (
+      {expanded && references.length > 0 && (
         <div className="web-search-results-list">
           {references.map((reference, index) => (
             <a
@@ -51,6 +56,19 @@ export function WebSearchCitationSummary({
       )}
     </section>
   )
+}
+
+function formatWebSearchStatus(
+  status: WebSearchStreamStatus | undefined,
+  resultCount: number,
+) {
+  if (!status) return `${resultCount} 个搜索结果`
+  if (status.phase === 'preparing') return status.message ?? '准备联网搜索'
+  if (status.phase === 'searching') {
+    return status.query ? `正在搜索：${status.query}` : '正在搜索'
+  }
+  if (status.phase === 'error') return status.message ?? '搜索失败'
+  return `${resultCount} 个搜索结果`
 }
 
 interface WebSearchAnswerContentProps {

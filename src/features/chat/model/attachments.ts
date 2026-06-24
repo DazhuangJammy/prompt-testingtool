@@ -32,12 +32,16 @@ export function getAttachmentCapability(
 ): ChatAttachmentCapability {
   const providerModel =
     provider?.models?.find((model) => model.id === provider.model) ??
-    provider?.models?.[0]
+    provider?.models?.[0] ??
+    (provider?.model
+      ? {
+          id: provider.model,
+          name: provider.name,
+        }
+      : undefined)
   const target = providerSignature(provider)
-  const isQwen = target.includes('qwen') || target.includes('dashscope')
   const supportsImages =
     hasModelCapability(providerModel, 'vision') ||
-    isQwen ||
     target.includes('vision') ||
     target.includes('-vl') ||
     target.includes('vl-') ||

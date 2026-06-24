@@ -41,7 +41,7 @@ describe('provider repository', () => {
       models: [
         {
           id: 'model',
-          capabilities: ['chat', 'function-call'],
+          capabilities: ['chat'],
           group: undefined,
           name: undefined,
           enabled: true,

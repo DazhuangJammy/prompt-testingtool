@@ -183,24 +183,38 @@
   align-items: center;
   display: inline-flex;
   flex-wrap: nowrap;
-  gap: 4px;
+  gap: 6px;
   justify-content: flex-end;
-  max-width: min(260px, 34vw);
+  max-width: min(176px, 28vw);
   min-width: 0;
   overflow: hidden;
 }
 
 .provider-model-tags span {
-  background: var(--surface);
+  align-items: center;
+  background: color-mix(in srgb, var(--surface) 74%, transparent);
   border: 1px solid var(--line);
   border-radius: 999px;
   color: var(--muted);
-  font-size: 11px;
-  line-height: 1;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 30px;
+  justify-content: center;
   overflow: hidden;
-  padding: 4px 7px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  width: 34px;
+}
+
+.provider-model-tags span:hover,
+.provider-model-tags span:focus-visible {
+  background: var(--panel-2);
+  border-color: var(--line-strong);
+  color: var(--text);
+  outline: none;
+}
+
+.provider-model-tags svg {
+  height: 15px;
+  width: 15px;
 }
 
 .provider-model-actions {

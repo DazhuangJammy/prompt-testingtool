@@ -111,7 +111,7 @@ export const BUILT_IN_PROVIDER_DEFINITIONS: ProviderDefinition[] = [
         id: 'qwen3.7-plus',
         group: 'qwen3',
         name: 'Qwen3.7 Plus',
-        capabilities: ['chat', 'reasoning', 'function-call'],
+        capabilities: ['chat', 'reasoning', 'vision', 'function-call'],
       },
       {
         id: 'qwen3.5-plus',

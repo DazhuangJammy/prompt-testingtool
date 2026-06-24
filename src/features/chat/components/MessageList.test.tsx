@@ -375,6 +375,30 @@ describe('MessageList', () => {
     )
   })
 
+  it('renders web search progress before answer text arrives', () => {
+    renderMessageList([
+      {
+        id: 'message-web-search-progress',
+        sessionId: 'session-1',
+        role: 'assistant',
+        content: '',
+        webSearchStatus: {
+          phase: 'searching',
+          query: 'AI 新闻',
+          providerName: 'Baidu',
+        },
+        status: 'streaming',
+        createdAt: '2026-06-10T10:08:00.000Z',
+      },
+    ])
+
+    const summary = document.querySelector<HTMLButtonElement>(
+      '.web-search-results-head',
+    )
+    expect(summary?.textContent).toContain('正在搜索：AI 新闻')
+    expect(summary?.textContent).toContain('Baidu')
+  })
+
   it('hides knowledge citation chrome on user messages', () => {
     renderMessageList([userKnowledgeMessage])
 

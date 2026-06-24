@@ -1,9 +1,13 @@
 import type {
   CompletionMessage,
+  CompletionWebSearchToolConfig,
   ProviderConfig,
   ProviderModelConfig,
   ThinkingMode,
+  WebSearchReference,
+  WebSearchStreamStatus,
 } from '@/shared/types'
+import { getModelCapabilities } from '@/shared/model/providerModelCapabilities'
 
 export const extractAssistantText = (payload: unknown) => {
   const data = payload as {
@@ -65,6 +69,8 @@ export const requestCompletion = async (
 interface StreamHandlers {
   onText: (chunk: string) => void
   onThinking?: (chunk: string) => void
+  onWebSearchReferences?: (references: WebSearchReference[]) => void
+  onWebSearchStatus?: (status: WebSearchStreamStatus) => void
 }
 
 export const requestCompletionStream = async (
@@ -73,6 +79,7 @@ export const requestCompletionStream = async (
   handlers: StreamHandlers,
   thinkingMode: ThinkingMode = 'off',
   signal?: AbortSignal,
+  webSearch?: CompletionWebSearchToolConfig,
 ) => {
   const response = await fetch('/api/chat/completions', {
     method: 'POST',
@@ -87,6 +94,7 @@ export const requestCompletionStream = async (
       messages,
       stream: true,
       thinkingMode,
+      webSearch,
     }),
   })
 
@@ -118,6 +126,12 @@ export const requestCompletionStream = async (
 
     for (const part of parts) {
       const chunk = parseStreamBlock(part, thinkingMode)
+      if (chunk.webSearchReferences.length) {
+        handlers.onWebSearchReferences?.(chunk.webSearchReferences)
+      }
+      if (chunk.webSearchStatus) {
+        handlers.onWebSearchStatus?.(chunk.webSearchStatus)
+      }
       if (chunk.thinking) {
         pending = pending.then(() => handlers.onThinking?.(chunk.thinking))
         await pending
@@ -131,6 +145,12 @@ export const requestCompletionStream = async (
   }
 
   const finalChunk = parseStreamBlock(buffer, thinkingMode)
+  if (finalChunk.webSearchReferences.length) {
+    handlers.onWebSearchReferences?.(finalChunk.webSearchReferences)
+  }
+  if (finalChunk.webSearchStatus) {
+    handlers.onWebSearchStatus?.(finalChunk.webSearchStatus)
+  }
   if (finalChunk.thinking) handlers.onThinking?.(finalChunk.thinking)
   if (finalChunk.text) {
     fullText += finalChunk.text
@@ -150,9 +170,19 @@ function parseStreamBlock(block: string, thinkingMode: ThinkingMode = 'off') {
       return {
         text: result.text + chunk.text,
         thinking: result.thinking + chunk.thinking,
+        webSearchReferences: [
+          ...result.webSearchReferences,
+          ...chunk.webSearchReferences,
+        ],
+        webSearchStatus: chunk.webSearchStatus ?? result.webSearchStatus,
       }
     },
-    { text: '', thinking: '' },
+    {
+      text: '',
+      thinking: '',
+      webSearchReferences: [] as WebSearchReference[],
+      webSearchStatus: undefined as WebSearchStreamStatus | undefined,
+    },
   )
 }
 
@@ -185,6 +215,8 @@ function parseStreamDelta(data: string, thinkingMode: ThinkingMode = 'off') {
       reasoning_details?: unknown
       reasoningDetails?: unknown
     }>
+    webSearchReferences?: WebSearchReference[]
+    webSearchStatus?: WebSearchStreamStatus
   }
   const choice = payload.choices?.[0]
   const delta = choice?.delta ?? choice?.message
@@ -209,6 +241,10 @@ function parseStreamDelta(data: string, thinkingMode: ThinkingMode = 'off') {
   return {
     text: normalizeDeltaText(delta?.content ?? choice?.text),
     thinking,
+    webSearchReferences: Array.isArray(payload.webSearchReferences)
+      ? payload.webSearchReferences
+      : [],
+    webSearchStatus: payload.webSearchStatus,
   }
 }
 
@@ -432,6 +468,10 @@ export const listProviderModels = async (
     if (!id) return result
     result.push({
       id,
+      capabilities: getModelCapabilities({
+        id,
+        name: model.name?.trim() || undefined,
+      }),
       name: model.name?.trim() || undefined,
       enabled: true,
     })

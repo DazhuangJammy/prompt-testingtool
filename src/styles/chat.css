@@ -18,31 +18,6 @@
   padding: 0 10px;
 }
 
-.panel-meta select {
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: var(--muted);
-  cursor: pointer;
-  height: 30px;
-  max-width: 132px;
-  overflow: hidden;
-  padding: 0 7px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.panel-meta select {
-  background: var(--surface);
-  border-color: var(--line);
-  flex: 1;
-  min-width: 0;
-}
-
-.panel-meta select:hover {
-  color: var(--text);
-}
-
 .input-source-runner {
   align-items: center;
   display: flex;

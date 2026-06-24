@@ -1,12 +1,9 @@
 import { useState } from 'react'
 import { resolveChatKnowledgeContext } from '@/features/chat/application/chatKnowledgeContext'
-import { resolveChatWebSearchContext } from '@/features/web-search/application/webSearchService'
 import type {
   ChatMessage,
   KnowledgeBase,
   ProviderConfig,
-  WebSearchProviderId,
-  WebSearchSettings,
 } from '@/shared/types'
 
 interface UseChatContextResolutionOptions {
@@ -14,9 +11,6 @@ interface UseChatContextResolutionOptions {
   knowledgeBases: KnowledgeBase[]
   selectedKnowledgeBaseIds: string[]
   setError: (error: string) => void
-  webSearchEnabled: boolean
-  webSearchProviderId?: WebSearchProviderId
-  webSearchSettings?: WebSearchSettings
 }
 
 export function useChatContextResolution({
@@ -24,9 +18,6 @@ export function useChatContextResolution({
   knowledgeBases,
   selectedKnowledgeBaseIds,
   setError,
-  webSearchEnabled,
-  webSearchProviderId,
-  webSearchSettings,
 }: UseChatContextResolutionOptions) {
   const [preflightBusy, setPreflightBusy] = useState(false)
 
@@ -45,21 +36,7 @@ export function useChatContextResolution({
     })
   }
 
-  const resolveSelectedWebSearch = async (
-    query: string,
-    fallbackReferences: ChatMessage['webSearchReferences'] = [],
-  ) => {
-    if (!webSearchEnabled) {
-      return { context: '', references: fallbackReferences ?? [] }
-    }
-    return resolveChatWebSearchContext({
-      providerId: webSearchProviderId,
-      query,
-      settings: webSearchSettings,
-    })
-  }
-
-  const prepareContexts = async (
+  const prepareContextsOrThrow = async (
     query: string,
     fallbackKnowledgeReferences: ChatMessage['knowledgeReferences'] = [],
     fallbackWebSearchReferences: ChatMessage['webSearchReferences'] = [],
@@ -67,18 +44,39 @@ export function useChatContextResolution({
     setPreflightBusy(true)
     setError('')
     try {
-      const [knowledge, webSearch] = await Promise.all([
-        resolveSelectedKnowledge(query, fallbackKnowledgeReferences),
-        resolveSelectedWebSearch(query, fallbackWebSearchReferences),
-      ])
+      const knowledge = await resolveSelectedKnowledge(
+        query,
+        fallbackKnowledgeReferences,
+      )
+      const webSearch = { context: '', references: fallbackWebSearchReferences ?? [] }
       return { knowledge, webSearch }
     } catch (event) {
-      setError(event instanceof Error ? event.message : '准备上下文失败')
-      return undefined
+      if (event instanceof Error) {
+        setError(event.message)
+        throw event
+      }
+      setError('准备上下文失败')
+      throw new Error('准备上下文失败', { cause: event })
     } finally {
       setPreflightBusy(false)
     }
   }
 
-  return { preflightBusy, prepareContexts }
+  const prepareContexts = async (
+    query: string,
+    fallbackKnowledgeReferences: ChatMessage['knowledgeReferences'] = [],
+    fallbackWebSearchReferences: ChatMessage['webSearchReferences'] = [],
+  ) => {
+    try {
+      return await prepareContextsOrThrow(
+        query,
+        fallbackKnowledgeReferences,
+        fallbackWebSearchReferences,
+      )
+    } catch {
+      return undefined
+    }
+  }
+
+  return { preflightBusy, prepareContexts, prepareContextsOrThrow }
 }

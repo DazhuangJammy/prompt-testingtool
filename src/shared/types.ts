@@ -5,7 +5,11 @@ import type {
   KnowledgeChunk,
   KnowledgeItem,
 } from './knowledge.types'
-import type { WebSearchReference, WebSearchSettings } from './webSearch.types'
+import type {
+  WebSearchReference,
+  WebSearchSettings,
+  WebSearchStreamStatus,
+} from './webSearch.types'
 
 export type PromptSectionKey = string
 export type {
@@ -28,9 +32,11 @@ export type {
   WebSearchProviderId,
   WebSearchProviderType,
   WebSearchReference,
+  CompletionWebSearchToolConfig,
   WebSearchResponse,
   WebSearchResult,
   WebSearchSettings,
+  WebSearchStreamStatus,
 } from './webSearch.types'
 
 export type ThemeMode = 'light' | 'dark'
@@ -380,6 +386,7 @@ export interface ChatMessage {
   attachments?: ChatAttachment[]
   knowledgeReferences?: ChatKnowledgeReference[]
   webSearchReferences?: WebSearchReference[]
+  webSearchStatus?: WebSearchStreamStatus
   promptVersionId?: string
   thinkingMode?: ThinkingMode
   thinkingDurationMs?: number

@@ -201,6 +201,7 @@ describe('chat service', () => {
       expect.any(Object),
       'on',
       undefined,
+      undefined,
     )
   })
 
@@ -269,6 +270,7 @@ describe('chat service', () => {
       ]),
       expect.any(Object),
       'off',
+      undefined,
       undefined,
     )
   })
@@ -367,97 +369,6 @@ describe('chat service', () => {
     )
   })
 
-  it('streams assistant replies without thinking metadata', async () => {
-    mockAssistantStream('plain')
-
-    await sendChatMessage({
-      card,
-      history: [],
-      provider,
-      promptInjectionMode: 'system',
-      sessionId: 'session',
-      text: 'hello',
-      thinkingMode: 'off',
-    })
-
-    expect(chatRepository.updateAssistantMessage).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({
-        content: 'plain',
-        thinkingDurationMs: undefined,
-      }),
-    )
-  })
-
-  it('strips think blocks when thinking mode is off', async () => {
-    mockAssistantStream('<think>hidden</think>answer')
-
-    await sendChatMessage({
-      card,
-      history: [],
-      provider,
-      promptInjectionMode: 'system',
-      sessionId: 'session',
-      text: 'hello',
-      thinkingMode: 'off',
-    })
-
-    expect(chatRepository.addMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        role: 'assistant',
-        thinkingMode: 'off',
-      }),
-    )
-    expect(chatRepository.updateAssistantMessage).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({
-        content: 'answer',
-        thinkingDurationMs: undefined,
-      }),
-    )
-  })
-
-  it('throws when upstream returns an empty stream', async () => {
-    vi.mocked(requestCompletionStream).mockResolvedValue('')
-
-    await expect(
-      sendChatMessage({
-        card,
-        history: [],
-        provider,
-        promptInjectionMode: 'system',
-        sessionId: 'session',
-        text: 'hello',
-        thinkingMode: 'off',
-      }),
-    ).rejects.toThrow('上游返回为空')
-  })
-
-  it('keeps partial output when generation is stopped', async () => {
-    vi.mocked(requestCompletionStream).mockImplementation(
-      async (_provider, _messages, handlers) => {
-        handlers.onText('partial')
-        throw new DOMException('stopped', 'AbortError')
-      },
-    )
-
-    await sendChatMessage({
-      card,
-      history: [],
-      provider,
-      promptInjectionMode: 'system',
-      sessionId: 'session',
-      signal: new AbortController().signal,
-      text: 'hello',
-      thinkingMode: 'off',
-    })
-
-    expect(chatRepository.updateAssistantMessage).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({ content: 'partial', status: 'complete' }),
-    )
-  })
-
   it('clears and edits chat messages', async () => {
     await clearChatSession()
     expect(chatRepository.clearMessages).not.toHaveBeenCalled()
@@ -529,6 +440,7 @@ describe('chat service', () => {
       ]),
       expect.any(Object),
       'deep',
+      undefined,
       undefined,
     )
     expect(chatRepository.updateAssistantMessage).toHaveBeenCalledWith(

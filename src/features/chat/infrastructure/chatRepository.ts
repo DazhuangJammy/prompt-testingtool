@@ -86,13 +86,24 @@ export const chatRepository = {
     await db.chatMessages.update(id, { content })
   },
 
+  async updateMessageContextReferences(
+    id: string,
+    updates: Partial<Pick<ChatMessage, 'knowledgeReferences' | 'webSearchReferences'>>,
+  ) {
+    await db.chatMessages.update(id, updates)
+  },
+
   async updateAssistantMessage(
     id: string,
     updates: Pick<ChatMessage, 'content'> &
       Partial<
         Pick<
           ChatMessage,
-          'knowledgeReferences' | 'webSearchReferences' | 'status' | 'thinkingDurationMs'
+          | 'knowledgeReferences'
+          | 'webSearchReferences'
+          | 'webSearchStatus'
+          | 'status'
+          | 'thinkingDurationMs'
         >
       >,
   ) {
