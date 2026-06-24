@@ -80,6 +80,8 @@ export function OtherSettingsPanel({
               type="checkbox"
               checked={selectionMagnifier.enabled}
               aria-label="启用放大镜"
+              aria-controls="selection-magnifier-controls"
+              aria-expanded={selectionMagnifier.enabled}
               onChange={(event) =>
                 onSelectionMagnifierChange({ enabled: event.target.checked })
               }
@@ -88,79 +90,81 @@ export function OtherSettingsPanel({
           </label>
         </div>
 
-        <div className="other-settings-controls">
-          <MagnifierColorField
-            label="字体颜色"
-            value={selectionMagnifier.textColor}
-            colorLabel="放大镜字体颜色"
-            textLabel="放大镜字体颜色值"
-            onChange={(textColor) => onSelectionMagnifierChange({ textColor })}
-          />
+        {selectionMagnifier.enabled ? (
+          <div id="selection-magnifier-controls" className="other-settings-controls">
+            <MagnifierColorField
+              label="字体颜色"
+              value={selectionMagnifier.textColor}
+              colorLabel="放大镜字体颜色"
+              textLabel="放大镜字体颜色值"
+              onChange={(textColor) => onSelectionMagnifierChange({ textColor })}
+            />
 
-          <label className="settings-field">
-            <span>字号</span>
-            <input
-              type="number"
-              min={18}
-              max={72}
-              aria-label="放大镜字号"
-              value={selectionMagnifier.fontSize}
-              onChange={(event) =>
-                onSelectionMagnifierChange({ fontSize: Number(event.target.value) })
+            <label className="settings-field">
+              <span>字号</span>
+              <input
+                type="number"
+                min={18}
+                max={72}
+                aria-label="放大镜字号"
+                value={selectionMagnifier.fontSize}
+                onChange={(event) =>
+                  onSelectionMagnifierChange({ fontSize: Number(event.target.value) })
+                }
+              />
+            </label>
+
+            <MagnifierColorField
+              label="边框颜色"
+              value={selectionMagnifier.borderColor}
+              colorLabel="放大镜边框颜色"
+              textLabel="放大镜边框颜色值"
+              onChange={(borderColor) => onSelectionMagnifierChange({ borderColor })}
+            />
+
+            <label className="settings-field">
+              <span>边框圆角</span>
+              <input
+                type="number"
+                min={0}
+                max={28}
+                aria-label="放大镜边框圆角"
+                value={selectionMagnifier.borderRadius}
+                onChange={(event) =>
+                  onSelectionMagnifierChange({
+                    borderRadius: Number(event.target.value),
+                  })
+                }
+              />
+            </label>
+
+            <MagnifierColorField
+              label="背景色"
+              value={selectionMagnifier.backgroundColor}
+              colorLabel="放大镜背景色"
+              textLabel="放大镜背景色值"
+              onChange={(backgroundColor) =>
+                onSelectionMagnifierChange({ backgroundColor })
               }
             />
-          </label>
 
-          <MagnifierColorField
-            label="边框颜色"
-            value={selectionMagnifier.borderColor}
-            colorLabel="放大镜边框颜色"
-            textLabel="放大镜边框颜色值"
-            onChange={(borderColor) => onSelectionMagnifierChange({ borderColor })}
-          />
-
-          <label className="settings-field">
-            <span>边框圆角</span>
-            <input
-              type="number"
-              min={0}
-              max={28}
-              aria-label="放大镜边框圆角"
-              value={selectionMagnifier.borderRadius}
-              onChange={(event) =>
-                onSelectionMagnifierChange({
-                  borderRadius: Number(event.target.value),
-                })
-              }
-            />
-          </label>
-
-          <MagnifierColorField
-            label="背景色"
-            value={selectionMagnifier.backgroundColor}
-            colorLabel="放大镜背景色"
-            textLabel="放大镜背景色值"
-            onChange={(backgroundColor) =>
-              onSelectionMagnifierChange({ backgroundColor })
-            }
-          />
-
-          <label className="settings-field">
-            <span>背景透明度</span>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              aria-label="放大镜背景透明度"
-              value={selectionMagnifier.backgroundOpacity}
-              onChange={(event) =>
-                onSelectionMagnifierChange({
-                  backgroundOpacity: Number(event.target.value),
-                })
-              }
-            />
-          </label>
-        </div>
+            <label className="settings-field">
+              <span>背景透明度</span>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                aria-label="放大镜背景透明度"
+                value={selectionMagnifier.backgroundOpacity}
+                onChange={(event) =>
+                  onSelectionMagnifierChange({
+                    backgroundOpacity: Number(event.target.value),
+                  })
+                }
+              />
+            </label>
+          </div>
+        ) : null}
       </div>
     </section>
   )

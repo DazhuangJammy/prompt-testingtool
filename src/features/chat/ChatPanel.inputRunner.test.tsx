@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { PromptInputSource } from '@/features/input-card/model/inputCard'
 import type { PromptCard, ProviderConfig } from '@/shared/types'
 import { ChatPanel } from './ChatPanel'
+import type { ComparePaneState } from './model/comparePanes'
 
 vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn((query, _deps, defaultValue) => {
@@ -48,6 +49,7 @@ vi.mock('@/features/chat/application/chatService', async () => {
 
 vi.mock('@/features/chat/infrastructure/chatRepository', () => ({
   chatRepository: {
+    createSession: vi.fn(async () => undefined),
     listChildSessions: vi.fn(async () => []),
     listMessagesBySession: vi.fn(async () => []),
     listSessionsByCanvas: vi.fn(async () => []),
@@ -116,6 +118,39 @@ const inputSources: PromptInputSource[] = [
   },
 ]
 
+const compareInputSources: PromptInputSource[] = [
+  {
+    edge: {
+      id: 'edge-compare-1',
+      canvasId: 'canvas-1',
+      sourceId: 'input-compare-1',
+      sourceHandle: 'right',
+      targetId: 'card-2',
+      targetHandle: 'left',
+      createdAt: 'now',
+      updatedAt: 'now',
+    },
+    inputCard: {
+      id: 'input-compare-1',
+      canvasId: 'canvas-1',
+      title: '对比输入',
+      markdown: '# 左侧不用\n\n忽略\n\n# 右侧要跑\n\n对比正文 B',
+      position: { x: 0, y: 0 },
+      createdAt: 'now',
+      updatedAt: 'now',
+    },
+    segments: [
+      { id: 'seg-compare-1', title: '左侧不用', content: '忽略', order: 0 },
+      {
+        id: 'seg-compare-2',
+        title: '右侧要跑',
+        content: '对比正文 B',
+        order: 1,
+      },
+    ],
+  },
+]
+
 function clickButton(label: string) {
   act(() => {
     document
@@ -163,6 +198,56 @@ function renderChatPanel() {
   })
 }
 
+function renderCompareChatPanel() {
+  const comparePanes: ComparePaneState[] = [
+    {
+      id: 'pane-left',
+      attachments: [],
+      cardId: 'card-1',
+      input: '',
+      promptInjectionMode: 'system',
+    },
+    {
+      id: 'pane-right',
+      attachments: [],
+      cardId: 'card-2',
+      input: '',
+      promptInjectionMode: 'system',
+    },
+  ]
+
+  host = document.createElement('div')
+  document.body.append(host)
+  root = createRoot(host)
+
+  act(() => {
+    root?.render(
+      <ChatPanel
+        card={cards[0]}
+        provider={provider}
+        promptCards={cards}
+        providers={[provider]}
+        inputSources={compareInputSources}
+        compareOpen
+        comparePaneCardIds={['card-1', 'card-2']}
+        comparePanes={comparePanes}
+        collapsed={false}
+        activeSessionId="main-session"
+        onActiveSessionChange={vi.fn()}
+        onActiveCardChange={vi.fn()}
+        onCompareOpenChange={vi.fn()}
+        onComparePaneCardIdsChange={vi.fn()}
+        onComparePanesChange={vi.fn()}
+        onEnsureWidth={vi.fn()}
+        onResizeStart={vi.fn()}
+        onSelectProvider={vi.fn()}
+        onToggle={vi.fn()}
+        width={900}
+      />,
+    )
+  })
+}
+
 afterEach(() => {
   act(() => {
     root?.unmount()
@@ -204,6 +289,52 @@ describe('ChatPanel input runner', () => {
         ],
         text: '正文 B',
         sessionId: 'main-session',
+      }),
+    )
+  })
+
+  it('shows input controls per compare pane and runs only that pane', async () => {
+    const chatService =
+      await import('@/features/chat/application/chatService')
+    const { chatRepository } =
+      await import('@/features/chat/infrastructure/chatRepository')
+    renderCompareChatPanel()
+
+    const panes = Array.from(document.querySelectorAll<HTMLElement>('.split-pane'))
+    expect(panes).toHaveLength(2)
+    expect(panes[0].querySelector('select[aria-label="起始输入"]')).toBeNull()
+
+    const rightSegmentSelect = panes[1].querySelector<HTMLSelectElement>(
+      'select[aria-label="起始输入"]',
+    )
+    expect(rightSegmentSelect?.value).toBe('seg-compare-1')
+
+    act(() => {
+      rightSegmentSelect!.value = 'seg-compare-2'
+      rightSegmentSelect!.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    act(() => {
+      panes[1]
+        .querySelector<HTMLButtonElement>('button[aria-label="运行输入"]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    await flushPanelEffects()
+
+    expect(chatService.sendChatMessage).toHaveBeenCalledTimes(1)
+    expect(chatService.sendChatMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        card: expect.objectContaining({ id: 'card-2' }),
+        sessionId: expect.any(String),
+        text: '对比正文 B',
+      }),
+    )
+    expect(chatRepository.createSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        comparePaneIndex: 1,
+        hidden: true,
+        parentSessionId: 'main-session',
+        promptCardId: 'card-2',
       }),
     )
   })

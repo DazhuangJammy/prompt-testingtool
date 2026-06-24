@@ -1,8 +1,11 @@
-import { Bot, Box, Keyboard, MoreHorizontal, Search, Server, X } from 'lucide-react'
+import { Bot, Box, Keyboard, MoreHorizontal, Search, Server, X, Zap } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { QuickPhraseSettingsPanel } from '@/features/quick-phrases/components/QuickPhraseSettingsPanel'
 import type {
   DefaultModelSettings,
   ProviderConfig,
+  QuickPhrase,
+  QuickPhraseGroup,
   SkillsLabSettings,
   WebSearchSettings,
 } from '@/shared/types'
@@ -32,6 +35,8 @@ interface SettingsDialogProps {
   selectionMagnifier: SelectionMagnifierSettings
   skillsLabSettings?: SkillsLabSettings
   webSearchSettings?: WebSearchSettings
+  quickPhraseGroups: QuickPhraseGroup[]
+  quickPhrases: QuickPhrase[]
   providers: ProviderConfig[]
   activeProviderId?: string
   onClose: () => void
@@ -54,6 +59,7 @@ const SETTING_CATEGORIES = [
   { id: 'default-model', label: '默认模型', icon: Box },
   { id: 'skills-lab', label: 'Skills 设置', icon: Bot },
   { id: 'shortcuts', label: '快捷键设置', icon: Keyboard },
+  { id: 'quick-phrases', label: '快捷短语', icon: Zap },
   { id: 'other', label: '其他设置', icon: MoreHorizontal },
 ] as const
 
@@ -68,6 +74,8 @@ export function SettingsDialog({
   selectionMagnifier,
   skillsLabSettings,
   webSearchSettings,
+  quickPhraseGroups,
+  quickPhrases,
   providers,
   activeProviderId,
   onClose,
@@ -187,6 +195,13 @@ export function SettingsDialog({
                 shortcuts={canvasToolShortcuts}
                 onReset={onResetCanvasToolShortcuts}
                 onSaveShortcut={onSaveCanvasToolShortcut}
+              />
+            </main>
+          ) : activeCategory === 'quick-phrases' ? (
+            <main className="settings-main-panel quick-phrase-settings-page">
+              <QuickPhraseSettingsPanel
+                groups={quickPhraseGroups}
+                phrases={quickPhrases}
               />
             </main>
           ) : (

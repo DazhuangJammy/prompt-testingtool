@@ -142,6 +142,16 @@ vi.mock('@/shared/storage/db', () => ({
       get: vi.fn(() => undefined),
       put: vi.fn(),
     },
+    quickPhraseGroups: {
+      bulkPut: vi.fn(),
+      clear: vi.fn(),
+      toArray: vi.fn(() => []),
+    },
+    quickPhrases: {
+      bulkPut: vi.fn(),
+      clear: vi.fn(),
+      toArray: vi.fn(() => []),
+    },
     transaction: vi.fn(async (_mode, _tables, callback) => callback()),
   },
 }))
@@ -235,13 +245,15 @@ describe('workspace repository', () => {
     }
 
     await expect(workspaceRepository.exportWorkspace()).resolves.toMatchObject({
-      version: 11,
+      version: 12,
       inputCards: [],
       canvasShapeNodes: [],
       canvasImageNodes: [],
       canvasEdges: [],
       canvasStrokes: [],
       canvasTextNodes: [],
+      quickPhraseGroups: [],
+      quickPhrases: [],
     })
     await workspaceRepository.importWorkspace(payload)
 
@@ -257,7 +269,65 @@ describe('workspace repository', () => {
     expect(db.knowledgeBases.bulkPut).toHaveBeenCalledWith([])
     expect(db.chatKnowledgeSelections.bulkPut).toHaveBeenCalledWith([])
     expect(db.webSearchSettings.clear).toHaveBeenCalled()
+    expect(db.quickPhraseGroups.clear).toHaveBeenCalled()
+    expect(db.quickPhrases.clear).toHaveBeenCalled()
+    expect(db.quickPhraseGroups.bulkPut).toHaveBeenCalledWith([])
+    expect(db.quickPhrases.bulkPut).toHaveBeenCalledWith([])
     expect(db.webSearchSettings.put).not.toHaveBeenCalled()
+  })
+
+  it('exports and imports quick phrases', async () => {
+    const quickPhraseGroups = [
+      {
+        id: 'group',
+        name: ' 常用 ',
+        sortOrder: Number.NaN,
+        createdAt: 'created',
+        updatedAt: 'updated',
+      },
+    ]
+    const quickPhrases = [
+      {
+        id: 'phrase',
+        title: '问候',
+        content: '你好',
+        groupId: 'group',
+        sortOrder: Number.NaN,
+        createdAt: 'created',
+        updatedAt: 'updated',
+      },
+    ]
+    vi.mocked(db.quickPhraseGroups.toArray).mockResolvedValueOnce(quickPhraseGroups)
+    vi.mocked(db.quickPhrases.toArray).mockResolvedValueOnce(quickPhrases)
+
+    await expect(workspaceRepository.exportWorkspace()).resolves.toMatchObject({
+      quickPhraseGroups: [
+        expect.objectContaining({ name: '常用', sortOrder: 0 }),
+      ],
+      quickPhrases: [
+        expect.objectContaining({ id: 'phrase', sortOrder: 0 }),
+      ],
+    })
+    await workspaceRepository.importWorkspace({
+      version: 12,
+      exportedAt: 'now',
+      canvases: [],
+      promptCards: [],
+      promptVersions: [],
+      providerConfigs: [],
+      chatSessions: [],
+      chatMessages: [],
+      compareRuns: [],
+      quickPhraseGroups,
+      quickPhrases,
+    })
+
+    expect(db.quickPhraseGroups.bulkPut).toHaveBeenCalledWith([
+      expect.objectContaining({ name: '常用', sortOrder: 0 }),
+    ])
+    expect(db.quickPhrases.bulkPut).toHaveBeenCalledWith([
+      expect.objectContaining({ id: 'phrase', sortOrder: 0 }),
+    ])
   })
 
   it('exports and imports web search settings', async () => {
@@ -383,7 +453,7 @@ describe('workspace repository', () => {
     ])
 
     await expect(
-      workspaceRepository.importWorkspace({ version: 12 } as never),
+      workspaceRepository.importWorkspace({ version: 13 } as never),
     ).rejects.toThrow('Unsupported file')
     await expect(workspaceRepository.listCanvasesByUpdatedAt()).resolves.toEqual([
       expect.objectContaining({ id: 'older' }),

@@ -3,7 +3,10 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defaultAppFontId, type AppFontId } from '@/shared/model/appFont'
 import { defaultCanvasToolShortcuts } from '@/shared/model/canvasToolShortcuts'
-import { defaultSelectionMagnifierSettings } from '@/shared/model/selectionMagnifier'
+import {
+  defaultSelectionMagnifierSettings,
+  type SelectionMagnifierSettings,
+} from '@/shared/model/selectionMagnifier'
 import type { ProviderConfig } from '@/shared/types'
 import { SettingsDialog } from './SettingsDialog'
 
@@ -38,6 +41,10 @@ describe('SettingsDialog', () => {
     props: Partial<{
       appFontId: AppFontId
       onAppFontChange: (fontId: AppFontId) => void
+      selectionMagnifier: SelectionMagnifierSettings
+      onSelectionMagnifierChange: (
+        settings: Partial<SelectionMagnifierSettings>,
+      ) => void
     }> = {},
   ) => {
     root?.render(
@@ -45,20 +52,24 @@ describe('SettingsDialog', () => {
         open
         appFontId={props.appFontId ?? defaultAppFontId}
         canvasToolShortcuts={defaultCanvasToolShortcuts}
-        selectionMagnifier={defaultSelectionMagnifierSettings}
+        selectionMagnifier={
+          props.selectionMagnifier ?? defaultSelectionMagnifierSettings
+        }
         providers={[provider]}
         onAppFontChange={props.onAppFontChange ?? vi.fn()}
         onClose={vi.fn()}
         onDelete={vi.fn()}
         onReorderProviders={vi.fn()}
         onResetCanvasToolShortcuts={vi.fn()}
-        onSelectionMagnifierChange={vi.fn()}
+        onSelectionMagnifierChange={props.onSelectionMagnifierChange ?? vi.fn()}
         onSave={vi.fn()}
         onSaveCanvasToolShortcut={vi.fn()}
         onSaveDefaultModelSettings={vi.fn()}
         onSaveSkillsLabSettings={vi.fn()}
         onSaveWebSearchSettings={vi.fn()}
         onSelect={vi.fn()}
+        quickPhraseGroups={[]}
+        quickPhrases={[]}
       />
     )
   }
@@ -102,7 +113,7 @@ describe('SettingsDialog', () => {
     expect(document.body.textContent).toContain('流程图模型')
   })
 
-  it('opens other settings for the selection magnifier', () => {
+  it('folds the selection magnifier controls when the switch is off', () => {
     host = document.createElement('div')
     document.body.append(host)
     root = createRoot(host)
@@ -123,7 +134,45 @@ describe('SettingsDialog', () => {
         ?.value,
     ).toBe(defaultAppFontId)
     expect(document.body.textContent).toContain('高级字体预览')
-    expect(document.querySelector('input[aria-label="启用放大镜"]')).toBeTruthy()
+    expect(
+      document.querySelector<HTMLInputElement>('input[aria-label="启用放大镜"]')
+        ?.checked,
+    ).toBe(false)
+    expect(
+      document.querySelector<HTMLInputElement>('input[aria-label="放大镜字号"]'),
+    ).toBeNull()
+    expect(document.querySelector('input[aria-label="放大镜边框颜色"]')).toBeNull()
+    expect(document.querySelector('input[aria-label="放大镜边框圆角"]')).toBeNull()
+    expect(document.querySelector('input[aria-label="放大镜背景色"]')).toBeNull()
+    expect(
+      document.querySelector('input[aria-label="放大镜背景透明度"]'),
+    ).toBeNull()
+  })
+
+  it('expands the selection magnifier controls when the switch is on', () => {
+    host = document.createElement('div')
+    document.body.append(host)
+    root = createRoot(host)
+
+    act(() => {
+      renderSettings({
+        selectionMagnifier: {
+          ...defaultSelectionMagnifierSettings,
+          enabled: true,
+        },
+      })
+    })
+
+    act(() => {
+      Array.from(document.querySelectorAll<HTMLButtonElement>('nav button'))
+        .find((button) => button.textContent?.includes('其他设置'))
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(
+      document.querySelector<HTMLInputElement>('input[aria-label="启用放大镜"]')
+        ?.checked,
+    ).toBe(true)
     expect(
       document.querySelector<HTMLInputElement>('input[aria-label="放大镜字号"]')
         ?.value,
@@ -184,6 +233,39 @@ describe('SettingsDialog', () => {
     expect(document.querySelector('.skills-settings-page')).toBeTruthy()
     expect(document.body.textContent).toContain('工具命令')
     expect(document.body.textContent).toContain('默认 Skills 目录')
+  })
+
+  it('places quick phrase settings below shortcuts and above other settings', () => {
+    host = document.createElement('div')
+    document.body.append(host)
+    root = createRoot(host)
+
+    act(() => {
+      renderSettings()
+    })
+
+    const labels = Array.from(
+      document.querySelectorAll<HTMLButtonElement>('nav button'),
+    ).map((button) => button.textContent ?? '')
+    const shortcutsIndex = labels.findIndex((label) =>
+      label.includes('快捷键设置'),
+    )
+    const quickPhrasesIndex = labels.findIndex((label) =>
+      label.includes('快捷短语'),
+    )
+    const otherIndex = labels.findIndex((label) => label.includes('其他设置'))
+
+    expect(shortcutsIndex).toBeLessThan(quickPhrasesIndex)
+    expect(quickPhrasesIndex).toBeLessThan(otherIndex)
+
+    act(() => {
+      Array.from(document.querySelectorAll<HTMLButtonElement>('nav button'))
+        .find((button) => button.textContent?.includes('快捷短语'))
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(document.querySelector('.quick-phrase-settings-page')).toBeTruthy()
+    expect(document.body.textContent).toContain('添加短语')
   })
 
   it('keeps web search general settings separate from provider settings', () => {

@@ -23,7 +23,6 @@ import { CanvasWorkspace } from '@/features/canvas/CanvasWorkspace'
 import { KnowledgeWorkspace } from '@/features/knowledge/components/KnowledgeWorkspace'
 import { knowledgeRepository } from '@/features/knowledge/infrastructure/knowledgeRepository'
 import { useScopedCanvasRecords } from '@/features/canvas/hooks/useScopedCanvasRecords'
-import { findPromptInputSources } from '@/features/input-card/model/inputCard'
 import { copyStoredCanvasViewport } from '@/features/canvas/model/canvasViewport'
 import { workspaceRepository } from '@/features/workspace/infrastructure/workspaceRepository'
 import { WorkspaceTopbar } from '@/features/canvas/WorkspaceTopbar'
@@ -40,6 +39,7 @@ import type { ChatSessionExportAction } from '@/features/sidebar/sidebar.types'
 import type { ChatSession } from '@/shared/types'
 import { AppOverlays } from './AppOverlays'
 import { resolveActiveChatCard, resolveChatScopePromptCardId } from './activeChatCard'
+import { resolveChatInputSources } from './chatInputSources'
 import { useChatPanelSessionState } from './useChatPanelSessionState'
 import { resolveSidebarSessions } from './sidebarSessions'
 import { resolveActiveChatSessionId, useActiveChatTopic } from './useActiveChatTopic'
@@ -140,13 +140,13 @@ function App() {
   })
   const activeChatInputSources = useMemo(
     () =>
-      findPromptInputSources({
-        edges: scopedChatRecords.canvasEdges,
+      resolveChatInputSources({
+        canvasEdges: scopedChatRecords.canvasEdges,
         inputCards: scopedChatRecords.inputCards,
-        promptCard: activeChatCard,
+        promptCards: chatPromptCards,
       }),
     [
-      activeChatCard,
+      chatPromptCards,
       scopedChatRecords.canvasEdges,
       scopedChatRecords.inputCards,
     ],
@@ -309,12 +309,8 @@ function App() {
     return downloadChatSessionWord(session, messages)
   }
 
-  const selectedSkillPathTopic = skillsLab.topics.find(
-    (topic) => topic.id === skillPathDialogTopicId,
-  )
-  const selectedCreateSkillTopic = skillsLab.topics.find(
-    (topic) => topic.id === createSkillDialogTopicId,
-  )
+  const selectedSkillPathTopic = skillsLab.topics.find((topic) => topic.id === skillPathDialogTopicId)
+  const selectedCreateSkillTopic = skillsLab.topics.find((topic) => topic.id === createSkillDialogTopicId)
 
   const bindSkillToTopic = async (topicId: string, skillPath: string) => {
     await bindSkillPath(topicId, skillPath)
@@ -343,6 +339,38 @@ function App() {
       })
       .finally(() => setSkillsBusy(false))
   }
+
+  const renderChatPanel = () => (
+    <ChatPanel
+      card={activeChatCard}
+      provider={workspace.activeProvider}
+      promptCards={chatPromptCards}
+      providers={workspace.providers}
+      inputSources={activeChatInputSources}
+      knowledgeBases={knowledgeBases}
+      quickPhraseGroups={workspace.quickPhraseGroups}
+      quickPhrases={workspace.quickPhrases}
+      compareOpen={chatPanelState.compareOpen}
+      comparePaneCardIds={chatPanelState.comparePaneCardIds}
+      comparePanes={chatPanelState.comparePanes}
+      collapsed={chatPanelState.chatCollapsed}
+      activeSessionId={activeChatSessionId}
+      selectedKnowledgeBaseIds={chatKnowledgeSelection.selectedBaseIds}
+      webSearchSettings={workspace.webSearchSettings}
+      width={chatPanelState.chatWidth}
+      getKnowledgeProviders={async () => workspace.providers}
+      onActiveCardChange={workspace.setSelectedCardId}
+      onActiveSessionChange={setActiveChatSessionId}
+      onCompareOpenChange={chatPanelState.setCompareOpen}
+      onComparePaneCardIdsChange={chatPanelState.setComparePaneCardIds}
+      onComparePanesChange={chatPanelState.setComparePanes}
+      onEnsureWidth={resizablePanels.ensureChatWidth}
+      onKnowledgeSelectionChange={chatKnowledgeSelection.setSelectedBaseIds}
+      onResizeStart={resizablePanels.startChatResize}
+      onSelectProvider={workspace.setActiveProviderId}
+      onToggle={() => chatPanelState.setChatCollapsed(!chatPanelState.chatCollapsed)}
+    />
+  )
 
   return (
     <ReactFlowProvider>
@@ -444,37 +472,7 @@ function App() {
           </main>
         )}
 
-        {workspaceMode === 'prompt' && (
-          <ChatPanel
-            card={activeChatCard}
-            provider={workspace.activeProvider}
-            promptCards={chatPromptCards}
-            providers={workspace.providers}
-            inputSources={activeChatInputSources}
-            knowledgeBases={knowledgeBases}
-            compareOpen={chatPanelState.compareOpen}
-            comparePaneCardIds={chatPanelState.comparePaneCardIds}
-            comparePanes={chatPanelState.comparePanes}
-            collapsed={chatPanelState.chatCollapsed}
-            onResizeStart={resizablePanels.startChatResize}
-            activeSessionId={activeChatSessionId}
-            onToggle={() =>
-              chatPanelState.setChatCollapsed(!chatPanelState.chatCollapsed)
-            }
-            onSelectProvider={workspace.setActiveProviderId}
-            onActiveSessionChange={setActiveChatSessionId}
-            onActiveCardChange={workspace.setSelectedCardId}
-            onCompareOpenChange={chatPanelState.setCompareOpen}
-            onComparePaneCardIdsChange={chatPanelState.setComparePaneCardIds}
-            onComparePanesChange={chatPanelState.setComparePanes}
-            onEnsureWidth={resizablePanels.ensureChatWidth}
-            selectedKnowledgeBaseIds={chatKnowledgeSelection.selectedBaseIds}
-            onKnowledgeSelectionChange={chatKnowledgeSelection.setSelectedBaseIds}
-            getKnowledgeProviders={async () => workspace.providers}
-            webSearchSettings={workspace.webSearchSettings}
-            width={chatPanelState.chatWidth}
-          />
-        )}
+        {workspaceMode === 'prompt' && renderChatPanel()}
 
         <AppOverlays
           appFont={appFont}

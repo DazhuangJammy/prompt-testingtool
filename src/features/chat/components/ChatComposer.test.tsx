@@ -245,4 +245,97 @@ describe('ChatComposer', () => {
     expect(onWebSearchEnabledChange).toHaveBeenCalledWith(true)
     expect(document.querySelector('.web-search-provider-menu')).toBeNull()
   })
+
+  it('places quick phrase button after web search and inserts phrase at the caret', () => {
+    const onChange = vi.fn()
+    renderComposer({
+      input: '你好世界',
+      onChange,
+      quickPhraseGroups: [{ id: 'group', name: '常用', createdAt: 'now', updatedAt: 'now' }],
+      quickPhrases: [
+        {
+          id: 'phrase',
+          title: '问候',
+          content: '快捷',
+          groupId: 'group',
+          createdAt: 'now',
+          updatedAt: 'now',
+        },
+      ],
+      webSearchSettings,
+    })
+
+    const toolbarButtons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>('.composer-tool-group > .icon-button, .composer-tool-group > .composer-menu-shell > .icon-button'),
+    )
+    const labels = toolbarButtons.map((button) => button.getAttribute('aria-label') ?? '')
+    const webSearchIndex = labels.findIndex((label) => label.startsWith('网络搜索'))
+    const quickPhraseIndex = labels.findIndex((label) => label === '快捷短语')
+    expect(webSearchIndex).toBeGreaterThan(-1)
+    expect(quickPhraseIndex).toBe(webSearchIndex + 1)
+
+    const textarea = document.querySelector<HTMLTextAreaElement>('textarea')
+    textarea?.focus()
+    textarea?.setSelectionRange(2, 2)
+
+    act(() => {
+      document
+        .querySelector<HTMLButtonElement>('button[aria-label="快捷短语"]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    expect(document.querySelector('.quick-phrase-picker-menu')?.textContent)
+      .toContain('问候')
+    expect(host?.querySelector('.quick-phrase-picker-menu')).toBeNull()
+    expect(document.body.querySelector('.quick-phrase-picker-menu')).not.toBeNull()
+
+    act(() => {
+      Array.from(
+        document.querySelectorAll<HTMLButtonElement>('.quick-phrase-picker-list button'),
+      )
+        .find((button) => button.textContent?.includes('问候'))
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(onChange).toHaveBeenCalledWith('你好快捷世界')
+  })
+
+  it('directly sends a selected quick phrase when direct send is enabled', () => {
+    const onChange = vi.fn()
+    const onDirectSendQuickPhrase = vi.fn()
+    renderComposer({
+      input: '已有输入',
+      onChange,
+      onDirectSendQuickPhrase,
+      quickPhrases: [
+        {
+          id: 'phrase',
+          title: '直接',
+          content: '直接发送内容',
+          createdAt: 'now',
+          updatedAt: 'now',
+        },
+      ],
+    })
+
+    act(() => {
+      document
+        .querySelector<HTMLButtonElement>('button[aria-label="快捷短语"]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    act(() => {
+      document
+        .querySelector<HTMLInputElement>('input[aria-label="直接发送"]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    act(() => {
+      Array.from(
+        document.querySelectorAll<HTMLButtonElement>('.quick-phrase-picker-list button'),
+      )
+        .find((button) => button.textContent?.includes('直接'))
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(onDirectSendQuickPhrase).toHaveBeenCalledWith('直接发送内容')
+    expect(onChange).not.toHaveBeenCalled()
+  })
 })

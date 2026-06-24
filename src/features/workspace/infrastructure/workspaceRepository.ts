@@ -20,6 +20,10 @@ import {
   importChatTopic,
 } from './chatTopicTransfer'
 import { normalizeWebSearchSettings } from '@/features/web-search/model/webSearchSettings'
+import {
+  normalizeQuickPhrase,
+  normalizeQuickPhraseGroup,
+} from '@/features/quick-phrases/model/quickPhrases'
 
 export const workspaceRepository = {
   async createCanvas(title?: string) {
@@ -140,7 +144,7 @@ export const workspaceRepository = {
     const defaultModelSettings = await db.defaultModelSettings.toArray()
 
     return {
-      version: 11,
+      version: 12,
       exportedAt: nowIso(),
       canvases: await db.canvases.toArray(),
       promptCards: await db.promptCards.toArray(),
@@ -164,6 +168,10 @@ export const workspaceRepository = {
       knowledgeChunks: await db.knowledgeChunks.toArray(),
       chatKnowledgeSelections: await db.chatKnowledgeSelections.toArray(),
       webSearchSettings: await db.webSearchSettings.get('web-search'),
+      quickPhraseGroups: (await db.quickPhraseGroups.toArray()).map(
+        normalizeQuickPhraseGroup,
+      ),
+      quickPhrases: (await db.quickPhrases.toArray()).map(normalizeQuickPhrase),
     }
   },
 
@@ -193,6 +201,8 @@ export const workspaceRepository = {
         db.knowledgeItems,
         db.knowledgeChunks,
         db.webSearchSettings,
+        db.quickPhraseGroups,
+        db.quickPhrases,
       ],
       async () => {
         await Promise.all([
@@ -215,6 +225,8 @@ export const workspaceRepository = {
           db.knowledgeItems.clear(),
           db.knowledgeChunks.clear(),
           db.webSearchSettings.clear(),
+          db.quickPhraseGroups.clear(),
+          db.quickPhrases.clear(),
         ])
 
         await Promise.all([
@@ -236,6 +248,12 @@ export const workspaceRepository = {
           db.knowledgeBases.bulkPut(payload.knowledgeBases ?? []),
           db.knowledgeItems.bulkPut(payload.knowledgeItems ?? []),
           db.knowledgeChunks.bulkPut(payload.knowledgeChunks ?? []),
+          db.quickPhraseGroups.bulkPut(
+            (payload.quickPhraseGroups ?? []).map(normalizeQuickPhraseGroup),
+          ),
+          db.quickPhrases.bulkPut(
+            (payload.quickPhrases ?? []).map(normalizeQuickPhrase),
+          ),
           payload.webSearchSettings
             ? db.webSearchSettings.put(normalizeWebSearchSettings(payload.webSearchSettings))
             : Promise.resolve(),

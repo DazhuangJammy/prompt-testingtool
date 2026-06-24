@@ -1,0 +1,146 @@
+.quick-phrase-picker-menu {
+  bottom: auto;
+  gap: 8px;
+  max-width: calc(100vw - 36px);
+  min-width: 320px;
+  position: fixed;
+  right: auto;
+  width: min(340px, calc(100vw - 36px));
+  z-index: 10001;
+}
+
+.quick-phrase-picker-controls {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(126px, 154px) auto;
+  padding: 2px 2px 8px;
+}
+
+.quick-phrase-picker-select {
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: 36px;
+  min-width: 0;
+  padding: 0 9px;
+}
+
+.quick-phrase-picker-select span,
+.quick-phrase-direct-send > span:first-child {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.quick-phrase-picker-select select {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  min-width: 0;
+  outline: 0;
+  overflow: hidden;
+  padding-right: 2px;
+  text-overflow: ellipsis;
+}
+
+.quick-phrase-direct-send {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.quick-phrase-direct-send .settings-switch span {
+  height: 28px;
+  width: 50px;
+}
+
+.quick-phrase-direct-send .settings-switch span::before {
+  height: 20px;
+  left: 4px;
+  top: 3px;
+  width: 20px;
+}
+
+.quick-phrase-direct-send .settings-switch input:checked + span::before {
+  transform: translateX(20px);
+}
+
+.quick-phrase-picker-list {
+  display: grid;
+  gap: 3px;
+  max-height: min(300px, calc(100vh - 220px));
+  overflow: auto;
+}
+
+.quick-phrase-picker-list button {
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 48px;
+}
+
+.quick-phrase-picker-main {
+  align-items: center;
+  display: inline-flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.quick-phrase-picker-main > svg {
+  color: var(--muted);
+  flex: 0 0 auto;
+  height: 16px;
+  width: 16px;
+}
+
+.quick-phrase-picker-main > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.quick-phrase-picker-main strong {
+  color: var(--text);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-phrase-picker-main small {
+  color: var(--muted);
+  font-size: 12px;
+  max-width: 210px;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-phrase-picker-empty {
+  color: var(--muted);
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  padding: 22px 12px;
+  text-align: center;
+}
+
+.quick-phrase-picker-empty strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.quick-phrase-picker-empty span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}

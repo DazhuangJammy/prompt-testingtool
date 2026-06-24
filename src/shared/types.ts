@@ -245,6 +245,24 @@ export interface SkillsLabSettings {
   updatedAt: string
 }
 
+export interface QuickPhraseGroup {
+  id: string
+  name: string
+  sortOrder?: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface QuickPhrase {
+  id: string
+  title: string
+  content: string
+  groupId?: string
+  sortOrder?: number
+  createdAt: string
+  updatedAt: string
+}
+
 export type SkillGraphNodeType =
   | 'main'
   | 'reference'
@@ -432,7 +450,7 @@ export interface CompareRun {
 }
 
 export interface ExportPayload {
-  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11
+  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12
   exportedAt: string
   canvases: Canvas[]
   promptCards: PromptCard[]
@@ -454,6 +472,8 @@ export interface ExportPayload {
   knowledgeChunks?: KnowledgeChunk[]
   chatKnowledgeSelections?: ChatKnowledgeSelection[]
   webSearchSettings?: WebSearchSettings
+  quickPhraseGroups?: QuickPhraseGroup[]
+  quickPhrases?: QuickPhrase[]
 }
 
 export interface ChatTopicExportPayload {

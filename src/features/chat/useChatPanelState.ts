@@ -4,9 +4,9 @@ import {
   editChatMessage,
   ensureChatSession,
 } from '@/features/chat/application/chatService'
-import { chatRepository } from '@/features/chat/infrastructure/chatRepository'
 import { useComparePaneActions } from '@/features/chat/hooks/useComparePaneActions'
 import { useChatMessageActions } from '@/features/chat/hooks/useChatMessageActions'
+import { useInputSegmentRunners } from '@/features/chat/hooks/useInputSegmentRunners'
 import { useScopedComparePanes } from '@/features/chat/hooks/useScopedComparePanes'
 import { useChatTopics } from '@/features/chat/hooks/useChatTopics'
 import { useProviderThinkingModes } from '@/features/chat/hooks/useProviderThinkingModes'
@@ -16,7 +16,6 @@ import {
   usePaneMessagesById,
 } from '@/features/chat/hooks/useChatPanelMessages'
 import { useChatContextResolution } from '@/features/chat/hooks/useChatContextResolution'
-import type { InputSegment } from '@/features/input-card/model/inputCard'
 import {
   getAttachmentCapability,
   getUnsupportedAttachmentReason,
@@ -165,9 +164,37 @@ export function useChatPanelState(
     ? { providerId: webSearchProviderId, settings: webSearchSettings }
     : undefined
 
-  const sendMainMessage = async () => {
-    const text = input.trim()
-    const nextAttachments = attachments
+  const ensureMainSessionForCompare = async () => {
+    if (effectiveSessionId) return effectiveSessionId
+    if (!card?.canvasId) return undefined
+
+    const nextSessionId = await ensureChatSession(card.canvasId, undefined, card.id)
+    setMainSessionId(nextSessionId)
+    return nextSessionId
+  }
+
+  const { runCompareInputSegments, runInputSegments } = useInputSegmentRunners({
+    card,
+    chatActions,
+    comparePaneActions,
+    effectiveSessionId,
+    effectiveThinkingMode,
+    ensureMainSessionForCompare,
+    messagesRef,
+    paneViews,
+    prepareContexts,
+    promptInjectionMode,
+    provider,
+    setAttachments,
+    setError,
+    setInput,
+    setMainSessionId,
+  })
+
+  const sendMainMessage = async (overrideText?: string) => {
+    const directText = overrideText !== undefined
+    const text = (overrideText ?? input).trim()
+    const nextAttachments = directText ? [] : attachments
     if (!card || !provider || (!text && !nextAttachments.length)) return
     const unsupportedReason = getUnsupportedAttachmentReason(
       nextAttachments,
@@ -177,8 +204,10 @@ export function useChatPanelState(
       setError(unsupportedReason)
       return
     }
-    setInput('')
-    setAttachments([])
+    if (!directText) {
+      setInput('')
+      setAttachments([])
+    }
     await chatActions.sendMessageForPane({
       attachments: nextAttachments,
       card,
@@ -203,58 +232,11 @@ export function useChatPanelState(
     })
   }
 
-  const runInputSegments = async (segments: InputSegment[], startSegmentId?: string) => {
-    if (!card || !provider || chatActions.busy || !segments.length) return
-    const startIndex = Math.max(
-      0,
-      segments.findIndex((segment) => segment.id === startSegmentId),
-    )
-    const runnableSegments = segments
-      .slice(startIndex)
-      .filter((segment) => segment.content.trim())
-    if (!runnableSegments.length) {
-      setError('没有可发送的输入正文')
-      return
-    }
-
-    setInput('')
-    setAttachments([])
-    let currentSessionId = effectiveSessionId
-    for (const segment of runnableSegments) {
-      const prepared = await prepareContexts(segment.content)
-      if (!prepared) break
-      const result = await chatActions.sendMessageForPane({
-        attachments: [],
-        card,
-        history: messagesRef.current,
-        provider,
-        knowledgeContext: prepared.knowledge.context,
-        knowledgeReferences: prepared.knowledge.references,
-        webSearchContext: prepared.webSearch.context,
-        webSearchReferences: prepared.webSearch.references,
-        promptInjectionMode,
-        sessionId: currentSessionId,
-        setSessionId: (nextSessionId) => {
-          currentSessionId = nextSessionId
-          setMainSessionId(nextSessionId)
-        },
-        text: segment.content,
-        thinkingMode: effectiveThinkingMode,
-        requestKey: 'main',
-      })
-      if (result.sessionId) {
-        currentSessionId = result.sessionId
-        setMainSessionId(result.sessionId)
-        messagesRef.current = await chatRepository.listMessagesBySession(result.sessionId)
-      }
-      if (!result.completed) break
-    }
-  }
-
-  const sendCompareMessage = async (paneId: ComparePaneId) => {
+  const sendCompareMessage = async (paneId: ComparePaneId, overrideText?: string) => {
     const pane = paneViews.find((item) => item.id === paneId)
-    const text = pane?.input.trim() ?? ''
-    const nextAttachments = pane?.attachments ?? []
+    const directText = overrideText !== undefined
+    const text = (overrideText ?? pane?.input ?? '').trim()
+    const nextAttachments = directText ? [] : (pane?.attachments ?? [])
     if (!pane?.card || !pane.provider || (!text && !nextAttachments.length)) return
     const unsupportedReason = getUnsupportedAttachmentReason(
       nextAttachments,
@@ -271,13 +253,18 @@ export function useChatPanelState(
     const sessionId = paneBelongsToCurrentTopic ? pane.sessionId : undefined
     const history = paneBelongsToCurrentTopic ? pane.messages : []
 
-    comparePaneActions.updateComparePane(paneId, {
-      attachments: [],
-      input: '',
-      parentSessionId,
-    })
+    comparePaneActions.updateComparePane(
+      paneId,
+      directText
+        ? { parentSessionId }
+        : {
+            attachments: [],
+            input: '',
+            parentSessionId,
+          },
+    )
     const prepared = await prepareContexts(text)
-    if (!prepared) {
+    if (!prepared && !directText) {
       comparePaneActions.updateComparePane(paneId, {
         attachments: nextAttachments,
         input: text,
@@ -285,6 +272,7 @@ export function useChatPanelState(
       })
       return
     }
+    if (!prepared) return
     await chatActions.sendMessageForPane({
       attachments: nextAttachments,
       card: pane.card,
@@ -387,15 +375,6 @@ export function useChatPanelState(
     await editChatMessage(message.id, content)
   }
 
-  const ensureMainSessionForCompare = async () => {
-    if (effectiveSessionId) return effectiveSessionId
-    if (!card?.canvasId) return undefined
-
-    const nextSessionId = await ensureChatSession(card.canvasId, undefined, card.id)
-    setMainSessionId(nextSessionId)
-    return nextSessionId
-  }
-
   return {
     activeRequest: chatActions.activeRequest,
     addComparePane: comparePaneActions.addComparePane,
@@ -421,10 +400,14 @@ export function useChatPanelState(
     removeComparePane: comparePaneActions.removeComparePane,
     resendCompareMessage,
     resendMainMessage,
+    runCompareInputSegments,
     runInputSegments,
     renameMainTopic,
     sendCompareMessage,
+    sendCompareText: (paneId: ComparePaneId, content: string) =>
+      sendCompareMessage(paneId, content),
     sendMainMessage,
+    sendMainText: (content: string) => sendMainMessage(content),
     setMainSessionId,
     setComparePaneCard: comparePaneActions.setComparePaneCard,
     setComparePaneAttachments: comparePaneActions.setComparePaneAttachments,

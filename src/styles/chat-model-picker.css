@@ -1,5 +1,6 @@
 .chat-model-picker {
-  flex: 0 1 auto;
+  flex: 0 1 280px;
+  max-width: min(280px, 44vw);
   min-width: 0;
   position: relative;
 }
@@ -15,11 +16,11 @@
   gap: 8px;
   grid-template-columns: minmax(0, 1fr) 16px;
   height: 32px;
-  max-width: min(280px, 44vw);
+  max-width: 100%;
   min-width: 148px;
   padding: 0 8px 0 10px;
   text-align: left;
-  width: max-content;
+  width: 100%;
 }
 
 .chat-model-trigger:hover,
@@ -47,24 +48,25 @@
   display: flex;
   gap: 5px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .chat-model-trigger-text span,
 .chat-model-trigger-text strong {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .chat-model-trigger-text span:first-child {
-  flex: 0 1 auto;
+  flex: 0 1 max-content;
 }
 
 .chat-model-trigger-text strong {
   color: var(--text);
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   font-weight: 560;
-  min-width: 0;
 }
 
 .chat-model-modal-backdrop {
@@ -295,8 +297,12 @@
 }
 
 @media (width <= 720px) {
-  .chat-model-trigger {
+  .chat-model-picker {
+    flex-basis: 220px;
     max-width: min(220px, 56vw);
+  }
+
+  .chat-model-trigger {
     min-width: 126px;
   }
 

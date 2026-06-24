@@ -66,6 +66,8 @@ export function AppOverlays({
         selectionMagnifier={selectionMagnifier.selectionMagnifierSettings}
         skillsLabSettings={skillsLabSettings}
         webSearchSettings={workspace.webSearchSettings}
+        quickPhraseGroups={workspace.quickPhraseGroups}
+        quickPhrases={workspace.quickPhrases}
         providers={workspace.providerConfigs}
         activeProviderId={workspace.effectiveProviderConfigId}
         onClose={onCloseSettings}

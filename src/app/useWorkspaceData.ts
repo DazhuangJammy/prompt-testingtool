@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { defaultModelSettingsRepository } from '@/features/settings/infrastructure/defaultModelSettingsRepository'
 import { providerRepository } from '@/features/settings/infrastructure/providerRepository'
+import { quickPhraseRepository } from '@/features/quick-phrases/infrastructure/quickPhraseRepository'
 import { webSearchSettingsRepository } from '@/features/web-search/infrastructure/webSearchSettingsRepository'
 import {
   DEFAULT_MODEL_SETTINGS_ID,
@@ -18,6 +19,8 @@ import type {
   InputCard,
   PromptCard,
   ProviderConfig,
+  QuickPhrase,
+  QuickPhraseGroup,
   WebSearchSettings,
 } from '@/shared/types'
 
@@ -83,6 +86,16 @@ export function useWorkspaceData() {
     () => webSearchSettingsRepository.get(),
     [],
     undefined,
+  )
+  const quickPhraseGroups = useLiveQuery<QuickPhraseGroup[], QuickPhraseGroup[]>(
+    () => quickPhraseRepository.listGroups(),
+    [],
+    [],
+  )
+  const quickPhrases = useLiveQuery<QuickPhrase[], QuickPhrase[]>(
+    () => quickPhraseRepository.listPhrases(),
+    [],
+    [],
   )
 
   useEffect(() => {
@@ -151,6 +164,8 @@ export function useWorkspaceData() {
       promptCards: promptCards ?? [],
       providerConfigs: providers ?? [],
       providers: selectableProviders,
+      quickPhraseGroups: quickPhraseGroups ?? [],
+      quickPhrases: quickPhrases ?? [],
       setActiveCanvasId,
       setActiveProviderId,
       setSelectedCardId,
@@ -169,6 +184,8 @@ export function useWorkspaceData() {
       flowchartModelSettings,
       flowchartProvider,
       providers,
+      quickPhraseGroups,
+      quickPhrases,
       selectableProviders,
       webSearchSettings,
     ],

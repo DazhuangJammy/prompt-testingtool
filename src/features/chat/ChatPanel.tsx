@@ -1,24 +1,23 @@
 import { Plus, X, PanelRightClose, PanelRightOpen } from 'lucide-react'
 import type { CSSProperties, PointerEvent } from 'react'
-import { useMemo, useState } from 'react'
+import { useCallback } from 'react'
 import type {
   ChatAttachment,
   KnowledgeBase,
   PromptCard,
   PromptInjectionMode,
   ProviderConfig,
+  QuickPhrase,
+  QuickPhraseGroup,
   ThinkingMode,
   WebSearchSettings,
 } from '@/shared/types'
 import { IconButton } from '@/shared/ui/IconButton'
 import { ChatComposer } from './components/ChatComposer'
-import { InputSourceRunner } from './components/InputSourceRunner'
 import { MessageList } from './components/MessageList'
 import { PanelMeta } from './components/PanelMeta'
-import {
-  resolvePromptInputSource,
-  type PromptInputSource,
-} from '@/features/input-card/model/inputCard'
+import { PromptInputRunnerControl } from './components/PromptInputRunnerControl'
+import type { PromptInputSource } from '@/features/input-card/model/inputCard'
 import { getComparePanelWidth, type ComparePaneState } from './model/comparePanes'
 import { type ComparePaneView, useChatPanelState } from './useChatPanelState'
 
@@ -29,6 +28,8 @@ interface ChatPanelProps {
   providers: ProviderConfig[]
   inputSources?: PromptInputSource[]
   knowledgeBases?: KnowledgeBase[]
+  quickPhraseGroups?: QuickPhraseGroup[]
+  quickPhrases?: QuickPhrase[]
   compareOpen: boolean
   comparePaneCardIds: string[]
   comparePanes: ComparePaneState[]
@@ -59,6 +60,8 @@ export function ChatPanel({
   providers,
   inputSources = [],
   knowledgeBases = [],
+  quickPhraseGroups = [],
+  quickPhrases = [],
   compareOpen,
   comparePaneCardIds,
   comparePanes,
@@ -100,17 +103,11 @@ export function ChatPanel({
   )
   const disabled = !provider || !card
   const compareDisabled = promptCards.length < 2
-  const [selectedInputCardId, setSelectedInputCardId] = useState<string>()
-  const [selectedSegmentId, setSelectedSegmentId] = useState<string>()
-  const activeInputSource = useMemo(
-    () => resolvePromptInputSource(inputSources, selectedInputCardId),
-    [inputSources, selectedInputCardId],
+  const getInputSourcesForCard = useCallback(
+    (cardId?: string) =>
+      inputSources.filter((source) => source.edge.targetId === cardId),
+    [inputSources],
   )
-  const effectiveSegmentId = activeInputSource?.segments.some(
-    (segment) => segment.id === selectedSegmentId && segment.content.trim(),
-  )
-    ? selectedSegmentId
-    : activeInputSource?.segments.find((segment) => segment.content.trim())?.id
   const openCompare = () => {
     const nextOpen = !compareOpen
     if (nextOpen) {
@@ -174,6 +171,7 @@ export function ChatPanel({
                 generating={state.isRequestActive(pane.id)}
                 index={index}
                 providers={providers}
+                inputSources={getInputSourcesForCard(pane.card?.id)}
                 onCardChange={(id) => state.setComparePaneCard(pane.id, id)}
                 onClear={() => void state.clearCompareMessages(pane.id)}
                 onCloseCompare={index === 0 ? closeCompare : undefined}
@@ -187,6 +185,10 @@ export function ChatPanel({
                   state.resendCompareMessage(pane.id, message, content)
                 }
                 onSend={() => void state.sendCompareMessage(pane.id)}
+                onDirectSend={(content) => void state.sendCompareText(pane.id, content)}
+                onRunInputSegments={(source, startSegmentId) =>
+                  state.runCompareInputSegments(pane.id, source.segments, startSegmentId)
+                }
                 onStop={() => state.stopGeneration(pane.id)}
                 onAttachmentsChange={(value) =>
                   state.setComparePaneAttachments(pane.id, value)
@@ -195,6 +197,8 @@ export function ChatPanel({
                 onThinkingModeChange={(mode) =>
                   state.setComparePaneThinkingMode(pane.id, mode)
                 }
+                quickPhraseGroups={quickPhraseGroups}
+                quickPhrases={quickPhrases}
               />
             ))}
           </div>
@@ -205,28 +209,12 @@ export function ChatPanel({
               compareDisabled={compareDisabled}
               compareOpen={compareOpen}
               extraActions={
-                <InputSourceRunner
+                <PromptInputRunnerControl
                   busy={state.busy}
-                  selectedInputCardId={activeInputSource?.inputCard.id}
-                  selectedSegmentId={effectiveSegmentId}
-                  sources={inputSources}
-                  onInputCardChange={(id) => {
-                    setSelectedInputCardId(id)
-                    const nextSource = inputSources.find(
-                      (source) => source.inputCard.id === id,
-                    )
-                    setSelectedSegmentId(
-                      nextSource?.segments.find((segment) => segment.content.trim())?.id,
-                    )
-                  }}
-                  onRun={() => {
-                    if (!activeInputSource) return
-                    void state.runInputSegments(
-                      activeInputSource.segments,
-                      effectiveSegmentId,
-                    )
-                  }}
-                  onSegmentChange={setSelectedSegmentId}
+                  sources={getInputSourcesForCard(card?.id)}
+                  onRun={(source, startSegmentId) =>
+                    state.runInputSegments(source.segments, startSegmentId)
+                  }
                 />
               }
               providers={providers}
@@ -253,6 +241,8 @@ export function ChatPanel({
               thinkingMode={state.thinkingMode}
               knowledgeBases={knowledgeBases}
               selectedKnowledgeBaseIds={selectedKnowledgeBaseIds}
+              quickPhraseGroups={quickPhraseGroups}
+              quickPhrases={quickPhrases}
               webSearchEnabled={state.webSearchEnabled}
               webSearchProviderId={state.webSearchProviderId}
               webSearchSettings={webSearchSettings}
@@ -261,6 +251,7 @@ export function ChatPanel({
               onClearMessages={state.clearMainMessages}
               onKnowledgeSelectionChange={onKnowledgeSelectionChange}
               onPromptInjectionModeChange={state.setPromptInjectionMode}
+              onDirectSendQuickPhrase={state.sendMainText}
               onSend={state.sendMainMessage}
               onStop={state.stopGeneration}
               onWebSearchEnabledChange={state.setWebSearchEnabled}
@@ -282,6 +273,7 @@ interface SplitPaneProps {
   disabled: boolean
   generating: boolean
   index: number
+  inputSources: PromptInputSource[]
   providers: ProviderConfig[]
   onCardChange: (id: string) => void
   onClear: () => void
@@ -292,10 +284,17 @@ interface SplitPaneProps {
   onProviderChange: (id: string) => void
   onResend: ReturnType<typeof useChatPanelState>['resendMainMessage']
   onSend: () => void
+  onDirectSend: (content: string) => void
+  onRunInputSegments: (
+    source: PromptInputSource,
+    startSegmentId?: string,
+  ) => Promise<void> | void
   onStop: () => void
   onTextChange: (value: string) => void
   onAttachmentsChange: (value: ChatAttachment[]) => void
   onThinkingModeChange: (mode: ThinkingMode) => void
+  quickPhraseGroups: QuickPhraseGroup[]
+  quickPhrases: QuickPhrase[]
 }
 
 function SplitPane({
@@ -305,6 +304,7 @@ function SplitPane({
   disabled,
   generating,
   index,
+  inputSources,
   providers,
   onCardChange,
   onClear,
@@ -315,10 +315,14 @@ function SplitPane({
   onProviderChange,
   onResend,
   onSend,
+  onDirectSend,
+  onRunInputSegments,
   onStop,
   onAttachmentsChange,
   onTextChange,
   onThinkingModeChange,
+  quickPhraseGroups,
+  quickPhrases,
 }: SplitPaneProps) {
   return (
     <section className="split-pane">
@@ -326,6 +330,13 @@ function SplitPane({
         activeProviderId={pane.provider?.id}
         compareLabel="取消对比"
         compareOpen={Boolean(onCloseCompare)}
+        extraActions={
+          <PromptInputRunnerControl
+            busy={generating}
+            sources={inputSources}
+            onRun={onRunInputSegments}
+          />
+        }
         providers={providers}
         onToggleCompare={onCloseCompare}
         onSelectProvider={onProviderChange}
@@ -363,10 +374,13 @@ function SplitPane({
         supportsDeepThinking={pane.thinkingCapability.supportsDeepMode}
         supportsThinking={pane.thinkingCapability.supportsThinking}
         thinkingMode={pane.thinkingMode}
+        quickPhraseGroups={quickPhraseGroups}
+        quickPhrases={quickPhrases}
         onAttachmentsChange={onAttachmentsChange}
         onChange={onTextChange}
         onClearMessages={onClear}
         onPromptInjectionModeChange={onPromptInjectionModeChange}
+        onDirectSendQuickPhrase={onDirectSend}
         onSend={onSend}
         onStop={onStop}
         onWebSearchEnabledChange={undefined}

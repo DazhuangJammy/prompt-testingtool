@@ -12,20 +12,20 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { ChatQuickPhraseControl } from '@/features/quick-phrases/components/ChatQuickPhraseControl'
 import {
   type ChatAttachmentCapability,
   formatAttachmentSize,
   getFileAttachmentError,
 } from '@/features/chat/model/attachments'
-import {
-  THINKING_OPTIONS,
-  getThinkingOption,
-} from '@/shared/model/thinking'
+import { THINKING_OPTIONS, getThinkingOption } from '@/shared/model/thinking'
 import { createChatAttachment } from '@/features/chat/infrastructure/fileAttachmentReader'
 import type {
   ChatAttachment,
   KnowledgeBase,
   PromptInjectionMode,
+  QuickPhrase,
+  QuickPhraseGroup,
   ThinkingMode,
   WebSearchProviderId,
   WebSearchSettings,
@@ -47,12 +47,15 @@ interface ChatComposerProps {
   supportsThinking: boolean
   thinkingMode: ThinkingMode
   knowledgeBases?: KnowledgeBase[]
+  quickPhraseGroups?: QuickPhraseGroup[]
+  quickPhrases?: QuickPhrase[]
   selectedKnowledgeBaseIds?: string[]
   webSearchEnabled?: boolean
   webSearchProviderId?: WebSearchProviderId
   webSearchSettings?: WebSearchSettings
   onAttachmentsChange: (attachments: ChatAttachment[]) => void
   onChange: (value: string) => void
+  onDirectSendQuickPhrase?: (content: string) => void
   onClearMessages: () => void
   onKnowledgeSelectionChange?: (baseIds: string[]) => void
   onPromptInjectionModeChange: (mode: PromptInjectionMode) => void
@@ -76,12 +79,15 @@ export function ChatComposer({
   supportsThinking,
   thinkingMode,
   knowledgeBases = [],
+  quickPhraseGroups = [],
+  quickPhrases = [],
   selectedKnowledgeBaseIds = [],
   webSearchEnabled = false,
   webSearchProviderId,
   webSearchSettings,
   onAttachmentsChange,
   onChange,
+  onDirectSendQuickPhrase,
   onClearMessages,
   onKnowledgeSelectionChange,
   onPromptInjectionModeChange,
@@ -92,7 +98,9 @@ export function ChatComposer({
   onThinkingModeChange,
 }: ChatComposerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const knowledgeMenuRef = useRef<HTMLDivElement>(null)
+  const quickPhraseMenuRef = useRef<HTMLDivElement>(null)
   const webSearchMenuRef = useRef<HTMLDivElement>(null)
   const promptModeMenuRef = useRef<HTMLDivElement>(null)
   const thinkingMenuRef = useRef<HTMLDivElement>(null)
@@ -100,6 +108,7 @@ export function ChatComposer({
   const [promptModeMenuOpen, setPromptModeMenuOpen] = useState(false)
   const [thinkingMenuOpen, setThinkingMenuOpen] = useState(false)
   const [knowledgeMenuOpen, setKnowledgeMenuOpen] = useState(false)
+  const [quickPhraseMenuOpen, setQuickPhraseMenuOpen] = useState(false)
   const [webSearchMenuOpen, setWebSearchMenuOpen] = useState(false)
   const activeThinkingOption = getThinkingOption(thinkingMode)
   const activeWebSearchProvider = webSearchSettings
@@ -127,6 +136,7 @@ export function ChatComposer({
       !thinkingMenuOpen &&
       !promptModeMenuOpen &&
       !knowledgeMenuOpen &&
+      !quickPhraseMenuOpen &&
       !webSearchMenuOpen
     ) return
 
@@ -134,6 +144,8 @@ export function ChatComposer({
       const target = event.target as Node
       if (
         knowledgeMenuRef.current?.contains(target) ||
+        quickPhraseMenuRef.current?.contains(target) ||
+        (target instanceof Element && target.closest('.quick-phrase-picker-menu')) ||
         webSearchMenuRef.current?.contains(target) ||
         thinkingMenuRef.current?.contains(target) ||
         promptModeMenuRef.current?.contains(target)
@@ -143,6 +155,7 @@ export function ChatComposer({
       setThinkingMenuOpen(false)
       setPromptModeMenuOpen(false)
       setKnowledgeMenuOpen(false)
+      setQuickPhraseMenuOpen(false)
       setWebSearchMenuOpen(false)
     }
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -150,6 +163,7 @@ export function ChatComposer({
       setThinkingMenuOpen(false)
       setPromptModeMenuOpen(false)
       setKnowledgeMenuOpen(false)
+      setQuickPhraseMenuOpen(false)
       setWebSearchMenuOpen(false)
     }
 
@@ -159,7 +173,13 @@ export function ChatComposer({
       document.removeEventListener('pointerdown', closeOnOutsidePointer)
       document.removeEventListener('keydown', closeOnEscape)
     }
-  }, [knowledgeMenuOpen, promptModeMenuOpen, thinkingMenuOpen, webSearchMenuOpen])
+  }, [
+    knowledgeMenuOpen,
+    promptModeMenuOpen,
+    quickPhraseMenuOpen,
+    thinkingMenuOpen,
+    webSearchMenuOpen,
+  ])
 
   const addFiles = async (files: File[]) => {
     if (!files.length) return
@@ -235,6 +255,7 @@ export function ChatComposer({
           </div>
         )}
         <textarea
+          ref={textareaRef}
           value={input}
           placeholder="在这里输入消息，按 Enter 发送"
           onChange={(event) => onChange(event.target.value)}
@@ -287,6 +308,7 @@ export function ChatComposer({
                 setPromptModeMenuOpen(false)
                 setThinkingMenuOpen(false)
                 setWebSearchMenuOpen(false)
+                setQuickPhraseMenuOpen(false)
               }}
             />
             {knowledgeMenuOpen && (
@@ -337,6 +359,7 @@ export function ChatComposer({
                 setKnowledgeMenuOpen(false)
                 setPromptModeMenuOpen(false)
                 setThinkingMenuOpen(false)
+                setQuickPhraseMenuOpen(false)
               }}
             />
             {webSearchMenuOpen && (
@@ -356,6 +379,27 @@ export function ChatComposer({
               />
             )}
           </div>
+          <ChatQuickPhraseControl
+            busy={busy}
+            disabled={disabled}
+            generating={generating}
+            groups={quickPhraseGroups}
+            input={input}
+            menuOpen={quickPhraseMenuOpen}
+            phrases={quickPhrases}
+            shellRef={quickPhraseMenuRef}
+            textareaRef={textareaRef}
+            onChange={onChange}
+            onCloseMenu={() => setQuickPhraseMenuOpen(false)}
+            onDirectSend={onDirectSendQuickPhrase}
+            onToggleMenu={() => {
+              setQuickPhraseMenuOpen((value) => !value)
+              setKnowledgeMenuOpen(false)
+              setPromptModeMenuOpen(false)
+              setThinkingMenuOpen(false)
+              setWebSearchMenuOpen(false)
+            }}
+          />
           <div className="composer-menu-shell" ref={promptModeMenuRef}>
             <IconButton
               active={promptModeMenuOpen}
@@ -364,6 +408,7 @@ export function ChatComposer({
               onClick={() => {
                 setPromptModeMenuOpen((value) => !value)
                 setKnowledgeMenuOpen(false)
+                setQuickPhraseMenuOpen(false)
                 setThinkingMenuOpen(false)
                 setWebSearchMenuOpen(false)
               }}
@@ -401,6 +446,7 @@ export function ChatComposer({
                 onClick={() => {
                   setThinkingMenuOpen((value) => !value)
                   setKnowledgeMenuOpen(false)
+                  setQuickPhraseMenuOpen(false)
                   setPromptModeMenuOpen(false)
                   setWebSearchMenuOpen(false)
                 }}

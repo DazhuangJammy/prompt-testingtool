@@ -15,25 +15,42 @@
   display: flex;
   gap: 8px;
   min-height: 42px;
+  min-width: 0;
   padding: 0 10px;
 }
 
 .input-source-runner {
   align-items: center;
   display: flex;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   gap: 6px;
   min-width: 0;
 }
 
 .input-source-runner select {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
   flex: 0 1 auto;
+  height: 32px;
   max-width: 118px;
   min-width: 84px;
+  overflow: hidden;
+  padding: 0 28px 0 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.input-source-runner select:hover,
+.input-source-runner select:focus {
+  border-color: var(--line-strong);
+  color: var(--text);
 }
 
 .input-source-runner .icon-button {
   height: 30px;
+  flex: 0 0 30px;
   min-width: 30px;
   width: 30px;
 }
@@ -354,6 +371,32 @@
   flex-direction: column;
   min-width: min(380px, 86vw);
   width: max(380px, calc(100% / 2));
+}
+
+.split-pane .panel-meta {
+  gap: 6px;
+  overflow: hidden;
+}
+
+.split-pane .chat-model-picker {
+  flex: 0 1 180px;
+  max-width: 180px;
+}
+
+.split-pane .chat-model-trigger {
+  min-width: 0;
+}
+
+.split-pane .input-source-runner {
+  flex: 0 1 132px;
+  max-width: 132px;
+  overflow: hidden;
+}
+
+.split-pane .input-source-runner select {
+  flex: 1 1 0;
+  max-width: 96px;
+  min-width: 0;
 }
 
 .split-pane + .split-pane {
