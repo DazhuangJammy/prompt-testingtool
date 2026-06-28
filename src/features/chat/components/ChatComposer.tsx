@@ -1,9 +1,7 @@
 import {
   ArrowUp,
   Eraser,
-  FileText,
   Globe,
-  Image,
   Lightbulb,
   MessageSquare,
   Paperclip,
@@ -15,9 +13,9 @@ import { useEffect, useRef, useState } from 'react'
 import { ChatQuickPhraseControl } from '@/features/quick-phrases/components/ChatQuickPhraseControl'
 import {
   type ChatAttachmentCapability,
-  formatAttachmentSize,
   getFileAttachmentError,
 } from '@/features/chat/model/attachments'
+import { useComposerFileDrop } from '@/features/chat/hooks/useComposerFileDrop'
 import { THINKING_OPTIONS, getThinkingOption } from '@/shared/model/thinking'
 import { createChatAttachment } from '@/features/chat/infrastructure/fileAttachmentReader'
 import type {
@@ -32,6 +30,7 @@ import type {
 } from '@/shared/types'
 import { IconButton } from '@/shared/ui/IconButton'
 import { resolvePreferredWebSearchProvider } from '@/features/web-search/model/webSearchSettings'
+import { ComposerAttachmentPills } from './ComposerAttachmentPills'
 import { WebSearchProviderMenu } from './WebSearchProviderMenu'
 
 interface ChatComposerProps {
@@ -122,7 +121,8 @@ export function ChatComposer({
     promptInjectionMode === 'system' ? '系统提示词' : '用户提示词'
   const hasContent = Boolean(input.trim() || attachments.length)
   const sendDisabled = !generating && (busy || disabled || !hasContent)
-  const acceptedFileTypes = 'image/*,.txt,.md,.pdf,.doc,.docx'
+  const acceptedFileTypes =
+    'image/*,.txt,.md,.markdown,.csv,.html,.htm,.pdf,.doc,.docx,.pptx,.xls,.xlsx,.epub'
 
   useEffect(() => {
     if (!attachmentError) return
@@ -192,13 +192,25 @@ export function ChatComposer({
         setAttachmentError(`${file.name || '文件'}：${error}`)
         continue
       }
-      nextAttachments.push(await createChatAttachment(file))
+      try {
+        nextAttachments.push(await createChatAttachment(file))
+      } catch (readError) {
+        setAttachmentError(
+          `${file.name || '文件'}：${
+            readError instanceof Error ? readError.message : '文件读取失败'
+          }`,
+        )
+      }
     }
 
     if (nextAttachments.length) {
       onAttachmentsChange([...attachments, ...nextAttachments])
     }
   }
+  const { fileDropHandlers, isFileDragging } = useComposerFileDrop({
+    disabled,
+    onFiles: (files) => void addFiles(files),
+  })
 
   const handleSend = () => {
     if (generating) onStop?.()
@@ -207,29 +219,18 @@ export function ChatComposer({
 
   return (
     <div className="composer">
-      <div className="composer-input-surface">
-        {attachments.length > 0 && (
-          <div className="composer-attachments">
-            {attachments.map((attachment) => (
-              <span className="attachment-pill" key={attachment.id}>
-                {attachment.kind === 'image' ? <Image /> : <FileText />}
-                <span>{attachment.name}</span>
-                <small>{formatAttachmentSize(attachment.size)}</small>
-                <button
-                  type="button"
-                  aria-label={`移除 ${attachment.name}`}
-                  onClick={() =>
-                    onAttachmentsChange(
-                      attachments.filter((item) => item.id !== attachment.id),
-                    )
-                  }
-                >
-                  <X />
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
+      <div
+        className={`composer-input-surface ${isFileDragging ? 'is-file-dragging' : ''}`}
+        {...fileDropHandlers}
+      >
+        <ComposerAttachmentPills
+          attachments={attachments}
+          onRemove={(attachmentId) =>
+            onAttachmentsChange(
+              attachments.filter((item) => item.id !== attachmentId),
+            )
+          }
+        />
         {selectedKnowledgeBaseIds.length > 0 && (
           <div className="composer-knowledge-tags" aria-label="已选知识库">
             {selectedKnowledgeBaseIds.map((baseId) => {

@@ -4,6 +4,7 @@ import type {
   CompletionContentPart,
   ProviderConfig,
 } from '@/shared/types'
+import { isSupportedDocumentTextFile } from '@/shared/document/documentParser'
 import { hasModelCapability } from '@/shared/model/providerModelCapabilities'
 
 const SUPPORTED_IMAGE_MIME_TYPES = new Set([
@@ -54,7 +55,7 @@ export function getAttachmentCapability(
 
   return {
     supportsImages,
-    supportsDocuments: false,
+    supportsDocuments: true,
     supportsTextFiles: true,
   }
 }
@@ -74,18 +75,14 @@ export function isPlainTextFile(file: File) {
     file.type.startsWith('text/') ||
     file.type === 'application/json' ||
     file.type === 'application/xml' ||
+    /\.csv$/i.test(file.name) ||
     file.name.toLowerCase().endsWith('.txt') ||
     file.name.toLowerCase().endsWith('.md')
   )
 }
 
 export function isDocumentFile(file: File) {
-  return (
-    file.type === 'application/pdf' ||
-    WORD_MIME_TYPES.has(file.type) ||
-    /\.pdf$/i.test(file.name) ||
-    /\.docx?$/i.test(file.name)
-  )
+  return isSupportedDocumentTextFile(file.name) || WORD_MIME_TYPES.has(file.type)
 }
 
 export function canAttachFile(
@@ -110,7 +107,7 @@ export function getFileAttachmentError(
   }
   if (canAttachFile(file, capability)) return ''
   if (isImageFile(file)) return '当前模型不支持图片输入'
-  if (isDocumentFile(file)) return '当前模型不支持直接读取 PDF 或 Word'
+  if (isDocumentFile(file)) return ''
   return '暂不支持这个文件类型'
 }
 
@@ -120,12 +117,6 @@ export function getUnsupportedAttachmentReason(
 ) {
   if (attachments.some((item) => item.kind === 'image') && !capability.supportsImages) {
     return '当前模型不支持图片输入'
-  }
-  if (
-    attachments.some((item) => item.kind === 'document') &&
-    !capability.supportsDocuments
-  ) {
-    return '当前模型不支持直接读取 PDF 或 Word'
   }
   return ''
 }
@@ -140,25 +131,15 @@ export function buildAttachmentContentParts(
       type: 'image_url',
       image_url: { url: attachment.dataUrl as string },
     }))
-  const documentParts = attachments
-    .filter((attachment) => attachment.kind === 'document' && attachment.dataUrl)
-    .map<CompletionContentPart>((attachment) => ({
-      type: 'file',
-      file: {
-        filename: attachment.name,
-        file_data: attachment.dataUrl as string,
-      },
-    }))
   const textAttachmentContent = attachments
-    .filter((attachment) => attachment.kind === 'text' && attachment.text)
+    .filter((attachment) => attachment.text)
     .map((attachment) => `\n\n[${attachment.name}]\n${attachment.text}`)
     .join('')
   const combinedText = `${text}${textAttachmentContent}`.trim()
 
-  if (!imageParts.length && !documentParts.length) return combinedText
+  if (!imageParts.length) return combinedText
   return [
     ...imageParts,
-    ...documentParts,
     ...(combinedText ? [{ type: 'text' as const, text: combinedText }] : []),
   ]
 }
@@ -189,5 +170,14 @@ export function fallbackMimeType(name: string) {
   if (/\.doc$/i.test(name)) return 'application/msword'
   if (/\.md$/i.test(name)) return 'text/markdown'
   if (/\.txt$/i.test(name)) return 'text/plain'
+  if (/\.csv$/i.test(name)) return 'text/csv'
+  if (/\.pptx$/i.test(name)) {
+    return 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+  }
+  if (/\.xlsx?$/i.test(name)) {
+    return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  }
+  if (/\.epub$/i.test(name)) return 'application/epub+zip'
+  if (/\.html?$/i.test(name)) return 'text/html'
   return 'application/octet-stream'
 }

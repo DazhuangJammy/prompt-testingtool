@@ -10,6 +10,7 @@ import {
   getAppUpdateStatus,
   runAppUpdate,
 } from '../controllers/appUpdateController.mjs'
+import { extractDocumentTextController } from '../controllers/documentController.mjs'
 import { fetchKnowledgeUrl } from '../controllers/knowledgeController.mjs'
 import {
   analyzeSkillTopic,
@@ -36,6 +37,7 @@ apiRoutes.post('/embeddings', createEmbeddings)
 apiRoutes.post('/rerank', rerankDocuments)
 apiRoutes.post('/test-provider', testProvider)
 apiRoutes.post('/provider-models', listProviderModels)
+apiRoutes.post('/documents/extract-text', extractDocumentTextController)
 apiRoutes.post('/knowledge/fetch-url', fetchKnowledgeUrl)
 apiRoutes.post('/web-search/search', runWebSearch)
 apiRoutes.post('/web-search/check', checkWebSearchProvider)

@@ -18,6 +18,7 @@ import {
 } from '@/shared/model/thinking'
 import { MarkdownRenderer } from '@/shared/ui/MarkdownRenderer'
 import { formatAttachmentSize } from '@/features/chat/model/attachments'
+import { formatChatDisplayMarkdown } from '@/features/chat/model/messageDisplay'
 import {
   splitSvgPreviewBlocks,
   type SvgPreviewBlock,
@@ -142,7 +143,9 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
                     )}
                   </button>
                   {!thinkingCollapsed && (
-                    <MarkdownRenderer>{parsed.thinking}</MarkdownRenderer>
+                    <MarkdownRenderer>
+                      {formatChatDisplayMarkdown(parsed.thinking)}
+                    </MarkdownRenderer>
                   )}
                 </div>
               )}
@@ -312,7 +315,7 @@ function MessageContent({
           <SvgPreviewCard block={block} key={block.id} onPreview={onPreview} />
         ) : webSearchReferences.length > 0 ? (
           <WebSearchAnswerContent
-            content={block.markdown}
+            content={formatChatDisplayMarkdown(block.markdown)}
             key={block.id}
             references={webSearchReferences}
             renderContent={(markdown) => (
@@ -321,7 +324,7 @@ function MessageContent({
           />
         ) : (
           <KnowledgeAnswerContent
-            content={block.markdown}
+            content={formatChatDisplayMarkdown(block.markdown)}
             key={block.id}
             references={knowledgeReferences}
             renderContent={(markdown) => (

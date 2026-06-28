@@ -16,7 +16,14 @@
   flex-direction: column;
   gap: 10px;
   min-height: 116px;
+  outline: 1px solid transparent;
+  outline-offset: 1px;
   padding: 14px 14px 52px;
+  position: relative;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    outline-color 0.12s ease;
   width: 100%;
 }
 
@@ -24,6 +31,15 @@
   border-color: var(--line-strong);
   outline: 1px solid var(--focus);
   outline-offset: 1px;
+}
+
+.composer-input-surface.is-file-dragging {
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  border-color: var(--line-strong);
+  cursor: copy;
+  outline-color: var(--line-strong);
+  outline-style: dashed;
+  outline-width: 1px;
 }
 
 .composer textarea {

@@ -9,6 +9,10 @@ import type {
   ProviderModelCapability,
 } from '@/shared/types'
 import { hasModelCapability } from '@/shared/model/providerModelCapabilities'
+import {
+  isSupportedDocumentTextFile,
+  SUPPORTED_DOCUMENT_TEXT_EXTENSIONS,
+} from '@/shared/document/documentParser'
 import { createId } from '@/shared/utils/identity'
 import { nowIso } from '@/shared/utils/time'
 
@@ -20,20 +24,7 @@ export const DEFAULT_KNOWLEDGE_RAG_CONFIG: KnowledgeRagConfig = {
   rerankEnabled: false,
 }
 
-export const SUPPORTED_KNOWLEDGE_FILE_EXTENSIONS = [
-  'txt',
-  'md',
-  'markdown',
-  'html',
-  'htm',
-  'pdf',
-  'docx',
-  'pptx',
-  'xlsx',
-  'xls',
-  'csv',
-  'epub',
-] as const
+export const SUPPORTED_KNOWLEDGE_FILE_EXTENSIONS = SUPPORTED_DOCUMENT_TEXT_EXTENSIONS
 
 export const KNOWLEDGE_SOURCE_LABELS: Record<KnowledgeSourceType, string> = {
   file: '文件',
@@ -198,10 +189,7 @@ export function rankKnowledgeResults(
 }
 
 export function isSupportedKnowledgeFile(filename: string) {
-  const extension = getFileExtension(filename)
-  return SUPPORTED_KNOWLEDGE_FILE_EXTENSIONS.includes(
-    extension as (typeof SUPPORTED_KNOWLEDGE_FILE_EXTENSIONS)[number],
-  )
+  return isSupportedDocumentTextFile(filename)
 }
 
 export function filterKnowledgeModelProviders(
@@ -216,10 +204,6 @@ export function filterKnowledgeModelProviders(
       capability,
     ),
   )
-}
-
-export function getFileExtension(filename: string) {
-  return filename.split('.').pop()?.toLowerCase() ?? ''
 }
 
 export function estimateTokenCount(text: string) {

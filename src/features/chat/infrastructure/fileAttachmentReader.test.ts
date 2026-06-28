@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createChatAttachment } from './fileAttachmentReader'
+import { parseDocumentFile } from '@/shared/document/documentParser'
+
+vi.mock('@/shared/document/documentParser', () => ({
+  parseDocumentFile: vi.fn(async (file: File) => `parsed ${file.name}`),
+}))
 
 describe('file attachment reader', () => {
   const originalFileReader = globalThis.FileReader
@@ -20,6 +25,28 @@ describe('file attachment reader', () => {
       name: 'note.txt',
       text: 'hello',
     })
+  })
+
+  it('creates document attachments from parsed text', async () => {
+    const attachment = await createChatAttachment(
+      new File(['pdf'], 'brief.pdf', { type: 'application/pdf' }),
+    )
+
+    expect(attachment).toMatchObject({
+      kind: 'document',
+      mimeType: 'application/pdf',
+      name: 'brief.pdf',
+      text: 'parsed brief.pdf',
+    })
+    expect(attachment.dataUrl).toBeUndefined()
+  })
+
+  it('rejects document attachments without readable text', async () => {
+    vi.mocked(parseDocumentFile).mockResolvedValueOnce('   ')
+
+    await expect(
+      createChatAttachment(new File(['pdf'], 'scan.pdf', { type: 'application/pdf' })),
+    ).rejects.toThrow('没有提取到可读文本')
   })
 
   it('reads binary attachments as data urls', async () => {

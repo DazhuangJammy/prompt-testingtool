@@ -97,6 +97,25 @@ const webSearchSettings: WebSearchSettings = {
   updatedAt: 'now',
 }
 
+function createFileDragEvent(type: string, files: File[]) {
+  const event = new Event(type, {
+    bubbles: true,
+    cancelable: true,
+  }) as Event & {
+    dataTransfer: { dropEffect: string; files: File[]; types: string[] }
+  }
+
+  Object.defineProperty(event, 'dataTransfer', {
+    value: {
+      dropEffect: '',
+      files,
+      types: ['Files'],
+    },
+  })
+
+  return event
+}
+
 afterEach(() => {
   act(() => {
     root?.unmount()
@@ -109,6 +128,35 @@ afterEach(() => {
 })
 
 describe('ChatComposer', () => {
+  it('adds dropped files through the existing attachment flow', async () => {
+    const onAttachmentsChange = vi.fn()
+    renderComposer({ onAttachmentsChange })
+
+    const surface = document.querySelector<HTMLElement>('.composer-input-surface')
+    const file = new File(['hello'], 'note.txt', { type: 'text/plain' })
+
+    act(() => {
+      surface?.dispatchEvent(createFileDragEvent('dragenter', [file]))
+    })
+
+    expect(surface?.classList.contains('is-file-dragging')).toBe(true)
+
+    await act(async () => {
+      surface?.dispatchEvent(createFileDragEvent('drop', [file]))
+      await Promise.resolve()
+    })
+
+    expect(surface?.classList.contains('is-file-dragging')).toBe(false)
+    expect(onAttachmentsChange).toHaveBeenCalledTimes(1)
+    expect(onAttachmentsChange.mock.calls[0]?.[0][0]).toMatchObject({
+      kind: 'text',
+      mimeType: 'text/plain',
+      name: 'note.txt',
+      size: 5,
+      text: 'hello',
+    })
+  })
+
   it('shows unsupported attachment errors as a centered temporary toast', () => {
     vi.useFakeTimers()
     renderComposer()

@@ -102,6 +102,24 @@ describe('chat completion model', () => {
     ])
   })
 
+  it('builds document attachment text into user messages', () => {
+    expect(
+      buildChatMessages('prompt', [], 'question', 'system', [
+        {
+          id: 'doc',
+          kind: 'document',
+          name: 'brief.pdf',
+          mimeType: 'application/pdf',
+          size: 12,
+          text: 'document text',
+        },
+      ]),
+    ).toEqual([
+      { role: 'system', content: 'prompt' },
+      { role: 'user', content: 'question\n\n[brief.pdf]\ndocument text' },
+    ])
+  })
+
   it('creates prompt versions from compiled prompt markdown', () => {
     const card: PromptCard = {
       id: 'card',

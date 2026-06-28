@@ -150,6 +150,16 @@ const tableMessage: ChatMessage = {
   createdAt: '2026-06-10T10:04:00.000Z',
 }
 
+const dashItemMessage: ChatMessage = {
+  id: 'message-dash-item',
+  sessionId: 'session-1',
+  role: 'assistant',
+  content:
+    '— 本次基于输入材料,识别出7个内部能力评估模块。\n— 模块划分逻辑:必须单独拆解为独立评估页面。',
+  status: 'complete',
+  createdAt: '2026-06-10T10:08:30.000Z',
+}
+
 function renderMessageList(messages: ChatMessage[]) {
   host = document.createElement('div')
   document.body.append(host)
@@ -300,6 +310,16 @@ describe('MessageList', () => {
     expect(table?.querySelectorAll('th')).toHaveLength(2)
     expect(table?.textContent).toContain('角度编号')
     expect(table?.textContent).toContain('社交破冰')
+  })
+
+  it('renders sentence-level dash items as spaced paragraphs', () => {
+    renderMessageList([dashItemMessage])
+
+    const paragraphs = document.querySelectorAll('.message-bubble p')
+
+    expect(paragraphs).toHaveLength(2)
+    expect(paragraphs[0].textContent).toContain('— 本次基于输入材料')
+    expect(paragraphs[1].textContent).toContain('— 模块划分逻辑')
   })
 
   it('keeps thinking content collapsed until opened', () => {

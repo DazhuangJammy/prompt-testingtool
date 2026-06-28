@@ -22,12 +22,13 @@ describe('chat attachments model', () => {
     expect(getAttachmentCapability(provider('text-only')).supportsImages).toBe(false)
   })
 
-  it('rejects unsupported documents with a clear reason', () => {
+  it('allows supported documents because they are parsed as text', () => {
     const file = new File(['x'], 'doc.pdf', { type: 'application/pdf' })
 
     expect(
       getFileAttachmentError(file, getAttachmentCapability(provider('qwen3.7-plus'))),
-    ).toBe('当前模型不支持直接读取 PDF 或 Word')
+    ).toBe('')
+    expect(getAttachmentCapability(provider('text-only')).supportsDocuments).toBe(true)
   })
 
   it('validates file types and sizes by capability', () => {
@@ -83,12 +84,12 @@ describe('chat attachments model', () => {
             name: 'doc.pdf',
             mimeType: 'application/pdf',
             size: 1,
-            dataUrl: 'data:application/pdf;base64,a',
+            text: 'extracted text',
           },
         ],
         getAttachmentCapability(provider('qwen3.7-plus')),
       ),
-    ).toBe('当前模型不支持直接读取 PDF 或 Word')
+    ).toBe('')
   })
 
   it('builds content parts from image and text attachments', () => {
@@ -117,7 +118,7 @@ describe('chat attachments model', () => {
     ])
   })
 
-  it('builds document parts when a future provider enables file input', () => {
+  it('builds document attachments as text content for every model', () => {
     expect(
       buildAttachmentContentParts('read this', [
         {
@@ -126,19 +127,10 @@ describe('chat attachments model', () => {
           name: 'doc.pdf',
           mimeType: 'application/pdf',
           size: 1,
-          dataUrl: 'data:application/pdf;base64,a',
+          text: 'pdf text',
         },
       ]),
-    ).toEqual([
-      {
-        type: 'file',
-        file: {
-          filename: 'doc.pdf',
-          file_data: 'data:application/pdf;base64,a',
-        },
-      },
-      { type: 'text', text: 'read this' },
-    ])
+    ).toBe('read this\n\n[doc.pdf]\npdf text')
   })
 
   it('falls back mime types from filenames', () => {
@@ -147,6 +139,9 @@ describe('chat attachments model', () => {
     expect(fallbackMimeType('paper.docx')).toContain('wordprocessingml')
     expect(fallbackMimeType('note.md')).toBe('text/markdown')
     expect(fallbackMimeType('note.txt')).toBe('text/plain')
+    expect(fallbackMimeType('slides.pptx')).toContain('presentationml')
+    expect(fallbackMimeType('table.xlsx')).toContain('spreadsheetml')
+    expect(fallbackMimeType('book.epub')).toBe('application/epub+zip')
     expect(fallbackMimeType('archive.bin')).toBe('application/octet-stream')
   })
 })

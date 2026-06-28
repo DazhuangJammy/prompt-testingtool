@@ -3,6 +3,7 @@ import {
   fallbackMimeType,
   getAttachmentKind,
 } from '@/features/chat/model/attachments'
+import { parseDocumentFile } from '@/shared/document/documentParser'
 import type { ChatAttachment } from '@/shared/types'
 
 export async function createChatAttachment(file: File): Promise<ChatAttachment> {
@@ -17,6 +18,13 @@ export async function createChatAttachment(file: File): Promise<ChatAttachment> 
 
   if (kind === 'text') {
     return { ...base, text: await file.text() }
+  }
+  if (kind === 'document') {
+    const text = await parseDocumentFile(file)
+    if (!text.trim()) {
+      throw new Error('没有提取到可读文本')
+    }
+    return { ...base, text }
   }
 
   return { ...base, dataUrl: await readFileAsDataUrl(file) }

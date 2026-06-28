@@ -82,6 +82,7 @@ describe('knowledge model', () => {
   })
 
   it('recognizes supported file extensions', () => {
+    expect(isSupportedKnowledgeFile('demo.doc')).toBe(true)
     expect(isSupportedKnowledgeFile('demo.docx')).toBe(true)
     expect(isSupportedKnowledgeFile('demo.exe')).toBe(false)
   })
