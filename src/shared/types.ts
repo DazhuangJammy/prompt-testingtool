@@ -38,7 +38,6 @@ export type {
   WebSearchSettings,
   WebSearchStreamStatus,
 } from './webSearch.types'
-
 export type ThemeMode = 'light' | 'dark'
 export type WorkspaceMode = 'prompt' | 'knowledge' | 'skills'
 
@@ -61,6 +60,7 @@ export interface PromptCard {
   topicSessionId?: string
   title: string
   position: { x: number; y: number }
+  groupId?: string
   frameStyle?: CanvasNodeFrameStyle
   markdown?: string
   defaultCollapsed?: boolean
@@ -76,6 +76,7 @@ export interface InputCard {
   topicSessionId?: string
   title: string
   position: { x: number; y: number }
+  groupId?: string
   markdown: string
   collapsedMarkdownHeadingIds?: string[]
   frameStyle?: CanvasNodeFrameStyle
@@ -100,6 +101,7 @@ export interface CanvasShapeNode {
   position: CanvasPoint
   width: number
   height: number
+  groupId?: string
   frameStyle?: CanvasNodeFrameStyle
   createdAt: string
   updatedAt: string
@@ -124,6 +126,7 @@ export interface CanvasStroke {
   points: CanvasPoint[]
   color: string
   strokeWidth: number
+  groupId?: string
   createdAt: string
   updatedAt: string
 }
@@ -138,6 +141,7 @@ export interface CanvasTextNode {
   color: string
   fontSize: number
   backgroundColor: string
+  groupId?: string
   frameStyle?: CanvasNodeFrameStyle
   createdAt: string
   updatedAt: string
@@ -153,6 +157,7 @@ export interface CanvasImageNode {
   position: CanvasPoint
   width: number
   height: number
+  groupId?: string
   createdAt: string
   updatedAt: string
 }
@@ -423,7 +428,6 @@ export interface ChatAttachment {
   dataUrl?: string
   text?: string
 }
-
 
 export type CompletionContentPart =
   | { type: 'text'; text: string }

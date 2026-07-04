@@ -1,4 +1,5 @@
 import type { Node } from '@xyflow/react'
+import type { MouseEvent, PointerEvent } from 'react'
 import type { DefaultModelSettings, PromptCard, ProviderConfig } from '@/shared/types'
 
 export interface PromptNodeData extends Record<string, unknown> {
@@ -6,7 +7,7 @@ export interface PromptNodeData extends Record<string, unknown> {
   promptOptimizationProvider?: ProviderConfig
   promptOptimizationSettings?: DefaultModelSettings
   selectedCardId?: string
-  onSelect: (id: string) => void
+  onSelect: (id: string, event?: MouseEvent | PointerEvent) => void
   onChange: (card: PromptCard) => void
 }
 

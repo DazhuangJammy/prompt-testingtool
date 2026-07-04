@@ -254,6 +254,32 @@ describe('canvas clipboard', () => {
     })
   })
 
+  it('remaps copied group ids to a new group on paste', () => {
+    const groupedShape = { ...shape, groupId: 'source-group' }
+    const groupedText = { ...textNode, groupId: 'source-group' }
+    const ids = ['new-group', 'new-shape', 'new-text']
+
+    const result = createCanvasPastePayload({
+      anchor: { x: 100, y: 120 },
+      canvasId: 'next-canvas',
+      clipboard: {
+        edges: [],
+        imageNodes: [],
+        origin: { x: 60, y: 80 },
+        promptCards: [],
+        shapeNodes: [groupedShape],
+        strokes: [],
+        textNodes: [groupedText],
+      },
+      createNextId: () => ids.shift() ?? 'missing',
+      now: () => 'now',
+    })
+
+    expect(result.payload.shapeNodes[0].groupId).toBe('new-group')
+    expect(result.payload.textNodes[0].groupId).toBe('new-group')
+    expect(result.payload.shapeNodes[0].groupId).not.toBe('source-group')
+  })
+
   it('uses stroke bounds as origin when only a stroke is copied', () => {
     const clipboard = createCanvasClipboard({
       edges: [],

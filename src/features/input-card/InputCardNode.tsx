@@ -166,8 +166,8 @@ function InputCardNode({ data, selected }: NodeProps<InputCardFlowNode>) {
         frameStyle.highlighted ? 'is-highlighted' : ''
       }`}
       style={nodeStyle}
-      onClick={() => onSelect(card.id)}
-      onPointerDownCapture={() => onSelect(card.id)}
+      onClick={(event) => onSelect(card.id, event)}
+      onPointerDownCapture={(event) => onSelect(card.id, event)}
     >
       <CanvasConnectionHandles />
 

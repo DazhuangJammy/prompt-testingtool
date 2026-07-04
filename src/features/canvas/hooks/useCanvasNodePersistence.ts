@@ -83,7 +83,7 @@ export function useCanvasNodePersistence({
   const updateImageNode = useCallback(
     (
       id: string,
-      updates: Partial<Pick<CanvasImageNode, 'height' | 'position' | 'width'>>,
+      updates: Partial<Pick<CanvasImageNode, 'groupId' | 'height' | 'position' | 'width'>>,
     ) => {
       void touchAfter(canvasRepository.updateImageNode(id, updates))
     },
@@ -96,7 +96,13 @@ export function useCanvasNodePersistence({
       updates: Partial<
         Pick<
           CanvasShapeNode,
-          'body' | 'frameStyle' | 'height' | 'position' | 'title' | 'width'
+          | 'body'
+          | 'frameStyle'
+          | 'groupId'
+          | 'height'
+          | 'position'
+          | 'title'
+          | 'width'
         >
       >,
     ) => {
@@ -108,7 +114,7 @@ export function useCanvasNodePersistence({
   const updateInputCard = useCallback(
     (
       id: string,
-      updates: Partial<Pick<InputCard, 'frameStyle' | 'markdown' | 'position' | 'title'>>,
+      updates: Partial<Pick<InputCard, 'frameStyle' | 'groupId' | 'markdown' | 'position' | 'title'>>,
     ) => {
       void touchAfter(canvasRepository.updateInputCard(id, updates))
     },
@@ -125,6 +131,7 @@ export function useCanvasNodePersistence({
           | 'color'
           | 'fontSize'
           | 'frameStyle'
+          | 'groupId'
           | 'position'
           | 'text'
           | 'width'

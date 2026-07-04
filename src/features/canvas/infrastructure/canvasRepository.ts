@@ -1,5 +1,8 @@
 import { db } from '@/shared/storage/db'
 import type {
+  CanvasGroupAssignment,
+} from '@/features/canvas/model/canvasGrouping'
+import type {
   CanvasEdge,
   CanvasImageNode,
   InputCard,
@@ -31,7 +34,7 @@ export const canvasRepository = {
   async updateInputCard(
     id: string,
     updates: Partial<
-      Pick<InputCard, 'frameStyle' | 'markdown' | 'position' | 'title'>
+      Pick<InputCard, 'frameStyle' | 'groupId' | 'markdown' | 'position' | 'title'>
     >,
   ) {
     await db.inputCards.update(id, { ...updates, updatedAt: nowIso() })
@@ -55,7 +58,13 @@ export const canvasRepository = {
     updates: Partial<
       Pick<
         CanvasShapeNode,
-        'body' | 'frameStyle' | 'height' | 'position' | 'title' | 'width'
+        | 'body'
+        | 'frameStyle'
+        | 'groupId'
+        | 'height'
+        | 'position'
+        | 'title'
+        | 'width'
       >
     >,
   ) {
@@ -106,7 +115,7 @@ export const canvasRepository = {
 
   async updateStroke(
     id: string,
-    updates: Partial<Pick<CanvasStroke, 'color' | 'points' | 'strokeWidth'>>,
+    updates: Partial<Pick<CanvasStroke, 'color' | 'groupId' | 'points' | 'strokeWidth'>>,
   ) {
     await db.canvasStrokes.update(id, { ...updates, updatedAt: nowIso() })
   },
@@ -184,6 +193,7 @@ export const canvasRepository = {
         | 'color'
         | 'fontSize'
         | 'frameStyle'
+        | 'groupId'
         | 'position'
         | 'text'
         | 'width'
@@ -203,7 +213,7 @@ export const canvasRepository = {
 
   async updateImageNode(
     id: string,
-    updates: Partial<Pick<CanvasImageNode, 'height' | 'position' | 'width'>>,
+    updates: Partial<Pick<CanvasImageNode, 'groupId' | 'height' | 'position' | 'width'>>,
   ) {
     await db.canvasImageNodes.update(id, { ...updates, updatedAt: nowIso() })
   },
@@ -216,7 +226,61 @@ export const canvasRepository = {
     return db.canvasImageNodes.where('canvasId').equals(canvasId).sortBy('updatedAt')
   },
 
+  async updateCanvasGroupAssignments(
+    canvasId: string | undefined,
+    assignments: CanvasGroupAssignment[],
+  ) {
+    if (!assignments.length) return
+
+    const at = nowIso()
+    await db.transaction(
+      'rw',
+      [
+        db.canvases,
+        db.promptCards,
+        db.inputCards,
+        db.canvasShapeNodes,
+        db.canvasImageNodes,
+        db.canvasStrokes,
+        db.canvasTextNodes,
+      ],
+      async () => {
+        await Promise.all(
+          assignments.map((assignment) =>
+            updateGroupAssignment(assignment, {
+              groupId: assignment.groupId,
+              updatedAt: at,
+            }),
+          ),
+        )
+        if (canvasId) await db.canvases.update(canvasId, { updatedAt: at })
+      },
+    )
+  },
+
   async touchCanvas(canvasId: string) {
     await db.canvases.update(canvasId, { updatedAt: nowIso() })
   },
+}
+
+function updateGroupAssignment(
+  assignment: CanvasGroupAssignment,
+  updates: { groupId?: string; updatedAt: string },
+) {
+  if (assignment.kind === 'promptCard') {
+    return db.promptCards.update(assignment.id, updates)
+  }
+  if (assignment.kind === 'inputCard') {
+    return db.inputCards.update(assignment.id, updates)
+  }
+  if (assignment.kind === 'flowShape') {
+    return db.canvasShapeNodes.update(assignment.id, updates)
+  }
+  if (assignment.kind === 'canvasImage') {
+    return db.canvasImageNodes.update(assignment.id, updates)
+  }
+  if (assignment.kind === 'freeText') {
+    return db.canvasTextNodes.update(assignment.id, updates)
+  }
+  return db.canvasStrokes.update(assignment.id, updates)
 }

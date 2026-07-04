@@ -1,4 +1,5 @@
 import type { Node } from '@xyflow/react'
+import type { MouseEvent, PointerEvent } from 'react'
 import type { CanvasTool as SharedCanvasTool } from '@/shared/model/canvasToolShortcuts'
 import type {
   CanvasPoint,
@@ -14,7 +15,7 @@ export type CanvasTool = SharedCanvasTool
 export interface CanvasShapeNodeData extends Record<string, unknown> {
   node: CanvasShapeNode
   selectedNodeId?: string
-  onSelect: (id: string) => void
+  onSelect: (id: string, event?: MouseEvent | PointerEvent) => void
   onUpdate: (
     id: string,
     updates: Partial<
@@ -31,7 +32,7 @@ export type CanvasShapeFlowNode = Node<CanvasShapeNodeData, 'flowShape'>
 export interface InputCardNodeData extends Record<string, unknown> {
   card: InputCard
   selectedCardId?: string
-  onSelect: (id: string) => void
+  onSelect: (id: string, event?: MouseEvent | PointerEvent) => void
   onChange: (card: InputCard) => void
 }
 
@@ -40,7 +41,7 @@ export type InputCardFlowNode = Node<InputCardNodeData, 'inputCard'>
 export interface CanvasTextNodeData extends Record<string, unknown> {
   node: CanvasTextNode
   selectedNodeId?: string
-  onSelect: (id: string) => void
+  onSelect: (id: string, event?: MouseEvent | PointerEvent) => void
   onUpdate: (
     id: string,
     updates: Partial<
@@ -63,7 +64,7 @@ export type CanvasTextFlowNode = Node<CanvasTextNodeData, 'freeText'>
 export interface CanvasImageNodeData extends Record<string, unknown> {
   node: CanvasImageNode
   selectedNodeId?: string
-  onSelect: (id: string) => void
+  onSelect: (id: string, event?: MouseEvent | PointerEvent) => void
   onUpdate: (
     id: string,
     updates: Partial<Pick<CanvasImageNode, 'height' | 'position' | 'width'>>,
@@ -79,6 +80,7 @@ export interface CanvasStrokeNodeData extends Record<string, unknown> {
     minY: number
     width: number
   }
+  onSelect: (id: string, event?: MouseEvent | PointerEvent) => void
   selectedNodeId?: string
   stroke: CanvasStroke
   viewPoints: CanvasPoint[]

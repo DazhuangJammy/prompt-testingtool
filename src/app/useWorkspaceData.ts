@@ -13,6 +13,11 @@ import { deriveSelectableProviders } from '@/features/settings/model/providerCat
 import { ensureSeedData } from '@/features/workspace/application/seedWorkspace'
 import { repairLegacyWorkspaceTopicScopes } from '@/features/workspace/application/workspaceService'
 import { workspaceRepository } from '@/features/workspace/infrastructure/workspaceRepository'
+import {
+  readStoredActiveProviderId,
+  resolveActiveSelectableProviderId,
+  writeStoredActiveProviderId,
+} from './workspaceProviderSelection'
 import type {
   Canvas,
   DefaultModelSettings,
@@ -31,7 +36,9 @@ export function useWorkspaceData() {
   const [selectedCardId, setSelectedCardId] = useState<string | undefined>(() =>
     readStoredId('prompt-selected-card-id'),
   )
-  const [activeProviderId, setActiveProviderId] = useState<string>()
+  const [activeProviderId, setActiveProviderId] = useState<string | undefined>(
+    readStoredActiveProviderId,
+  )
 
   const canvases = useLiveQuery<Canvas[], Canvas[]>(
     () => workspaceRepository.listCanvasesByUpdatedAt(),
@@ -118,6 +125,10 @@ export function useWorkspaceData() {
     writeStoredId('prompt-selected-card-id', selectedCardId)
   }, [selectedCardId])
 
+  useEffect(() => {
+    writeStoredActiveProviderId(activeProviderId)
+  }, [activeProviderId])
+
   const effectiveSelectedCardId = promptCards?.some(
     (card) => card.id === selectedCardId,
   )
@@ -135,11 +146,10 @@ export function useWorkspaceData() {
     () => resolveDefaultModelProvider(providers ?? [], flowchartModelSettings),
     [flowchartModelSettings, providers],
   )
-  const effectiveProviderId = selectableProviders.some(
-    (provider) => provider.id === activeProviderId,
+  const effectiveProviderId = resolveActiveSelectableProviderId(
+    selectableProviders,
+    activeProviderId,
   )
-    ? activeProviderId
-    : selectableProviders[0]?.id
   const effectiveProviderConfigId =
     selectableProviders.find((provider) => provider.id === effectiveProviderId)
       ?.sourceProviderId ?? providers?.[0]?.id

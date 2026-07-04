@@ -311,6 +311,33 @@ class PromptCanvasDatabase extends Dexie {
       knowledgeItems: 'id, baseId, sourceType, status, updatedAt',
       knowledgeChunks: 'id, baseId, itemId, [baseId+itemId], createdAt',
     })
+    this.version(15).stores({
+      canvases: 'id, updatedAt',
+      promptCards: 'id, canvasId, updatedAt',
+      inputCards: 'id, canvasId, updatedAt',
+      canvasShapeNodes: 'id, canvasId, updatedAt',
+      canvasEdges: 'id, canvasId, sourceId, targetId, updatedAt',
+      canvasStrokes: 'id, canvasId, updatedAt',
+      canvasTextNodes: 'id, canvasId, updatedAt',
+      canvasImageNodes: 'id, canvasId, updatedAt',
+      promptVersions: 'id, promptCardId, createdAt',
+      providerConfigs: 'id, updatedAt',
+      defaultModelSettings: 'id, updatedAt',
+      chatSessions: 'id, canvasId, promptCardId, parentSessionId, hidden, updatedAt',
+      chatMessages: 'id, sessionId, createdAt, promptVersionId',
+      chatKnowledgeSelections: 'id, sessionId, updatedAt',
+      compareRuns: 'id, promptCardId, createdAt',
+      skillTopics: 'id, skillPath, agentSessionId, updatedAt',
+      skillLabMessages: 'id, topicId, agentSessionId, createdAt',
+      skillAnalysisSnapshots: 'id, topicId, createdAt',
+      skillsLabSettings: 'id, updatedAt',
+      webSearchSettings: 'id, updatedAt',
+      quickPhraseGroups: 'id, sortOrder, updatedAt',
+      quickPhrases: 'id, groupId, sortOrder, updatedAt',
+      knowledgeBases: 'id, providerType, updatedAt',
+      knowledgeItems: 'id, baseId, sourceType, status, updatedAt',
+      knowledgeChunks: 'id, baseId, itemId, [baseId+itemId], createdAt',
+    })
   }
 }
 

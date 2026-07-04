@@ -9,6 +9,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const host = process.env.PROMPT_TOOL_HOST ?? '127.0.0.1'
 const webPort = Number(process.env.PROMPT_TOOL_WEB_PORT ?? 5173)
 const apiPort = Number(process.env.PROMPT_TOOL_API_PORT ?? 8787)
+const webUrl = process.env.PROMPT_TOOL_WEB_URL ?? `http://localhost:${webPort}`
+const shouldOpenBrowser = !process.argv.slice(2).includes('--no-open')
 
 try {
   ensureTooling()
@@ -37,16 +39,22 @@ try {
   )
 
   let opened = false
+  let checkingReady = false
   const openTimer = setInterval(async () => {
-    if (opened) return
-    if (await isPortOpen(host, webPort)) {
-      opened = true
-      clearInterval(openTimer)
-      console.log('')
-      console.log('Prompt Canvas dev is ready:')
-      console.log(`  http://localhost:${webPort}`)
-      console.log('')
-      openBrowser(`http://localhost:${webPort}`)
+    if (opened || checkingReady) return
+    checkingReady = true
+    try {
+      if (await isWebReady(webUrl)) {
+        opened = true
+        clearInterval(openTimer)
+        console.log('')
+        console.log('Prompt Canvas dev is ready:')
+        console.log(`  ${webUrl}`)
+        console.log('')
+        if (shouldOpenBrowser) openBrowser(webUrl)
+      }
+    } finally {
+      checkingReady = false
     }
   }, 250)
 
@@ -180,9 +188,22 @@ function isPortOpen(targetHost, targetPort) {
   })
 }
 
+async function isWebReady(url) {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 1000)
+  try {
+    const response = await fetch(url, { signal: controller.signal })
+    return response.ok || response.status < 500
+  } catch {
+    return false
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 function openBrowser(url) {
   const commands = {
-    darwin: ['open', [url]],
+    darwin: ['/usr/bin/open', [url]],
     linux: ['xdg-open', [url]],
     win32: ['cmd', ['/c', 'start', '', url]],
   }

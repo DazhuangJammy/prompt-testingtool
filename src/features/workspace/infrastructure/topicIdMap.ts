@@ -34,6 +34,22 @@ export function createTopicImportIdMap(payload: ChatTopicExportPayload) {
       (node) => [node.id, crypto.randomUUID()] as const,
     ),
   ])
+  const groups = new Map(
+    Array.from(
+      new Set(
+        [
+          ...payload.promptCards,
+          ...(payload.inputCards ?? []),
+          ...(payload.canvasShapeNodes ?? []),
+          ...(payload.canvasImageNodes ?? []),
+          ...(payload.canvasStrokes ?? []),
+          ...(payload.canvasTextNodes ?? []),
+        ]
+          .map((node) => node.groupId)
+          .filter((groupId): groupId is string => Boolean(groupId)),
+      ),
+    ).map((groupId) => [groupId, crypto.randomUUID()]),
+  )
 
   return {
     promptCards,
@@ -51,6 +67,7 @@ export function createTopicImportIdMap(payload: ChatTopicExportPayload) {
     compareRuns: new Map(
       payload.compareRuns.map((run) => [run.id, crypto.randomUUID()]),
     ),
+    groups,
   }
 }
 

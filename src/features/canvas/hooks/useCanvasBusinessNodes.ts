@@ -1,10 +1,12 @@
 import { useMemo } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
+import type { Dispatch, MouseEvent, PointerEvent, SetStateAction } from 'react'
 import { canvasRepository } from '@/features/canvas/infrastructure/canvasRepository'
 import {
   createCanvasFlowNodes,
   type CanvasFlowNode,
 } from '@/features/canvas/model/canvasFlowMapping'
+import type { CanvasGroupLookup } from '@/features/canvas/model/canvasGrouping'
+import { expandCanvasNodeIdsByGroups } from '@/features/canvas/model/canvasGrouping'
 import type { FlowSelectionIds } from '@/features/canvas/model/flowSelection'
 import type { CanvasTextStyle } from '@/features/canvas/model/textStyle'
 import type {
@@ -24,8 +26,10 @@ type NodePersistence = ReturnType<typeof useCanvasNodePersistence>
 export function useCanvasBusinessNodes({
   imageNodes,
   inputCards,
+  groupLookup,
   nodePersistence,
   onSelectCard,
+  onSyncFlowSelection,
   promptCards,
   promptOptimizationProvider,
   promptOptimizationSettings,
@@ -38,8 +42,10 @@ export function useCanvasBusinessNodes({
 }: {
   imageNodes: CanvasImageNode[]
   inputCards: InputCard[]
+  groupLookup: CanvasGroupLookup
   nodePersistence: NodePersistence
   onSelectCard: (id: string) => void
+  onSyncFlowSelection: (nodeIds: string[]) => void
   promptCards: PromptCard[]
   promptOptimizationProvider?: ProviderConfig
   promptOptimizationSettings?: DefaultModelSettings
@@ -51,8 +57,18 @@ export function useCanvasBusinessNodes({
   textNodes: CanvasTextNode[]
 }): CanvasFlowNode[] {
   return useMemo(
-    () =>
-      createCanvasFlowNodes({
+    () => {
+      const selectNodeGroup = (
+        id: string,
+        event?: MouseEvent | PointerEvent,
+      ) => {
+        void event
+        const nodeIds = expandCanvasNodeIdsByGroups([id], groupLookup)
+        setSelectedFlowIds({ edges: [], nodes: nodeIds })
+        onSyncFlowSelection(nodeIds)
+      }
+
+      return createCanvasFlowNodes({
         promptCards,
         selectedNodeIds,
         imageNodes,
@@ -69,15 +85,17 @@ export function useCanvasBusinessNodes({
         promptOptimizationProvider,
         promptOptimizationSettings,
         onSelectInputCard: (id) => {
-          setSelectedFlowIds({ edges: [], nodes: [id] })
+          selectNodeGroup(id)
         },
-        onSelectPrompt: onSelectCard,
-        onSelectShape: () => undefined,
-        onSelectImage: (id) => {
-          setSelectedFlowIds({ edges: [], nodes: [id] })
+        onSelectPrompt: (id, event) => {
+          selectNodeGroup(id, event)
+          onSelectCard(id)
         },
-        onSelectText: (id) => {
-          setSelectedFlowIds({ edges: [], nodes: [id] })
+        onSelectShape: selectNodeGroup,
+        onSelectImage: selectNodeGroup,
+        onSelectStroke: selectNodeGroup,
+        onSelectText: (id, event) => {
+          selectNodeGroup(id, event)
           const selectedText = textNodes.find((node) => node.id === id)
           if (selectedText) {
             setTextStyle({
@@ -90,8 +108,10 @@ export function useCanvasBusinessNodes({
         onUpdateImage: nodePersistence.updateImageNode,
         onUpdateShape: nodePersistence.updateShapeNode,
         onUpdateText: nodePersistence.updateTextNode,
-      }),
+      })
+    },
     [
+      groupLookup,
       imageNodes,
       inputCards,
       nodePersistence.updateImageNode,
@@ -102,6 +122,7 @@ export function useCanvasBusinessNodes({
       promptOptimizationProvider,
       promptOptimizationSettings,
       selectedNodeIds,
+      onSyncFlowSelection,
       setSelectedFlowIds,
       setTextStyle,
       shapeNodes,

@@ -220,6 +220,7 @@ function renderPreviewNodes(
     onSelectImage: () => undefined,
     onSelectPrompt: () => undefined,
     onSelectShape: () => undefined,
+    onSelectStroke: () => undefined,
     onSelectText: () => undefined,
     onUpdateImage: () => undefined,
     onUpdateShape: () => undefined,

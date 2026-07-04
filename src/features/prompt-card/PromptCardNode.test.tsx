@@ -29,7 +29,7 @@ afterEach(() => {
 
 describe('PromptCardNode', () => {
   it('selects the prompt card during pointer capture', () => {
-    const onSelect = vi.fn<(id: string) => void>()
+    const onSelect = vi.fn()
     host = document.createElement('div')
     document.body.append(host)
     root = createRoot(host)
@@ -72,7 +72,8 @@ describe('PromptCardNode', () => {
         ?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
     })
 
-    expect(onSelect).toHaveBeenCalledWith('card-2')
+    expect(onSelect).toHaveBeenCalled()
+    expect(onSelect.mock.calls[0]?.[0]).toBe('card-2')
   })
 
   it('saves markdown editing when the canvas asks active editors to commit', () => {

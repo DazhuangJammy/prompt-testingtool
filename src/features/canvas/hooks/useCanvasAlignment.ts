@@ -77,8 +77,11 @@ export function useCanvasAlignment({
   )
 
   const handleNodeDragStop = useCallback<OnNodeDrag<CanvasFlowNode>>(
-    (_, node) => {
-      onPersistNodeRef.current(getNodeRef.current(node.id) ?? node)
+    (_, node, draggedNodes) => {
+      const nodesToPersist = draggedNodes.length ? draggedNodes : [node]
+      nodesToPersist.forEach((draggedNode) => {
+        onPersistNodeRef.current(getNodeRef.current(draggedNode.id) ?? draggedNode)
+      })
       setAlignmentGuides([])
     },
     [],

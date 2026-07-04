@@ -1,0 +1,22 @@
+appId: com.promptcanvastool.desktop
+productName: Prompt Canvas Tool
+directories:
+  output: desktop-release
+files:
+  - electron/**/*
+  - server/**/*
+  - dist/**/*
+  - package.json
+  - node_modules/**/*
+  - "!**/*.test.*"
+  - "!**/{test,tests,__tests__,coverage}/**"
+  - "!**/*.{map,ts,tsx,jsx,md,markdown}"
+  - "!node_modules/.cache/**"
+asar: true
+mac:
+  category: public.app-category.productivity
+  artifactName: Prompt-Canvas-Tool-${version}-${arch}.${ext}
+  target:
+    - target: dmg
+dmg:
+  writeUpdateInfo: false

@@ -3,7 +3,7 @@ import { memo } from 'react'
 import type { CanvasStrokeFlowNode } from '@/features/canvas/model/flowTypes'
 
 function FreehandStrokeNode({ data }: NodeProps<CanvasStrokeFlowNode>) {
-  const { bounds, selectedNodeId, stroke, viewPoints } = data
+  const { bounds, onSelect, selectedNodeId, stroke, viewPoints } = data
   const selected = selectedNodeId === stroke.id
   const path = pointsToPath(viewPoints)
 
@@ -11,6 +11,8 @@ function FreehandStrokeNode({ data }: NodeProps<CanvasStrokeFlowNode>) {
     <svg
       className={`stroke-node ${selected ? 'is-selected' : ''}`}
       height={bounds.height}
+      onClick={(event) => onSelect(stroke.id, event)}
+      onPointerDownCapture={(event) => onSelect(stroke.id, event)}
       viewBox={`0 0 ${bounds.width} ${bounds.height}`}
       width={bounds.width}
     >

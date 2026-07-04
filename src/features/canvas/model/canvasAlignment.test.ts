@@ -89,6 +89,7 @@ function strokeNode(id: string, position: { x: number; y: number }): CanvasFlowN
     type: 'freehandStroke',
     data: {
       bounds: { height: 40, minX: position.x, minY: position.y, width: 40 },
+      onSelect: () => undefined,
       stroke: {
         id,
         canvasId: 'canvas',

@@ -146,8 +146,9 @@ function FlowShapeNode({ data }: NodeProps<CanvasShapeFlowNode>) {
         frameStyle.highlighted ? 'is-highlighted' : ''
       }`}
       style={nodeStyle}
-      onClick={() => onSelect(node.id)}
+      onClick={(event) => onSelect(node.id, event)}
       onDoubleClick={startEditing}
+      onPointerDownCapture={(event) => onSelect(node.id, event)}
       onWheelCapture={handleWheel}
       onPointerEnter={() => setHovering(true)}
       onPointerLeave={() => setHovering(false)}

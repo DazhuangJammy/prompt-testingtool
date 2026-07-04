@@ -1,4 +1,5 @@
 import { MarkerType, type Edge } from '@xyflow/react'
+import type { MouseEvent, PointerEvent } from 'react'
 import {
   getStrokeBounds,
   toStrokeViewPoints,
@@ -31,6 +32,11 @@ export type CanvasFlowNode =
   | CanvasTextFlowNode
   | CanvasStrokeFlowNode
 
+type CanvasNodeSelectHandler = (
+  id: string,
+  event?: MouseEvent | PointerEvent,
+) => void
+
 interface CreateCanvasNodesOptions {
   promptCards: PromptCard[]
   promptOptimizationProvider?: ProviderConfig
@@ -43,21 +49,28 @@ interface CreateCanvasNodesOptions {
   textNodes: CanvasTextNode[]
   onSavePromptCard: (card: PromptCard) => void
   onSaveInputCard?: (card: InputCard) => void
-  onSelectPrompt: (id: string) => void
-  onSelectInputCard?: (id: string) => void
-  onSelectShape: (id: string) => void
-  onSelectImage: (id: string) => void
-  onSelectText: (id: string) => void
+  onSelectPrompt: CanvasNodeSelectHandler
+  onSelectInputCard?: CanvasNodeSelectHandler
+  onSelectShape: CanvasNodeSelectHandler
+  onSelectImage: CanvasNodeSelectHandler
+  onSelectStroke: CanvasNodeSelectHandler
+  onSelectText: CanvasNodeSelectHandler
   onUpdateImage: (
     id: string,
-    updates: Partial<Pick<CanvasImageNode, 'height' | 'position' | 'width'>>,
+    updates: Partial<Pick<CanvasImageNode, 'groupId' | 'height' | 'position' | 'width'>>,
   ) => void
   onUpdateShape: (
     id: string,
     updates: Partial<
       Pick<
         CanvasShapeNode,
-        'body' | 'frameStyle' | 'height' | 'position' | 'title' | 'width'
+        | 'body'
+        | 'frameStyle'
+        | 'groupId'
+        | 'height'
+        | 'position'
+        | 'title'
+        | 'width'
       >
     >,
   ) => void
@@ -70,6 +83,7 @@ interface CreateCanvasNodesOptions {
         | 'color'
         | 'fontSize'
         | 'frameStyle'
+        | 'groupId'
         | 'position'
         | 'text'
         | 'width'
@@ -85,6 +99,7 @@ export function createCanvasFlowNodes({
   onSelectInputCard = () => undefined,
   onSelectImage,
   onSelectShape,
+  onSelectStroke,
   onSelectText,
   onUpdateImage,
   onUpdateShape,
@@ -198,6 +213,7 @@ export function createCanvasFlowNodes({
         selected: selectedNodeIds.includes(stroke.id),
         data: {
           bounds,
+          onSelect: onSelectStroke,
           selectedNodeId: selectedNodeIds.includes(stroke.id) ? stroke.id : undefined,
           stroke,
           viewPoints: toStrokeViewPoints(stroke.points, bounds),
@@ -371,6 +387,7 @@ function toComparableFlowNodeData(node: CanvasFlowNode) {
   if (node.type === 'freehandStroke') {
     return {
       bounds: node.data.bounds,
+      onSelect: node.data.onSelect,
       selectedNodeId: node.data.selectedNodeId,
       stroke: node.data.stroke,
       viewPoints: node.data.viewPoints,

@@ -9,10 +9,12 @@ import {
   ViewportPortal,
   type EdgeChange,
   type Edge,
+  type NodeMouseHandler,
   type OnEdgesChange,
   type OnSelectionChangeFunc,
   useReactFlow,
 } from '@xyflow/react'
+import { Group, Ungroup } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { CanvasAlignmentGuides } from '@/features/canvas/components/CanvasAlignmentGuides'
 import { CanvasLayoutControls } from '@/features/canvas/components/CanvasLayoutControls'
@@ -33,13 +35,22 @@ import { useCanvasToolKeyboardShortcuts } from '@/features/canvas/hooks/useCanva
 import { useCanvasTextStyle } from '@/features/canvas/hooks/useCanvasTextStyle'
 import { useCanvasViewportPersistence } from '@/features/canvas/hooks/useCanvasViewportPersistence'
 import { useDraftStroke } from '@/features/canvas/hooks/useDraftStroke'
+import { canvasRepository } from '@/features/canvas/infrastructure/canvasRepository'
 import type { CanvasWorkspaceProps } from '@/features/canvas/CanvasWorkspace.types'
+import {
+  createCanvasGroupAssignments,
+  createCanvasGroupLookup,
+  expandCanvasNodeIdsByGroups,
+  getCanvasFlowSelectionBounds,
+  resolveCanvasGroupAction,
+} from '@/features/canvas/model/canvasGrouping'
 import { canvasNodeTypes, penColors } from '@/features/canvas/model/canvasWorkspaceRegistry'
 import { createCanvasFlowEdges, type CanvasFlowNode } from '@/features/canvas/model/canvasFlowMapping'
 import type { CanvasTool } from '@/features/canvas/model/flowTypes'
 import {
   areFlowSelectionsEqual,
   emptyFlowSelection,
+  replaceSelectedFlowItems,
   toFlowSelectionIds,
   type FlowSelectionIds,
 } from '@/features/canvas/model/flowSelection'
@@ -91,6 +102,28 @@ export function CanvasWorkspace({
   const canvasStrokes = scopedRecords.canvasStrokes
   const canvasTextNodes = scopedRecords.canvasTextNodes
   const scopedPromptCards = scopedRecords.promptCards
+  const groupingElements = useMemo(
+    () => ({
+      imageNodes: canvasImageNodes,
+      inputCards,
+      promptCards: scopedPromptCards,
+      shapeNodes: canvasShapeNodes,
+      strokes: canvasStrokes,
+      textNodes: canvasTextNodes,
+    }),
+    [
+      canvasImageNodes,
+      canvasShapeNodes,
+      canvasStrokes,
+      canvasTextNodes,
+      inputCards,
+      scopedPromptCards,
+    ],
+  )
+  const groupLookup = useMemo(
+    () => createCanvasGroupLookup(groupingElements),
+    [groupingElements],
+  )
   const updateSelection = useCallback((nextSelection: FlowSelectionIds) => {
     setSelectedFlowIds((currentSelection) =>
       areFlowSelectionsEqual(currentSelection, nextSelection)
@@ -101,6 +134,13 @@ export function CanvasWorkspace({
   const clearSelection = useCallback(
     () => updateSelection(emptyFlowSelection),
     [updateSelection],
+  )
+  const syncFlowNodeSelection = useCallback(
+    (nodeIds: string[]) => {
+      reactFlow.setNodes((nodes) => replaceSelectedFlowItems(nodes, nodeIds))
+      reactFlow.setEdges((edges) => replaceSelectedFlowItems(edges, []))
+    },
+    [reactFlow],
   )
   const nodePersistence = useCanvasNodePersistence({
     canvasId: effectiveCanvasId,
@@ -126,8 +166,10 @@ export function CanvasWorkspace({
   const businessNodes = useCanvasBusinessNodes({
     imageNodes: canvasImageNodes,
     inputCards,
+    groupLookup,
     nodePersistence,
     onSelectCard,
+    onSyncFlowSelection: syncFlowNodeSelection,
     promptCards: scopedPromptCards,
     promptOptimizationProvider,
     promptOptimizationSettings,
@@ -149,6 +191,14 @@ export function CanvasWorkspace({
     handleNodeChanges,
     setFlowNodes,
   } = useCanvasFlowState({ businessEdges, businessNodes })
+  const selectedGroupAction = useMemo(
+    () => resolveCanvasGroupAction(selectedFlowIds.nodes, groupLookup),
+    [groupLookup, selectedFlowIds.nodes],
+  )
+  const selectionBounds = useMemo(
+    () => getCanvasFlowSelectionBounds(flowNodes, selectedFlowIds.nodes),
+    [flowNodes, selectedFlowIds.nodes],
+  )
   const getFlowNode = useCallback(
     (nodeId: string) => reactFlow.getNode(nodeId) as CanvasFlowNode | undefined,
     [reactFlow],
@@ -174,12 +224,16 @@ export function CanvasWorkspace({
   const handleSelectionChange = useCallback<
     OnSelectionChangeFunc<CanvasFlowNode, Edge>
   >(({ edges, nodes }) => {
-    updateSelection(toFlowSelectionIds({ edges, nodes }))
+    const nextSelection = toFlowSelectionIds({ edges, nodes })
+    updateSelection({
+      edges: nextSelection.edges,
+      nodes: expandCanvasNodeIdsByGroups(nextSelection.nodes, groupLookup),
+    })
     if (nodes.length || edges.length) {
       const selectedPrompt = nodes.find((node) => node.type === 'promptCard')
       if (selectedPrompt) onSelectCard(selectedPrompt.id)
     }
-  }, [onSelectCard, updateSelection])
+  }, [groupLookup, onSelectCard, updateSelection])
 
   const handleEdgesChange = useCallback<OnEdgesChange<Edge>>(
     (changes: EdgeChange<Edge>[]) => {
@@ -197,6 +251,24 @@ export function CanvasWorkspace({
     },
     [updateFlowEdges],
   )
+
+  const handleApplyGroupAction = useCallback(() => {
+    if (!selectedGroupAction) return
+
+    const assignments = createCanvasGroupAssignments({
+      elements: groupingElements,
+      groupId:
+        selectedGroupAction.kind === 'group' ? crypto.randomUUID() : undefined,
+      nodeIds: selectedFlowIds.nodes,
+    })
+
+    void canvasRepository.updateCanvasGroupAssignments(effectiveCanvasId, assignments)
+  }, [
+    effectiveCanvasId,
+    groupingElements,
+    selectedFlowIds.nodes,
+    selectedGroupAction,
+  ])
 
   const { handleConnect, handleReconnect, handleReconnectEnd } =
     useCanvasConnectionHandlers({
@@ -218,6 +290,20 @@ export function CanvasWorkspace({
     onSelectTool: selectTool,
     shortcuts: toolShortcuts,
   })
+
+  const handleNodeClick = useCallback<NodeMouseHandler<CanvasFlowNode>>(
+    (_, node) => {
+      deactivateShortcutScope()
+      updateSelection({
+        edges: [],
+        nodes: expandCanvasNodeIdsByGroups([node.id], groupLookup),
+      })
+      if (node.type === 'promptCard') {
+        onSelectCard(node.id)
+      }
+    },
+    [deactivateShortcutScope, groupLookup, onSelectCard, updateSelection],
+  )
 
   const handlePaneClick = useCanvasPaneClick({
     activeTool,
@@ -298,13 +384,7 @@ export function CanvasWorkspace({
           event.stopPropagation()
           updateSelection({ edges: [edge.id], nodes: [] })
         }}
-        onNodeClick={(_, node) => {
-          deactivateShortcutScope()
-          updateSelection({ edges: [], nodes: [node.id] })
-          if (node.type === 'promptCard') {
-            onSelectCard(node.id)
-          }
-        }}
+        onNodeClick={handleNodeClick}
         onNodeDrag={canvasAlignment.handleNodeDrag}
         onNodeDragStop={canvasAlignment.handleNodeDragStop}
         onEdgesChange={handleEdgesChange}
@@ -348,6 +428,27 @@ export function CanvasWorkspace({
         <ViewportPortal>
           <DraftStrokeLayer points={draftPoints} />
           <CanvasAlignmentGuides guides={canvasAlignment.alignmentGuides} />
+          {selectedGroupAction && selectionBounds && (
+            <div
+              className="canvas-selection-group-toolbar nodrag nopan"
+              style={{
+                transform: `translate(${selectionBounds.x + selectionBounds.width / 2}px, ${
+                  selectionBounds.y - 44
+                }px)`,
+              }}
+            >
+              <button type="button" onClick={handleApplyGroupAction}>
+                {selectedGroupAction.kind === 'group' ? (
+                  <Group aria-hidden="true" />
+                ) : (
+                  <Ungroup aria-hidden="true" />
+                )}
+                <span>
+                  {selectedGroupAction.kind === 'group' ? '组合' : '解除组合'}
+                </span>
+              </button>
+            </div>
+          )}
         </ViewportPortal>
         <Controls position="bottom-left" showInteractive={false}>
           <CanvasLayoutControls

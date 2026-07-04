@@ -382,4 +382,41 @@ describe('canvas repository', () => {
     expect(db.canvasEdges.bulkPut).toHaveBeenCalled()
     expect(db.canvases.update).toHaveBeenCalledWith('canvas', expect.any(Object))
   })
+
+  it('updates canvas group assignments across node tables', async () => {
+    await canvasRepository.updateCanvasGroupAssignments('canvas', [
+      { groupId: 'group', id: 'card', kind: 'promptCard' },
+      { groupId: 'group', id: 'input', kind: 'inputCard' },
+      { groupId: 'group', id: 'shape', kind: 'flowShape' },
+      { groupId: undefined, id: 'image', kind: 'canvasImage' },
+      { groupId: undefined, id: 'text', kind: 'freeText' },
+      { groupId: undefined, id: 'stroke', kind: 'freehandStroke' },
+    ])
+
+    expect(db.promptCards.update).toHaveBeenCalledWith('card', {
+      groupId: 'group',
+      updatedAt: expect.any(String),
+    })
+    expect(db.inputCards.update).toHaveBeenCalledWith('input', {
+      groupId: 'group',
+      updatedAt: expect.any(String),
+    })
+    expect(db.canvasShapeNodes.update).toHaveBeenCalledWith('shape', {
+      groupId: 'group',
+      updatedAt: expect.any(String),
+    })
+    expect(db.canvasImageNodes.update).toHaveBeenCalledWith('image', {
+      groupId: undefined,
+      updatedAt: expect.any(String),
+    })
+    expect(db.canvasTextNodes.update).toHaveBeenCalledWith('text', {
+      groupId: undefined,
+      updatedAt: expect.any(String),
+    })
+    expect(db.canvasStrokes.update).toHaveBeenCalledWith('stroke', {
+      groupId: undefined,
+      updatedAt: expect.any(String),
+    })
+    expect(db.canvases.update).toHaveBeenCalledWith('canvas', expect.any(Object))
+  })
 })

@@ -51,7 +51,8 @@ function CanvasImageNode({ data }: NodeProps<CanvasImageFlowNode>) {
         className={`canvas-image-node ${isSelected ? 'is-selected' : ''} ${
           hovering ? 'is-hovered' : ''
         }`}
-        onClick={() => onSelect(node.id)}
+        onClick={(event) => onSelect(node.id, event)}
+        onPointerDownCapture={(event) => onSelect(node.id, event)}
         onPointerEnter={() => setHovering(true)}
         onPointerLeave={() => setHovering(false)}
       >

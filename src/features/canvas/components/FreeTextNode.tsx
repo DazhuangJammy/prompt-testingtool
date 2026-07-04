@@ -105,8 +105,9 @@ function FreeTextNode({ data }: NodeProps<CanvasTextFlowNode>) {
         frameStyle.highlighted ? 'is-highlighted' : ''
       }`}
       style={style}
-      onClick={() => onSelect(node.id)}
+      onClick={(event) => onSelect(node.id, event)}
       onDoubleClick={startEditing}
+      onPointerDownCapture={(event) => onSelect(node.id, event)}
     >
       <NodeResizer
         autoScale

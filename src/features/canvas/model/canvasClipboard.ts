@@ -111,6 +111,7 @@ export function createCanvasPastePayload({
     y: anchor.y - clipboard.origin.y,
   }
   const nodeIdMap = new Map<string, string>()
+  const groupIdMap = createGroupIdMap(clipboard, createNextId)
 
   const promptCards = clipboard.promptCards.map((card) => {
     const id = createNextId()
@@ -125,6 +126,7 @@ export function createCanvasPastePayload({
       position: movePoint(card.position, delta),
       sections: clonePromptSections(card, createNextId),
       title: `${card.title} 副本`,
+      groupId: remapGroupId(card.groupId, groupIdMap),
       updatedAt: at,
     }
   })
@@ -139,6 +141,7 @@ export function createCanvasPastePayload({
       createdAt: at,
       id,
       position: movePoint(node.position, delta),
+      groupId: remapGroupId(node.groupId, groupIdMap),
       updatedAt: at,
     }
   })
@@ -154,6 +157,7 @@ export function createCanvasPastePayload({
       id,
       position: movePoint(card.position, delta),
       title: `${card.title} 副本`,
+      groupId: remapGroupId(card.groupId, groupIdMap),
       updatedAt: at,
     }
   })
@@ -168,6 +172,7 @@ export function createCanvasPastePayload({
       createdAt: at,
       id,
       position: movePoint(node.position, delta),
+      groupId: remapGroupId(node.groupId, groupIdMap),
       updatedAt: at,
     }
   })
@@ -182,6 +187,7 @@ export function createCanvasPastePayload({
       createdAt: at,
       id,
       position: movePoint(node.position, delta),
+      groupId: remapGroupId(node.groupId, groupIdMap),
       updatedAt: at,
     }
   })
@@ -194,6 +200,7 @@ export function createCanvasPastePayload({
       canvasId,
       topicSessionId,
       createdAt: at,
+      groupId: remapGroupId(stroke.groupId, groupIdMap),
       id,
       points: movePoints(stroke.points, delta),
       updatedAt: at,
@@ -281,6 +288,36 @@ function movePoint(point: CanvasPoint, delta: CanvasPoint): CanvasPoint {
     x: point.x + delta.x,
     y: point.y + delta.y,
   }
+}
+
+function createGroupIdMap(
+  clipboard: CanvasClipboardSnapshot,
+  createNextId: () => string,
+) {
+  const sourceGroupIds = new Set<string>()
+  const nodes = [
+    ...clipboard.promptCards,
+    ...(clipboard.inputCards ?? []),
+    ...clipboard.shapeNodes,
+    ...clipboard.imageNodes,
+    ...clipboard.textNodes,
+    ...clipboard.strokes,
+  ]
+
+  nodes.forEach((node) => {
+    if (node.groupId) sourceGroupIds.add(node.groupId)
+  })
+
+  return new Map(
+    Array.from(sourceGroupIds).map((groupId) => [groupId, createNextId()]),
+  )
+}
+
+function remapGroupId(
+  groupId: string | undefined,
+  groupIdMap: Map<string, string>,
+) {
+  return groupId ? groupIdMap.get(groupId) : undefined
 }
 
 function clonePromptSections(

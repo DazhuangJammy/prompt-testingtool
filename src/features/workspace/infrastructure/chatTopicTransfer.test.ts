@@ -79,6 +79,7 @@ describe('chat topic transfer', () => {
             title: 'Input',
             markdown: '# A\n\nbody',
             position: { x: 1, y: 2 },
+            groupId: 'source-group',
             createdAt: 'old',
             updatedAt: 'old',
           },
@@ -107,6 +108,7 @@ describe('chat topic transfer', () => {
             position: { x: 5, y: 6 },
             width: 100,
             height: 80,
+            groupId: 'source-group',
             createdAt: 'old',
             updatedAt: 'old',
           },
@@ -132,6 +134,7 @@ describe('chat topic transfer', () => {
             color: '#fff',
             fontSize: 16,
             backgroundColor: 'transparent',
+            groupId: 'source-group',
             createdAt: 'old',
             updatedAt: 'old',
           },
@@ -201,6 +204,10 @@ describe('chat topic transfer', () => {
     expect(savedImageNode.topicSessionId).toBe(savedSession.id)
     expect(savedStroke.topicSessionId).toBe(savedSession.id)
     expect(savedTextNode.topicSessionId).toBe(savedSession.id)
+    expect(savedInputCard.groupId).toEqual(expect.any(String))
+    expect(savedInputCard.groupId).not.toBe('source-group')
+    expect(savedImageNode.groupId).toBe(savedInputCard.groupId)
+    expect(savedTextNode.groupId).toBe(savedInputCard.groupId)
     expect(savedEdge).toEqual(
       expect.objectContaining({
         sourceId: savedInputCard.id,
