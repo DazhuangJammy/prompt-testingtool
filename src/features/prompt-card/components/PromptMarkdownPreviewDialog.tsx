@@ -47,7 +47,9 @@ export function PromptMarkdownPreviewDialog({
           </div>
         </div>
         <article className="prompt-preview-body markdown-preview">
-          <MarkdownRenderer>{markdown}</MarkdownRenderer>
+          <MarkdownRenderer preserveLineBreaks protectSpecialBlockHeadings>
+            {markdown}
+          </MarkdownRenderer>
         </article>
       </section>
     </div>,

@@ -222,6 +222,7 @@ export function ChatPanel({
               onSelectProvider={onSelectProvider}
             />
             <MessageList
+              generating={state.isRequestActive('main')}
               messages={state.mainMessages}
               onEdit={state.editMessage}
               onResend={state.resendMainMessage}
@@ -341,7 +342,12 @@ function SplitPane({
         onToggleCompare={onCloseCompare}
         onSelectProvider={onProviderChange}
       />
-      <MessageList messages={pane.messages} onEdit={onEdit} onResend={onResend} />
+      <MessageList
+        generating={generating}
+        messages={pane.messages}
+        onEdit={onEdit}
+        onResend={onResend}
+      />
       <div className="pane-card-select">
         <select
           aria-label="提示词卡片"

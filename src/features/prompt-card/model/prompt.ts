@@ -1,4 +1,5 @@
 import type { PromptCard, PromptSection, WorkflowStep } from '@/shared/types'
+import { collectMarkdownHeadingsOutsideProtectedBlocks } from '@/shared/model/markdownProtection'
 import { createId } from '@/shared/utils/identity'
 import { nowIso } from '@/shared/utils/time'
 import {
@@ -114,7 +115,7 @@ export const parseMarkdownHeadingBlocks = (
   if (!normalizedMarkdown) return []
 
   const lines = normalizedMarkdown.split('\n')
-  const headings = collectMarkdownHeadings(lines).filter(
+  const headings = collectMarkdownHeadingsOutsideProtectedBlocks(lines).filter(
     (heading) => heading.depth === depth,
   )
 
@@ -141,7 +142,7 @@ export const parseMarkdownOutline = (markdown: string): MarkdownOutline => {
   if (!normalizedMarkdown) return { preface: '', nodes: [] }
 
   const lines = normalizedMarkdown.split('\n')
-  const headings = collectMarkdownHeadings(lines)
+  const headings = collectMarkdownHeadingsOutsideProtectedBlocks(lines)
   if (!headings.length) return { preface: normalizedMarkdown, nodes: [] }
 
   const nodes = headings.map<MarkdownOutlineNode>((heading, index) => {
@@ -327,7 +328,7 @@ function parsePromptMarkdown(markdown: string) {
   if (!normalizedMarkdown) return sections
 
   const lines = normalizedMarkdown.split('\n')
-  const headingMatches = collectMarkdownHeadings(lines).filter(
+  const headingMatches = collectMarkdownHeadingsOutsideProtectedBlocks(lines).filter(
     (heading) => heading.depth === 1,
   )
 
@@ -356,37 +357,6 @@ function parsePromptMarkdown(markdown: string) {
   })
 
   return sections
-}
-
-function collectMarkdownHeadings(lines: string[]) {
-  const headings: Array<{ lineIndex: number; depth: number; title: string }> = []
-  let fenceMarker: string | undefined
-
-  lines.forEach((line, lineIndex) => {
-    const fenceMatch = line.match(/^\s*(`{3,}|~{3,})/)
-    if (fenceMatch) {
-      const marker = fenceMatch[1][0]
-      if (!fenceMarker) {
-        fenceMarker = marker
-      } else if (fenceMarker === marker) {
-        fenceMarker = undefined
-      }
-      return
-    }
-
-    if (fenceMarker) return
-
-    const headingMatch = line.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/)
-    if (!headingMatch) return
-
-    headings.push({
-      lineIndex,
-      depth: headingMatch[1].length,
-      title: headingMatch[2].trim(),
-    })
-  })
-
-  return headings
 }
 
 function normalizeLineEndings(markdown: string) {

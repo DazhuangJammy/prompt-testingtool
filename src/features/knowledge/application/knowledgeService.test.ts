@@ -26,6 +26,18 @@ const providerMethods = {
   search: vi.fn(),
   updateBase: vi.fn(),
 }
+const bailianProviderMethods = {
+  ...providerMethods,
+  addItems: vi.fn(),
+  createBase: vi.fn(),
+  deleteBase: vi.fn(),
+  deleteItems: vi.fn(),
+  listChunks: vi.fn(),
+  reindexItems: vi.fn(),
+  search: vi.fn(),
+  syncItems: vi.fn(),
+  updateBase: vi.fn(),
+}
 
 vi.mock('@/shared/utils/identity', () => ({
   createId: vi.fn(() => 'selection-id'),
@@ -41,9 +53,16 @@ vi.mock('../infrastructure/localKnowledgeProvider', () => ({
   }),
 }))
 
+vi.mock('../infrastructure/bailianKnowledgeProvider', () => ({
+  BailianKnowledgeProvider: vi.fn(function BailianKnowledgeProviderMock() {
+    return bailianProviderMethods
+  }),
+}))
+
 vi.mock('../infrastructure/knowledgeRepository', () => ({
   knowledgeRepository: {
     deleteSelection: vi.fn(),
+    getBase: vi.fn(),
     getSelection: vi.fn(),
     listBases: vi.fn(),
     listItems: vi.fn(),
@@ -81,6 +100,31 @@ describe('knowledge service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     providerMethods.search.mockResolvedValue([])
+    bailianProviderMethods.search.mockResolvedValue([])
+    vi.mocked(knowledgeRepository.getBase).mockResolvedValue(base)
+  })
+
+  it('routes Bailian bases to the Bailian provider', async () => {
+    const bailianBase: KnowledgeBase = {
+      ...base,
+      providerType: 'bailian',
+      externalBaseId: 'remote-base',
+    }
+    vi.mocked(knowledgeRepository.getBase).mockResolvedValue(bailianBase)
+    bailianProviderMethods.createBase.mockResolvedValue(bailianBase)
+    bailianProviderMethods.search.mockResolvedValue([{ chunkId: 'remote-chunk' }])
+    const service = createKnowledgeService(async () => [provider])
+
+    await expect(service.createBase({
+      name: '百炼库',
+      providerType: 'bailian',
+    })).resolves.toBe(bailianBase)
+    await expect(service.search({ baseIds: ['base'], query: 'q' })).resolves.toEqual([
+      { chunkId: 'remote-chunk' },
+    ])
+
+    expect(bailianProviderMethods.search).toHaveBeenCalled()
+    expect(providerMethods.search).not.toHaveBeenCalled()
   })
 
   it('creates a local provider-backed service facade', async () => {
@@ -150,7 +194,11 @@ describe('knowledge service', () => {
       itemTitle: '销售手册',
       score: 0.9,
     })
-    expect(formatKnowledgeContext(references)).toContain('关键事实')
+    const context = formatKnowledgeContext(references)
+    expect(context).toContain('关键事实')
+    expect(context).toContain('把对应编号写在相关句子或段落末尾')
+    expect(context).toContain('不要把引用编号统一堆在回答结尾')
+    expect(context).toContain('未使用的资料不要引用')
   })
 
   it('skips empty knowledge queries', async () => {

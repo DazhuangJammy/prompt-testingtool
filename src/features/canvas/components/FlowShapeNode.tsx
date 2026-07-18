@@ -12,7 +12,6 @@ import {
   isTargetOutsideContainer,
 } from '@/features/canvas/components/editorFocus'
 import type { CanvasShapeFlowNode } from '@/features/canvas/model/flowTypes'
-import { normalizeFlowBody } from '@/features/canvas/model/generatedFlowchartLayout'
 import { resolveCanvasNodeFrameStyle } from '@/shared/model/nodeFrameStyle'
 import { MarkdownRenderer } from '@/shared/ui/MarkdownRenderer'
 import {
@@ -24,15 +23,14 @@ const resizePositions = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
 
 function FlowShapeNode({ data }: NodeProps<CanvasShapeFlowNode>) {
   const { node, onSelect, onUpdate, selectedNodeId } = data
+  const bodyPlaceholder = node.kind === 'decision' ? '分支条件' : '流程说明'
+  const nodeBody = resolveEditableBody(node.body, bodyPlaceholder)
   const [editing, setEditing] = useState(false)
   const [hovering, setHovering] = useState(false)
-  const [titleDraft, setTitleDraft] = useState(node.title)
-  const [bodyDraft, setBodyDraft] = useState(node.body)
-  const pendingFocusRef = useRef<'title' | 'body'>('title')
+  const [bodyDraft, setBodyDraft] = useState(nodeBody)
   const pendingCursorOffsetRef = useRef<number | undefined>(undefined)
   const editorRef = useRef<HTMLDivElement>(null)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
-  const titleRef = useRef<HTMLInputElement>(null)
   const isSelected = selectedNodeId === node.id
   const frameStyle = resolveCanvasNodeFrameStyle(node.frameStyle)
   const nodeStyle = node.frameStyle?.borderColor
@@ -40,21 +38,15 @@ function FlowShapeNode({ data }: NodeProps<CanvasShapeFlowNode>) {
     : undefined
 
   const saveDraft = useCallback(() => {
-    const title = (titleRef.current?.value ?? titleDraft).trim() || node.title
-    const body = normalizeFlowBody((bodyRef.current?.value ?? bodyDraft).trim())
-    onUpdate(node.id, {
-      body,
-      title,
-    })
-    setTitleDraft(title)
+    const body = normalizeManualFlowBody(bodyRef.current?.value ?? bodyDraft)
+    onUpdate(node.id, { body })
     setBodyDraft(body)
     setEditing(false)
-  }, [bodyDraft, node.id, node.title, onUpdate, titleDraft])
+  }, [bodyDraft, node.id, onUpdate])
 
   useEffect(() => {
     if (!editing) return
-    const target =
-      pendingFocusRef.current === 'body' ? bodyRef.current : titleRef.current
+    const target = bodyRef.current
     if (!target) return
 
     window.requestAnimationFrame(() => {
@@ -77,27 +69,18 @@ function FlowShapeNode({ data }: NodeProps<CanvasShapeFlowNode>) {
   }, [editing, saveDraft])
 
   const cancelDraft = () => {
-    setTitleDraft(node.title)
-    setBodyDraft(node.body)
+    setBodyDraft(nodeBody)
     setEditing(false)
   }
 
   const startEditing = (event: MouseEvent<HTMLElement>) => {
-    const titleTarget = event.target instanceof HTMLElement
-      ? event.target.closest<HTMLElement>('.flow-shape-head')
-      : undefined
     const bodyTarget = event.target instanceof HTMLElement
       ? event.target.closest<HTMLElement>('.flow-shape-body')
       : undefined
-    const focus = bodyTarget ? 'body' : 'title'
-    pendingFocusRef.current = focus
-    pendingCursorOffsetRef.current = getTextOffsetFromPoint(
-      (focus === 'body' ? bodyTarget : titleTarget) ?? event.currentTarget,
-      event.clientX,
-      event.clientY,
-    )
-    setTitleDraft(node.title)
-    setBodyDraft(node.body)
+    pendingCursorOffsetRef.current = bodyTarget
+      ? getTextOffsetFromPoint(bodyTarget, event.clientX, event.clientY)
+      : undefined
+    setBodyDraft(nodeBody)
     setEditing(true)
   }
 
@@ -197,17 +180,10 @@ function FlowShapeNode({ data }: NodeProps<CanvasShapeFlowNode>) {
           className="flow-shape-editor nodrag nopan nowheel"
           onBlur={handleEditorBlur}
         >
-          <input
-            ref={titleRef}
-            value={titleDraft}
-            onChange={(event) => setTitleDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') saveDraft()
-              if (event.key === 'Escape') cancelDraft()
-            }}
-          />
           <textarea
             ref={bodyRef}
+            aria-label={node.kind === 'decision' ? '编辑判断条件' : '编辑步骤内容'}
+            placeholder={bodyPlaceholder}
             value={bodyDraft}
             onChange={(event) => setBodyDraft(event.target.value)}
             onKeyDown={(event) => {
@@ -217,11 +193,14 @@ function FlowShapeNode({ data }: NodeProps<CanvasShapeFlowNode>) {
         </div>
       ) : (
         <div className={`flow-shape-drag-area flow-shape-${node.kind}-content`}>
-          <div className="flow-shape-head">
-            <span>{node.title}</span>
-          </div>
           <div className="flow-shape-body markdown-preview nowheel">
-            <MarkdownRenderer>{node.body}</MarkdownRenderer>
+            {nodeBody ? (
+              <MarkdownRenderer preserveLineBreaks protectSpecialBlockHeadings>
+                {nodeBody}
+              </MarkdownRenderer>
+            ) : (
+              <span className="flow-shape-body-placeholder">{bodyPlaceholder}</span>
+            )}
           </div>
         </div>
       )}
@@ -230,3 +209,11 @@ function FlowShapeNode({ data }: NodeProps<CanvasShapeFlowNode>) {
 }
 
 export default memo(FlowShapeNode)
+
+function normalizeManualFlowBody(value: string) {
+  return value.replace(/\r\n?/g, '\n').trim()
+}
+
+function resolveEditableBody(value: string, placeholder: string) {
+  return value.trim() === placeholder ? '' : value
+}

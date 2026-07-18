@@ -12,13 +12,13 @@ import { nowIso } from '@/shared/utils/time'
 
 const shapeDefaults = {
   decision: {
-    body: '分支条件',
+    body: '',
     height: 150,
     title: '判断',
     width: 220,
   },
   step: {
-    body: '流程说明',
+    body: '',
     height: 112,
     title: '步骤',
     width: 200,

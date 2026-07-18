@@ -7,8 +7,13 @@ let root: Root | undefined
 let host: HTMLDivElement | undefined
 
 const renderDialog = ({
+  markdown = '# 角色\n\n专家\n\n## 步骤一\n\n分析',
   onClose = vi.fn(),
   onCopy = vi.fn(),
+}: {
+  markdown?: string
+  onClose?: () => void
+  onCopy?: () => void
 } = {}) => {
   host = document.createElement('div')
   document.body.append(host)
@@ -17,7 +22,7 @@ const renderDialog = ({
   act(() => {
     root?.render(
       <PromptMarkdownPreviewDialog
-        markdown="# 角色&#10;&#10;专家&#10;&#10;## 步骤一&#10;&#10;分析"
+        markdown={markdown}
         title="提示词 1"
         onClose={onClose}
         onCopy={onCopy}
@@ -50,6 +55,32 @@ describe('PromptMarkdownPreviewDialog', () => {
     expect(dialog?.querySelector('strong')?.textContent).toBe('提示词 1')
     expect(dialog?.querySelector('h1')?.textContent).toBe('角色')
     expect(dialog?.querySelector('h2')?.textContent).toBe('步骤一')
+  })
+
+  it('renders headings inside special protected blocks as plain text', () => {
+    renderDialog({
+      markdown: [
+        '# 输出格式',
+        '""""""',
+        '# 企业发展历程',
+        '## 产品力分析',
+        '""""""',
+        '<think>',
+        '# 内部推理',
+        '</think>',
+        '# 真实标题',
+      ].join('\n'),
+    })
+
+    const dialog = document.body.querySelector('.prompt-preview-dialog')
+    const headings = Array.from(dialog?.querySelectorAll('h1, h2') ?? []).map(
+      (heading) => heading.textContent,
+    )
+
+    expect(headings).toEqual(['输出格式', '真实标题'])
+    expect(dialog?.textContent).toContain('# 企业发展历程')
+    expect(dialog?.textContent).toContain('## 产品力分析')
+    expect(dialog?.textContent).toContain('# 内部推理')
   })
 
   it('supports copy and Escape close actions', () => {

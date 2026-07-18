@@ -69,6 +69,14 @@ export const knowledgeRepository = {
     if (items.length) await db.knowledgeItems.bulkPut(items)
   },
 
+  async replaceBaseItems(baseId: string, items: KnowledgeItem[]) {
+    await db.transaction('rw', db.knowledgeItems, db.knowledgeChunks, async () => {
+      await db.knowledgeItems.where('baseId').equals(baseId).delete()
+      await db.knowledgeChunks.where('baseId').equals(baseId).delete()
+      if (items.length) await db.knowledgeItems.bulkPut(items)
+    })
+  },
+
   async updateItem(itemId: string, updates: Partial<KnowledgeItem>) {
     await db.knowledgeItems.update(itemId, updates)
   },

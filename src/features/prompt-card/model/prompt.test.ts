@@ -270,6 +270,65 @@ describe('prompt model', () => {
     ])
   })
 
+  it('ignores markdown headings inside protected quote and think blocks', () => {
+    const markdown = [
+      '# 输出格式',
+      '""""""',
+      '# 企业发展历程',
+      '## 产品力分析',
+      '""""""',
+      '<think>',
+      '# 内部推理',
+      '<think/>',
+      '# 规则',
+      '真实规则',
+    ].join('\n')
+    const outline = parseMarkdownOutline(markdown)
+
+    expect(outline.nodes).toHaveLength(2)
+    expect(outline.nodes[0]).toMatchObject({
+      title: '输出格式',
+      ownBody: [
+        '""""""',
+        '# 企业发展历程',
+        '## 产品力分析',
+        '""""""',
+        '<think>',
+        '# 内部推理',
+        '<think/>',
+      ].join('\n'),
+    })
+    expect(outline.nodes[0].children).toEqual([])
+    expect(outline.nodes[1]).toMatchObject({
+      title: '规则',
+      ownBody: '真实规则',
+    })
+  })
+
+  it('keeps protected output-format headings in the output-format section', () => {
+    const card = createPromptCard('canvas-1', 0)
+
+    const imported = importMarkdownToPromptCard(
+      card,
+      [
+        '# 输出格式',
+        '""""""',
+        '# 角色',
+        '## 工作流程',
+        '""""""',
+        '# 规则',
+        '真实规则',
+      ].join('\n'),
+    )
+
+    expect(imported.sections.outputFormat.markdown).toBe(
+      ['""""""', '# 角色', '## 工作流程', '""""""'].join('\n'),
+    )
+    expect(imported.sections.role.markdown).toBe('')
+    expect(imported.sections.workflow.markdown).toBe('')
+    expect(imported.sections.rules.markdown).toBe('真实规则')
+  })
+
   it('adds top-level and nested markdown headings', () => {
     const markdown = ['# 角色', '内容', '# 输出格式', 'JSON'].join('\n\n')
     const withSection = addMarkdownHeading(markdown, 1)

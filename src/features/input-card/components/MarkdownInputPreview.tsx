@@ -66,7 +66,9 @@ export function MarkdownInputPreview({
   if (!outline.nodes.length) {
     return (
       <article className="input-card-empty markdown-preview">
-        <MarkdownRenderer>{outline.preface || '用 # 标题拆分要发送的输入'}</MarkdownRenderer>
+        <MarkdownRenderer preserveLineBreaks protectSpecialBlockHeadings>
+          {outline.preface || '用 # 标题拆分要发送的输入'}
+        </MarkdownRenderer>
       </article>
     )
   }
@@ -208,7 +210,9 @@ function InputOutlineSection({
             onEditNode(node, { focus: 'body', cursorOffset: offset })
           }}
         >
-          <MarkdownRenderer>{node.body}</MarkdownRenderer>
+          <MarkdownRenderer preserveLineBreaks protectSpecialBlockHeadings>
+            {node.body}
+          </MarkdownRenderer>
         </article>
       )}
     </section>

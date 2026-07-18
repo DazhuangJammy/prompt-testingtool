@@ -75,7 +75,11 @@ const knowledgeMessage: ChatMessage = {
   id: 'message-knowledge',
   sessionId: 'session-1',
   role: 'assistant',
-  content: '根据参考材料，活跃客户集中在少数高频客户中。',
+  content: [
+    '活跃客户集中在少数高频客户中。[1]',
+    '',
+    '销售端应当按成交频次和流失风险进行客户分层。[2]',
+  ].join('\n'),
   knowledgeReferences: [
     {
       baseId: 'base',
@@ -349,7 +353,10 @@ describe('MessageList', () => {
     )
     expect(summary?.textContent).toContain('2 个引用内容')
     expect(document.querySelectorAll('.knowledge-citation-marker')).toHaveLength(2)
-    expect(document.body.textContent).toContain('根据参考材料')
+    const paragraphs = document.querySelectorAll('.message-bubble p')
+    expect(paragraphs).toHaveLength(2)
+    expect(paragraphs[0].querySelector('.knowledge-citation-marker')?.textContent).toBe('1')
+    expect(paragraphs[1].querySelector('.knowledge-citation-marker')?.textContent).toBe('2')
 
     act(() => {
       summary?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
@@ -360,6 +367,23 @@ describe('MessageList', () => {
     expect(dialog?.textContent).toContain('引用内容')
     expect(dialog?.textContent).toContain('访谈总结提炼.docx')
     expect(dialog?.textContent).toContain('系统内有 130 多家客户')
+  })
+
+  it('does not append unused knowledge references to the answer ending', () => {
+    renderMessageList([
+      {
+        ...knowledgeMessage,
+        id: 'message-knowledge-without-marks',
+        content: '这段回答只使用了第一条知识库资料。[1]',
+      },
+    ])
+
+    const markers = document.querySelectorAll('.knowledge-citation-marker')
+    expect(markers).toHaveLength(1)
+    expect(markers[0].textContent).toBe('1')
+    expect(document.querySelector('.message-bubble p')?.textContent).toContain(
+      '这段回答只使用了第一条知识库资料。',
+    )
   })
 
   it('renders web search result summary and clickable inline citations', () => {

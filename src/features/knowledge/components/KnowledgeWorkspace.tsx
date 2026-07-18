@@ -1,14 +1,18 @@
 import {
+  AlertCircle,
   BookOpen,
+  Cloud,
   FileText,
   Folder,
   Globe,
   Link,
   MoreHorizontal,
   Plus,
+  RefreshCw,
   Search,
   Settings2,
   Trash2,
+  X,
 } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import type {
@@ -26,11 +30,16 @@ import {
 import { useKnowledgeData } from '../hooks/useKnowledgeData'
 import {
   CreateBaseDialog,
+  type CreateBaseDialogInput,
   KnowledgeSettingsDialog,
   RecallTestDialog,
   TextSourceDialog,
 } from './KnowledgeDialogs'
 import { KnowledgeItemList, SourceActions } from './KnowledgeSourcePanel'
+import {
+  BailianKnowledgeSettingsDialog,
+  type BailianSettingsInput,
+} from './BailianKnowledgeSettingsDialog'
 
 const SOURCE_TABS: Array<{ type: KnowledgeSourceType; icon: typeof FileText }> = [
   { type: 'file', icon: FileText },
@@ -74,21 +83,35 @@ export function KnowledgeWorkspace({ providerConfigs }: KnowledgeWorkspaceProps)
     [activeSource, knowledge.items, searchQuery],
   )
 
-  const createBase = async (name: string) => {
-    const base = await knowledge.runBusy(() =>
+  const runAction = async <T,>(task: () => Promise<T>) => {
+    try {
+      return await knowledge.runBusy(task)
+    } catch {
+      return undefined
+    }
+  }
+
+  const createBase = async (input: CreateBaseDialogInput) => {
+    const base = await runAction(() =>
       knowledge.service.createBase({
-        name,
-        config: inferDefaultModelConfig(providerConfigs),
+        ...input,
+        config: input.providerType === 'local'
+          ? inferDefaultModelConfig(providerConfigs)
+          : undefined,
       }),
     )
+    if (!base) return
     knowledge.setActiveBaseId(base.id)
+    setActiveSource('file')
     setDialog(undefined)
   }
 
   const addFiles = async (files: File[]) => {
     if (!knowledge.activeBaseId || !files.length) return
-    const supported = files.filter((file) => isSupportedKnowledgeFile(file.name))
-    await knowledge.runBusy(() =>
+    const supported = knowledge.activeBase?.providerType === 'bailian'
+      ? files
+      : files.filter((file) => isSupportedKnowledgeFile(file.name))
+    await runAction(() =>
       knowledge.service.addItems(knowledge.activeBaseId!, [
         { sourceType: 'file', title: '文件', files: supported },
       ]),
@@ -100,7 +123,7 @@ export function KnowledgeWorkspace({ providerConfigs }: KnowledgeWorkspaceProps)
     input: { title: string; text?: string; sourceUri?: string },
   ) => {
     if (!knowledge.activeBaseId) return
-    await knowledge.runBusy(() =>
+    await runAction(() =>
       knowledge.service.addItems(knowledge.activeBaseId!, [
         { sourceType, ...input },
       ]),
@@ -109,13 +132,28 @@ export function KnowledgeWorkspace({ providerConfigs }: KnowledgeWorkspaceProps)
   }
 
   const deleteItem = async (item: KnowledgeItem) => {
-    if (!confirm(`删除资料「${item.title}」？`)) return
-    await knowledge.runBusy(() => knowledge.service.deleteItems(item.baseId, [item.id]))
+    const remote = knowledge.activeBase?.providerType === 'bailian'
+      ? '这会同时从阿里百炼知识库中删除该文件。'
+      : ''
+    if (!confirm(`删除资料「${item.title}」？${remote}`)) return
+    await runAction(() => knowledge.service.deleteItems(item.baseId, [item.id]))
   }
 
   const deleteBase = async (base: KnowledgeBase) => {
-    if (!confirm(`删除知识库「${base.name}」？`)) return
-    await knowledge.runBusy(() => knowledge.service.deleteBase(base.id))
+    const message = base.providerType === 'bailian'
+      ? `从本项目移除知识库「${base.name}」？阿里百炼中的线上知识库和文件不会被删除。`
+      : `删除知识库「${base.name}」？`
+    if (!confirm(message)) return
+    await runAction(() => knowledge.service.deleteBase(base.id))
+  }
+
+  const saveBailianSettings = async (input: BailianSettingsInput) => {
+    if (!knowledge.activeBase) return
+    const saved = await runAction(() => knowledge.service.updateBase(
+      knowledge.activeBase!.id,
+      input,
+    ))
+    if (saved) setDialog(undefined)
   }
 
   return (
@@ -138,9 +176,12 @@ export function KnowledgeWorkspace({ providerConfigs }: KnowledgeWorkspaceProps)
               type="button"
               className={`knowledge-base-row ${base.id === knowledge.activeBaseId ? 'is-active' : ''}`}
               key={base.id}
-              onClick={() => knowledge.setActiveBaseId(base.id)}
+              onClick={() => {
+                knowledge.setActiveBaseId(base.id)
+                if (base.providerType === 'bailian') setActiveSource('file')
+              }}
             >
-              <BookOpen />
+              {base.providerType === 'bailian' ? <Cloud /> : <BookOpen />}
               <span>{base.name}</span>
               <small>{baseCounts[base.id] ?? 0}</small>
             </button>
@@ -161,8 +202,8 @@ export function KnowledgeWorkspace({ providerConfigs }: KnowledgeWorkspaceProps)
               <div>
                 <h1>{knowledge.activeBase.name}</h1>
                 <p>
-                  {knowledge.items.length} 个资料 · 分块 {knowledge.activeBase.config.chunkSize} · 召回{' '}
-                  {knowledge.activeBase.config.topK}
+                  {knowledge.activeBase.providerType === 'bailian' ? '阿里百炼' : '本地'} ·{' '}
+                  {knowledge.items.length} 个资料 · 召回 {knowledge.activeBase.config.topK}
                 </p>
               </div>
               <div className="knowledge-head-actions">
@@ -174,14 +215,34 @@ export function KnowledgeWorkspace({ providerConfigs }: KnowledgeWorkspaceProps)
                     onChange={(event) => setSearchQuery(event.target.value)}
                   />
                 </label>
-                <IconButton icon={<Settings2 />} label="设置" onClick={() => setDialog('settings')} />
-                <IconButton icon={<MoreHorizontal />} label="召回测试" onClick={() => setDialog('recall')} />
-                <IconButton icon={<Trash2 />} label="删除知识库" onClick={() => deleteBase(knowledge.activeBase!)} />
+                <IconButton disabled={knowledge.busy} icon={<Settings2 />} label="设置" onClick={() => setDialog('settings')} />
+                {knowledge.activeBase.providerType === 'bailian' && (
+                  <IconButton
+                    icon={<RefreshCw />}
+                    disabled={knowledge.busy}
+                    label="同步百炼资料"
+                    onClick={() => void runAction(() => knowledge.service.refreshBase(knowledge.activeBase!.id))}
+                  />
+                )}
+                <IconButton disabled={knowledge.busy} icon={<MoreHorizontal />} label="召回测试" onClick={() => setDialog('recall')} />
+                <IconButton disabled={knowledge.busy} icon={<Trash2 />} label="删除知识库" onClick={() => deleteBase(knowledge.activeBase!)} />
               </div>
             </header>
 
+            {knowledge.error && (
+              <div className="knowledge-error-banner" role="alert">
+                <AlertCircle />
+                <span>{knowledge.error}</span>
+                <button type="button" aria-label="关闭错误提示" onClick={knowledge.clearError}>
+                  <X />
+                </button>
+              </div>
+            )}
+
             <div className="knowledge-tabs">
-              {SOURCE_TABS.map((tab) => {
+              {SOURCE_TABS
+                .filter((tab) => knowledge.activeBase?.providerType === 'local' || tab.type === 'file')
+                .map((tab) => {
                 const Icon = tab.icon
                 const count = knowledge.items.filter((item) => item.sourceType === tab.type).length
                 return (
@@ -196,7 +257,7 @@ export function KnowledgeWorkspace({ providerConfigs }: KnowledgeWorkspaceProps)
                     <small>{count}</small>
                   </button>
                 )
-              })}
+                })}
             </div>
 
             <section className="knowledge-source-panel">
@@ -206,14 +267,15 @@ export function KnowledgeWorkspace({ providerConfigs }: KnowledgeWorkspaceProps)
                 fileInputRef={fileInputRef}
                 onAddDialog={setDialog}
                 onFiles={addFiles}
+                providerType={knowledge.activeBase.providerType}
               />
               <KnowledgeItemList
                 items={visibleItems}
                 busy={knowledge.busy}
                 onDelete={deleteItem}
-                onReindex={(item) =>
-                  knowledge.runBusy(() => knowledge.service.reindexItems(item.baseId, [item.id]))
-                }
+                onReindex={knowledge.activeBase.providerType === 'local'
+                  ? (item) => void runAction(() => knowledge.service.reindexItems(item.baseId, [item.id]))
+                  : undefined}
               />
             </section>
           </>
@@ -229,7 +291,13 @@ export function KnowledgeWorkspace({ providerConfigs }: KnowledgeWorkspaceProps)
         )}
       </main>
 
-      {dialog === 'base' && <CreateBaseDialog onClose={() => setDialog(undefined)} onCreate={createBase} />}
+      {dialog === 'base' && (
+        <CreateBaseDialog
+          busy={knowledge.busy}
+          onClose={() => setDialog(undefined)}
+          onCreate={createBase}
+        />
+      )}
       {dialog === 'note' && (
         <TextSourceDialog
           kind="note"
@@ -255,16 +323,26 @@ export function KnowledgeWorkspace({ providerConfigs }: KnowledgeWorkspaceProps)
         />
       )}
       {dialog === 'settings' && knowledge.activeBase && (
-        <KnowledgeSettingsDialog
-          base={knowledge.activeBase}
-          providers={providerConfigs}
-          onClose={() => setDialog(undefined)}
-          onSave={(config) =>
-            knowledge
-              .runBusy(() => knowledge.service.updateBase(knowledge.activeBase!.id, { config }))
-              .then(() => setDialog(undefined))
-          }
-        />
+        knowledge.activeBase.providerType === 'bailian' ? (
+          <BailianKnowledgeSettingsDialog
+            base={knowledge.activeBase}
+            busy={knowledge.busy}
+            onClose={() => setDialog(undefined)}
+            onSave={(input) => void saveBailianSettings(input)}
+          />
+        ) : (
+          <KnowledgeSettingsDialog
+            base={knowledge.activeBase}
+            providers={providerConfigs}
+            onClose={() => setDialog(undefined)}
+            onSave={(config) => {
+              void runAction(() => knowledge.service.updateBase(knowledge.activeBase!.id, { config }))
+                .then((saved) => {
+                  if (saved) setDialog(undefined)
+                })
+            }}
+          />
+        )
       )}
       {dialog === 'recall' && knowledge.activeBase && (
         <RecallTestDialog

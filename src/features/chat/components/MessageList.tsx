@@ -35,14 +35,11 @@ import {
   WebSearchAnswerContent,
   WebSearchCitationSummary,
 } from './WebSearchCitations'
-import {
-  appendMissingKnowledgeCitationMarks,
-  createKnowledgeCitations,
-} from '@/features/chat/model/knowledgeCitations'
 
 const defaultThinkingCollapsed = true
 
 interface MessageListProps {
+  generating?: boolean
   messages: ChatMessage[]
   onEdit: (message: ChatMessage, content: string) => void
   onResend: (message: ChatMessage, content: string) => void
@@ -53,7 +50,12 @@ interface ImagePreviewItem {
   src: string
 }
 
-export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
+export function MessageList({
+  generating = false,
+  messages,
+  onEdit,
+  onResend,
+}: MessageListProps) {
   const [editingId, setEditingId] = useState<string>()
   const [previewItem, setPreviewItem] = useState<ImagePreviewItem>()
   const [expandedThinkingIds, setExpandedThinkingIds] = useState<Set<string>>(
@@ -90,9 +92,13 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [previewItem])
 
+  const lastMessage = messages.at(-1)
+  const showPendingAssistant =
+    generating && (!lastMessage || lastMessage.role === 'user')
+
   return (
     <>
-      <div className="message-list">
+      <div className="message-list" aria-busy={generating}>
         {exportError && <div className="message-export-error">{exportError}</div>}
         {successMessage && <div className="action-toast">{successMessage}</div>}
         {messages.map((message) => {
@@ -108,6 +114,12 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
             (message.role === 'assistant' && message.status === 'complete'
               ? '空回复'
               : '')
+          const awaitingAnswer =
+            generating &&
+            message.id === lastMessage?.id &&
+            message.role === 'assistant' &&
+            message.status === 'streaming' &&
+            !parsed.answer
           const hasWebSearchProgress =
             message.role === 'assistant' &&
             (Boolean(message.webSearchStatus) ||
@@ -116,7 +128,8 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
             isEditing ||
             Boolean(answerText) ||
             attachments.length > 0 ||
-            hasWebSearchProgress
+            hasWebSearchProgress ||
+            awaitingAnswer
           const thinkingCollapsed =
             defaultThinkingCollapsed && !expandedThinkingIds.has(message.id)
 
@@ -153,7 +166,7 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
                 <div
                   className={`message-bubble ${
                     answerText === '空回复' && !attachments.length ? 'is-empty' : ''
-                  }`}
+                  } ${awaitingAnswer ? 'is-loading' : ''}`}
                 >
                   {isEditing ? (
                     <textarea
@@ -187,6 +200,7 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
                         attachments={attachments}
                         onPreview={setPreviewItem}
                       />
+                      {awaitingAnswer && <AssistantLoadingIndicator />}
                     </>
                   )}
                 </div>
@@ -261,6 +275,13 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
             </article>
           )
         })}
+        {showPendingAssistant && (
+          <article className="message is-assistant">
+            <div className="message-bubble is-loading">
+              <AssistantLoadingIndicator />
+            </div>
+          </article>
+        )}
       </div>
       {previewItem && (
         <ImagePreviewDialog
@@ -270,6 +291,20 @@ export function MessageList({ messages, onEdit, onResend }: MessageListProps) {
         />
       )}
     </>
+  )
+}
+
+function AssistantLoadingIndicator() {
+  return (
+    <div
+      className="assistant-loading-indicator"
+      role="status"
+      aria-label="模型正在思考"
+    >
+      <span aria-hidden="true" />
+      <span aria-hidden="true" />
+      <span aria-hidden="true" />
+    </div>
   )
 }
 
@@ -288,11 +323,7 @@ function MessageContent({
   webSearchStatus,
   onPreview,
 }: MessageContentProps) {
-  const citations = createKnowledgeCitations(knowledgeReferences)
-  const displayContent = webSearchReferences.length
-    ? content
-    : appendMissingKnowledgeCitationMarks(content, citations)
-  const blocks = splitSvgPreviewBlocks(displayContent)
+  const blocks = splitSvgPreviewBlocks(content)
   const hasKnowledgeCitations = knowledgeReferences.length > 0
   const hasWebSearchCitations = webSearchReferences.length > 0 || Boolean(webSearchStatus)
   if (!blocks.length && !hasKnowledgeCitations && !hasWebSearchCitations) {

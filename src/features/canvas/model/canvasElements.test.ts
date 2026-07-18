@@ -18,7 +18,7 @@ vi.mock('@/shared/utils/time', () => ({
 describe('canvas elements model', () => {
   it('creates default shape nodes by kind', () => {
     expect(createCanvasShapeNode('canvas', 'step', { x: 1, y: 2 })).toMatchObject({
-      body: '流程说明',
+      body: '',
       canvasId: 'canvas',
       height: 112,
       id: 'id-1',
@@ -29,7 +29,7 @@ describe('canvas elements model', () => {
     })
 
     expect(createCanvasShapeNode('canvas', 'decision', { x: 3, y: 4 })).toMatchObject({
-      body: '分支条件',
+      body: '',
       height: 150,
       kind: 'decision',
       title: '判断',

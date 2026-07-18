@@ -17,6 +17,7 @@ import {
 } from '../model/knowledge'
 import type {
   KnowledgeAddItemInput,
+  KnowledgeCreateBaseInput,
   KnowledgeProvider,
   KnowledgeSearchInput,
 } from '../model/knowledgeProvider'
@@ -32,10 +33,7 @@ export class LocalKnowledgeProvider implements KnowledgeProvider {
     this.getProviders = getProviders
   }
 
-  async createBase(input: {
-    name: string
-    config?: Partial<KnowledgeBase['config']>
-  }) {
+  async createBase(input: KnowledgeCreateBaseInput) {
     const base = createKnowledgeBase(input)
     await knowledgeRepository.saveBase(base)
     return base
@@ -43,7 +41,7 @@ export class LocalKnowledgeProvider implements KnowledgeProvider {
 
   async updateBase(
     baseId: string,
-    updates: Partial<Pick<KnowledgeBase, 'name' | 'config'>>,
+    updates: Partial<Pick<KnowledgeBase, 'name' | 'config' | 'externalBaseId' | 'bailian'>>,
   ) {
     const base = await requireBase(baseId)
     const next: KnowledgeBase = {

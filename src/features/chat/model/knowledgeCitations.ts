@@ -27,28 +27,6 @@ export function summarizeKnowledgeCitation(
   return `${content.slice(0, maxLength)}...`
 }
 
-export function appendMissingKnowledgeCitationMarks(
-  content: string,
-  citations: KnowledgeCitation[],
-) {
-  if (!content.trim() || !citations.length) return content
-
-  const usedNumbers = new Set<number>()
-  const markRegex = /(?<!!)\[(\d+)\](?!\()/g
-  let match: RegExpExecArray | null
-
-  while ((match = markRegex.exec(content)) !== null) {
-    usedNumbers.add(Number(match[1]))
-  }
-
-  const missingMarks = citations
-    .filter((citation) => !usedNumbers.has(citation.number))
-    .map((citation) => `[${citation.number}]`)
-
-  if (!missingMarks.length) return content
-  return `${content.trimEnd()} ${missingMarks.join('')}`
-}
-
 export function linkKnowledgeCitationMarks(
   content: string,
   citations: KnowledgeCitation[],

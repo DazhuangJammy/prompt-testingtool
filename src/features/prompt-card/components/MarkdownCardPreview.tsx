@@ -88,7 +88,9 @@ export function MarkdownCardPreview({
           )
         }}
       >
-        <MarkdownRenderer>{outline.preface}</MarkdownRenderer>
+        <MarkdownRenderer preserveLineBreaks protectSpecialBlockHeadings>
+          {outline.preface}
+        </MarkdownRenderer>
       </article>
     )
   }
@@ -108,7 +110,9 @@ export function MarkdownCardPreview({
             )
           }}
         >
-          <MarkdownRenderer>{outline.preface}</MarkdownRenderer>
+          <MarkdownRenderer preserveLineBreaks protectSpecialBlockHeadings>
+            {outline.preface}
+          </MarkdownRenderer>
         </article>
       )}
       {outline.nodes.length ? (
@@ -150,7 +154,9 @@ export function MarkdownCardPreview({
             )
           }}
         >
-          <MarkdownRenderer>{markdown || ' '}</MarkdownRenderer>
+          <MarkdownRenderer preserveLineBreaks protectSpecialBlockHeadings>
+            {markdown || ' '}
+          </MarkdownRenderer>
         </article>
       )}
     </div>
@@ -283,7 +289,9 @@ function MarkdownOutlineSection({
             onEditNode(node, { focus: 'body', cursorOffset: offset })
           }}
         >
-          <MarkdownRenderer>{node.ownBody}</MarkdownRenderer>
+          <MarkdownRenderer preserveLineBreaks protectSpecialBlockHeadings>
+            {node.ownBody}
+          </MarkdownRenderer>
         </article>
       )}
       {!collapsed && node.children.length > 0 && (

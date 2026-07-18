@@ -1,0 +1,113 @@
+.knowledge-provider-options {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.knowledge-provider-options button {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 12px;
+  text-align: left;
+}
+
+.knowledge-provider-options button:hover {
+  background: var(--panel-2);
+}
+
+.knowledge-provider-options button.is-active {
+  background: var(--panel-2);
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.knowledge-provider-options svg,
+.knowledge-settings-toolbar svg,
+.knowledge-error-banner svg {
+  height: 16px;
+  width: 16px;
+}
+
+.knowledge-provider-options span {
+  min-width: 0;
+}
+
+.knowledge-provider-options strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.knowledge-settings-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.knowledge-settings-toolbar button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 11px;
+}
+
+.knowledge-settings-toolbar button:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.knowledge-error-banner {
+  align-items: center;
+  border-bottom: 1px solid color-mix(in srgb, var(--danger) 36%, var(--line));
+  color: var(--danger);
+  display: flex;
+  gap: 8px;
+  min-height: 42px;
+  padding: 8px 18px;
+}
+
+.knowledge-error-banner span {
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.45;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.knowledge-error-banner button {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  min-height: 30px;
+  padding: 0 6px;
+}
+
+.knowledge-dialog-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.knowledge-dropzone:focus-visible {
+  border-color: var(--line-strong);
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 560px) {
+  .knowledge-provider-options {
+    grid-template-columns: 1fr;
+  }
+}

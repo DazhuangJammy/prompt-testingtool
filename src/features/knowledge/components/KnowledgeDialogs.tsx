@@ -1,37 +1,114 @@
-import { X } from 'lucide-react'
+import { Cloud, HardDrive, X } from 'lucide-react'
 import { useState } from 'react'
 import type {
   KnowledgeBase,
   KnowledgeRagConfig,
   KnowledgeSearchResult,
   ProviderConfig,
+  KnowledgeProviderType,
 } from '@/shared/types'
 import { IconButton } from '@/shared/ui/IconButton'
 import type { createKnowledgeService } from '../application/knowledgeService'
 import { filterKnowledgeModelProviders } from '../model/knowledge'
 
 export function CreateBaseDialog({
+  busy,
   onClose,
   onCreate,
 }: {
+  busy: boolean
   onClose: () => void
-  onCreate: (name: string) => void
+  onCreate: (input: CreateBaseDialogInput) => void
 }) {
   const [name, setName] = useState('')
+  const [providerType, setProviderType] = useState<KnowledgeProviderType>('local')
+  const [knowledgeBaseId, setKnowledgeBaseId] = useState('')
+  const [workspaceId, setWorkspaceId] = useState('')
+  const [accessKeyId, setAccessKeyId] = useState('')
+  const [accessKeySecret, setAccessKeySecret] = useState('')
+  const isBailian = providerType === 'bailian'
   return (
     <DialogShell title="新建知识库" onClose={onClose}>
-      <input
-        autoFocus
-        value={name}
-        placeholder="知识库名称"
-        onChange={(event) => setName(event.target.value)}
-      />
+      <div className="knowledge-provider-options" role="radiogroup" aria-label="知识库类型">
+        <button
+          type="button"
+          role="radio"
+          aria-checked={providerType === 'local'}
+          className={providerType === 'local' ? 'is-active' : ''}
+          onClick={() => setProviderType('local')}
+        >
+          <HardDrive />
+          <span><strong>本地</strong></span>
+        </button>
+        <button
+          type="button"
+          role="radio"
+          aria-checked={providerType === 'bailian'}
+          className={providerType === 'bailian' ? 'is-active' : ''}
+          onClick={() => setProviderType('bailian')}
+        >
+          <Cloud />
+          <span><strong>阿里百炼</strong></span>
+        </button>
+      </div>
+      <label>
+        显示名称
+        <input
+          autoFocus
+          value={name}
+          placeholder={isBailian ? '默认使用百炼知识库名称' : '知识库名称'}
+          onChange={(event) => setName(event.target.value)}
+        />
+      </label>
+      {isBailian && (
+        <>
+          <label>
+            知识库 ID
+            <input value={knowledgeBaseId} onChange={(event) => setKnowledgeBaseId(event.target.value)} />
+          </label>
+          <label>
+            业务空间 ID
+            <input value={workspaceId} onChange={(event) => setWorkspaceId(event.target.value)} />
+          </label>
+          <label>
+            AccessKey ID
+            <input value={accessKeyId} autoComplete="off" onChange={(event) => setAccessKeyId(event.target.value)} />
+          </label>
+          <label>
+            AccessKey Secret
+            <input
+              type="password"
+              value={accessKeySecret}
+              autoComplete="new-password"
+              onChange={(event) => setAccessKeySecret(event.target.value)}
+            />
+          </label>
+        </>
+      )}
       <div className="knowledge-dialog-actions">
         <button type="button" onClick={onClose}>取消</button>
-        <button type="button" onClick={() => onCreate(name)}>创建</button>
+        <button
+          type="button"
+          disabled={busy || (isBailian && (!knowledgeBaseId.trim() || !workspaceId.trim() || !accessKeyId.trim() || !accessKeySecret.trim()))}
+          onClick={() => onCreate({
+            name,
+            providerType,
+            externalBaseId: isBailian ? knowledgeBaseId : undefined,
+            bailian: isBailian ? { accessKeyId, accessKeySecret, workspaceId } : undefined,
+          })}
+        >
+          {busy ? (isBailian ? '连接中' : '创建中') : (isBailian ? '连接' : '创建')}
+        </button>
       </div>
     </DialogShell>
   )
+}
+
+export interface CreateBaseDialogInput {
+  name: string
+  providerType: KnowledgeProviderType
+  externalBaseId?: string
+  bailian?: KnowledgeBase['bailian']
 }
 
 export function TextSourceDialog({
@@ -222,7 +299,7 @@ function NumberInput({
   )
 }
 
-function DialogShell({
+export function DialogShell({
   children,
   onClose,
   title,

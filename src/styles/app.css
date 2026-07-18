@@ -14,11 +14,13 @@
 @import './prompt-markdown-card.css';
 @import './markdown-content.css';
 @import './chat.css';
+@import './chat-loading.css';
 @import './chat-model-picker.css';
 @import './chat-knowledge-citations.css';
 @import './chat-composer.css';
 @import './chat-quick-phrases.css';
 @import './knowledge.css';
+@import './knowledge-bailian.css';
 @import './settings.css';
 @import './settings-web-search.css';
 @import './settings-states.css';

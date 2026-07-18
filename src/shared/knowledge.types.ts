@@ -21,11 +21,18 @@ export interface KnowledgeRagConfig {
   rerankEnabled: boolean
 }
 
+export interface BailianKnowledgeConnection {
+  accessKeyId: string
+  accessKeySecret: string
+  workspaceId: string
+}
+
 export interface KnowledgeBase {
   id: string
   name: string
   providerType: KnowledgeProviderType
   externalBaseId?: string
+  bailian?: BailianKnowledgeConnection
   config: KnowledgeRagConfig
   createdAt: string
   updatedAt: string

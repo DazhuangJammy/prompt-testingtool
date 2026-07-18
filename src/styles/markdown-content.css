@@ -107,6 +107,10 @@
   white-space: pre-line;
 }
 
+.markdown-preserve-line-breaks {
+  white-space: pre-line;
+}
+
 .markdown-preview li + li,
 .message li + li,
 .compare-result li + li {

@@ -71,7 +71,9 @@ export function PromptSectionAccordion({
           </div>
         ) : (
           <div className="markdown-preview nodrag nopan nowheel">
-            <MarkdownRenderer>{preview}</MarkdownRenderer>
+            <MarkdownRenderer preserveLineBreaks protectSpecialBlockHeadings>
+              {preview}
+            </MarkdownRenderer>
           </div>
         ))}
     </section>

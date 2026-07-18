@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ChatKnowledgeReference } from '@/shared/types'
 import {
-  appendMissingKnowledgeCitationMarks,
   createKnowledgeCitations,
   linkKnowledgeCitationMarks,
   summarizeKnowledgeCitation,
@@ -23,20 +22,6 @@ describe('knowledge citations', () => {
     expect(createKnowledgeCitations([reference])).toEqual([
       { number: 1, reference },
     ])
-  })
-
-  it('appends only missing citation marks once', () => {
-    const citations = createKnowledgeCitations([
-      reference,
-      { ...reference, chunkId: 'chunk-2' },
-    ])
-
-    expect(appendMissingKnowledgeCitationMarks('答案已有 [1]', citations)).toBe(
-      '答案已有 [1] [2]',
-    )
-    expect(appendMissingKnowledgeCitationMarks('答案已有 [1] [2]', citations)).toBe(
-      '答案已有 [1] [2]',
-    )
   })
 
   it('links plain marks without touching markdown links or images', () => {

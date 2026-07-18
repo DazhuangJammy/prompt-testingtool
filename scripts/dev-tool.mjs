@@ -10,7 +10,13 @@ const host = process.env.PROMPT_TOOL_HOST ?? '127.0.0.1'
 const webPort = Number(process.env.PROMPT_TOOL_WEB_PORT ?? 5173)
 const apiPort = Number(process.env.PROMPT_TOOL_API_PORT ?? 8787)
 const webUrl = process.env.PROMPT_TOOL_WEB_URL ?? `http://localhost:${webPort}`
-const shouldOpenBrowser = !process.argv.slice(2).includes('--no-open')
+const args = process.argv.slice(2)
+const shouldOpenBrowser = !args.includes('--no-open')
+
+if (args.includes('--help') || args.includes('-h')) {
+  printUsage()
+  process.exit(0)
+}
 
 try {
   ensureTooling()
@@ -89,7 +95,10 @@ function ensureTooling() {
       run('corepack', ['prepare', 'pnpm@10.0.0', '--activate'])
     }
   }
-  requireCommand('pnpm', 'Install pnpm first.')
+  if (!binaryExists('pnpm')) {
+    throw new Error('pnpm is missing. Install pnpm first.')
+  }
+  run('pnpm', ['--version'])
 }
 
 function requireCommand(command, help) {
@@ -99,6 +108,15 @@ function requireCommand(command, help) {
 function commandExists(command) {
   const result = spawnSync(command, ['--version'], {
     shell: process.platform === 'win32',
+    stdio: 'ignore',
+  })
+  return result.status === 0
+}
+
+function binaryExists(command) {
+  const lookupCommand = process.platform === 'win32' ? 'where' : 'sh'
+  const lookupArgs = process.platform === 'win32' ? [command] : ['-c', `command -v ${command}`]
+  const result = spawnSync(lookupCommand, lookupArgs, {
     stdio: 'ignore',
   })
   return result.status === 0
@@ -214,4 +232,16 @@ function openBrowser(url) {
     stdio: 'ignore',
     shell: process.platform === 'win32',
   }).unref()
+}
+
+function printUsage() {
+  console.log(`Usage: ./start.sh [--no-open]
+
+Starts the local development server:
+  Web: http://localhost:${webPort}
+  API: http://${host}:${apiPort}
+
+Options:
+  --no-open  Start servers without opening a browser.
+  -h, --help Show this help message.`)
 }
